@@ -22,16 +22,185 @@
 ### 2.1 Лента
 
 **Сайт:** lenta.com
-**Официального API нет.** Есть внутренние недокументированные эндпоинты:
+**Фронтенд:** Angular (lazy-loaded chunks), PHP-бэкенд
+**Защита:** Qrator (JavaScript challenge) — curl и скрипты блокируются. Требуется headless-браузер (Playwright/Puppeteer) для прохождения.
 
-| Endpoint | Описание |
+**Официального API нет.** Есть **два внутренних API**:
+
+#### 2.1.1 Старый API: `/api/rest/*` (PHP RPC-style)
+
+Формат запроса (JSON RPC-style, MarketingPartnerKey из cookies `App_Cache_MPK`):
+
+```json
+{
+  "request": {
+    "Head": {
+      "MarketingPartnerKey": "mp300-{uuid}",
+      "Version": "web-12.0.633",
+      "Client": "angular_web_0.0.2",
+      "Method": "sessionGet",
+      "SessionToken": "",
+      "RequestId": "sessionGet_{random}",
+      "DeviceId": "{uuid}",
+      "Domain": "spb"
+    },
+    "Body": {}
+  }
+}
+```
+
+Формат ответа:
+
+```json
+{
+  "Head": {
+    "RequestId": "...",
+    "Created": "2026-06-17 02:47:14",
+    "Method": "sessionGet",
+    "Status": "success",
+    "SessionToken": "{token}",
+    "ServerName": "php"
+  },
+  "Body": { ... }
+}
+```
+
+**Эндпоинты:**
+
+| Метод | Endpoint | Описание | Статус |
+|---|---|---|---|
+| POST | `/api/rest/sessionGet` | Получение/обновление сессии | ✅ Работает |
+| POST | `/api/rest/cartLookup` | Просмотр корзины | ✅ Работает |
+| POST | `/api/rest/catalogGetCategories` | Категории каталога | ❌ требует сессии |
+| POST | `/api/rest/catalogGetProducts` | Товары | ❌ требует сессии |
+| POST | `/api/rest/catalogSearch` | Поиск товаров | ❌ требует сессии |
+| POST | `/api/rest/productGet` | Товар по ID | ❌ требует сессии |
+| POST | `/api/rest/productGetBySku` | Товар по SKU | ❌ требует сессии |
+| POST | `/api/rest/deliveryGet` | Информация о доставке | ❌ требует сессии |
+| POST | `/api/rest/deliveryGetStores` | Магазины доставки | ❌ требует сессии |
+| POST | `/api/rest/deliveryGetIntervals` | Интервалы доставки | ❌ требует сессии |
+| POST | `/api/rest/deliveryGetAddresses` | Адреса доставки | ❌ требует сессии |
+| POST | `/api/rest/orderGet` | Заказы пользователя | ❌ требует сессии |
+| POST | `/api/rest/orderCreate` | Создание заказа | ❌ требует сессии |
+| POST | `/api/rest/orderCheckout` | Оформление заказа | ❌ требует сессии |
+| POST | `/api/rest/userGet` | Профиль пользователя | ❌ требует сессии |
+| POST | `/api/rest/favoritesGet` | Избранное | ❌ требует сессии |
+| POST | `/api/rest/promotionsGet` | Акции | ❌ требует сессии |
+| POST | `/api/rest/promotionGetById` | Акция по ID | ❌ требует сессии |
+
+**Ошибка без сессии:** `Utk\Utkapi_Exception_MarketingPartner_InvalidKey` (код 16)
+
+#### 2.1.2 Новый API Gateway: `/api-gateway/v1/*` (RESTful JSON)
+
+Работает **без** MarketingPartnerKey — использует cookies/JWT токены.
+
+| Метод | Endpoint | Описание |
+|---|---|---|
+| GET | `/api-gateway/v1/frontend/features` | Фича-флаги (GrowthBook) |
+| GET | `/api-gateway/v1/region/list` | Список регионов |
+| GET | `/api-gateway/v1/region/user` | Регион текущего пользователя |
+| POST | `/api-gateway/v1/auth/passport/token/guest` | Получение гостевого токена (JWT) |
+| POST | `/api-gateway/v1/stores/pickup/search` | Поиск магазинов для самовывоза |
+| GET | `/api-gateway/v1/stores/pickup/recent` | Недавние магазины |
+| GET | `/api-gateway/v1/delivery/mode` | Режим доставки |
+| POST | `/api-gateway/v1/catalog/items/recommendations` | Рекомендации товаров |
+| GET | `/api-gateway/v1/catalog/items/{id}` | Товар по ID |
+| POST | `/api-gateway/v1/catalog/items/collections` | Товары коллекции |
+| GET | `/api-gateway/v1/pages/types/{typeId}/widgets` | Виджеты по типу страницы |
+| POST | `/api-gateway/v1/pages/places/widgets` | Виджеты по местам |
+| GET | `/api-gateway/v1/pages/widgets/{id}` | Виджет по ID |
+| GET | `/api-gateway/v1/banners/adhweb` | Баннеры |
+| GET | `/api-gateway/v1/sem/redirect` | Редиректы |
+| POST | `/api-gateway/v1/sem/usepattern` | Семантический эндпоинт |
+
+**Аутентификация:**
+1. `POST /api-gateway/v1/auth/passport/token/guest` → `{"expiresIn": 3600, "sessionId": "..."}`
+2. JWT в куках: `PassportAccessToken` (Bearer), `PassportRefreshToken`
+
+**Рекомендации:** `POST /api-gateway/v1/catalog/items/recommendations`
+```json
+{
+  "id": 12345,
+  "recommendType": "1",   // или "2"
+  "offset": 0,
+  "limit": 50
+}
+```
+
+**Товары коллекции:** `POST /api-gateway/v1/catalog/items/collections`
+```json
+{ "collectionId": 310004503 }
+```
+Ответ содержит `items`, `filters` (с брендами, рейтингом и т.д.), `collections`.
+
+**Поиск товаров по категории — эндпоинт не найден.** Фронтенд Angular загружает товары через комбинацию:
+1. `POST /api-gateway/v1/pages/places/widgets` — получение виджетов для страницы (содержат `collectionId`)
+2. `POST /api-gateway/v1/catalog/items/collections` — загрузка товаров коллекции
+3. `POST /api-gateway/v1/catalog/items/recommendations` — рекомендации
+
+Вероятные недокументированные эндпоинты (требуют исследования через Network вкладку браузера):
+- `GET /api-gateway/v1/catalog/items/list?categoryId={id}&offset=0&limit=24` (400 — неверные параметры)
+- `GET /api-gateway/v1/catalog/categories` (400 — нужен параметр)
+- `POST /api-gateway/v1/catalog/items/search` (405 — неверный метод)
+
+**Формат товара (из коллекции):**
+```json
+{
+  "id": 12345,
+  "name": "Молоко питьевое 3.2% 720мл",
+  "slug": "moloko-pitevoe-3-2-720ml",
+  "brand": "...",
+  "price": 89.90,
+  "oldPrice": 109.90,
+  "image": "https://cdn.api.lenta.com/...",
+  "rating": 4.5,
+  "stock": { /* остатки */ }
+}
+```
+
+**CDN для ассетов:** `https://sitecdn.api.lenta.com/`
+**CDN для изображений:** `https://cdn.api.lenta.com/resample/webp/{size}/photo/...`
+
+#### 2.1.3 URL-структура фронтенда
+
+| URL | Описание |
 |---|---|
-| `GET /api/v1/stores/` | Список магазинов |
-| `POST /api/v1/skus/list` | Список товаров (требуются cookies) |
-| `GET /api/v1/stores/{id}/home` | Акции |
-| `GET /api/v1/stores/{id}/crazypromotions` | Акции (crazypromotions) |
+| `/` | Главная |
+| `/catalog/{slug}-{id}/` | Категория каталога (напр. `/catalog/frukty-153/`) |
+| `/product/{slug}-{id}/` | Карточка товара (напр. `/product/moloko-pitevoe-3-2-720ml-12345/`) |
+| `/search?query={text}` | Поиск |
+| `/action/detail/{id}` | Акция/спецпредложение |
 
-Доступные данные: названия, цены (текущая + старая), фото, категории, штрихкоды, остатки.
+#### 2.1.4 Технологии
+
+- **Бэкенд:** PHP (выяснено из ServerName в API-ответах)
+- **Фронтенд:** Angular 17+ (SSR — Angular Universal, lazy modules, `ngsw-bootstrap.js` — Service Worker)
+- **Feature flags:** GrowthBook (CDN: `growthbook-cdn.api.lenta.com`)
+- **Защита:** Qrator Labs (DDoS protection, JS challenge)
+- **Версия:** `web-12.0.633`
+- **Клиент:** `angular_web_0.0.2`
+- **Доп. интеграции:** Max (st.max.ru), Яндекс Passport (аутентификация), Яндекс Rotor (антибот)
+- **Мульти-брендовая платформа:** runtime-скрипт содержит API-домены нескольких сетей:
+  - `api.lenta.com` — Лента
+  - `api.domlenta.ru` — ДомЛента
+  - `api.utkonos.ru` — Утконос
+  - `api.monetka.ru` — Монетка
+  - Это может означать единую платформу для нескольких брендов
+
+**Внутренняя конфигурация:**
+- `window.APP_CONFIG = {"APP_API_URL": "http://lenta-site-api"}` — внутренний URL API (Kubernetes service)
+
+#### 2.1.5 Данные магазинов (регионы)
+
+Регионы Ленты (из `/api-gateway/v1/region/list`):
+- Москва и МО (id: 1, slug: moscow)
+- Санкт-Петербург и область (id: 3, slug: spb)
+- Уфа (id: 5, slug: ufa)
+- Нижний Новгород (id: 7, slug: nnov)
+- Екатеринбург (id: 9, slug: ekb)
+- Казань (id: 11, slug: kzn)
+- Красноярск (id: 13, slug: krsk)
+- Краснодар (id: 15, slug: krd)
 
 **Партнёрская программа:** [lenta.tech](https://lenta.tech/products) — B2B-продукты (аналитика, RPA, EDI Hub), **не API каталога**.
 
@@ -124,6 +293,15 @@ flowchart TD
 
 ---
 
+## 4. Cookbook: как исследовать API сети
+
+1. **Если сайт защищён Qrator/Cloudflare** — curl не сработает. Используй Playwright с headless-браузером и куками из реальной сессии.
+2. **Перехватывай API-вызовы** через `page.on('request')` и `page.on('response')`.
+3. **Загружай страницу дважды:** сначала главную (загрузка сессии), потом целевую (каталог/товар).
+4. **Ищи inline-данные:** `__NEXT_DATA__` (Next.js), `ng-state` (Angular SSR), `window.__INITIAL_STATE__`.
+5. **Анализируй JS-бандлы:** ищи URL-паттерны через regex в главном чанке и source maps.
+6. **Проверяй консольные логеры:** некоторые Angular-приложения логируют API-вызовы в debug-режиме.
+
 ## 5. Выводы для проекта
 
 1. **Единого API нет** — каждая сеть интеграция по-своему
@@ -132,3 +310,8 @@ flowchart TD
 4. **Точных остатков** не даёт никто — пикеры проверяют вживую
 5. **Super Babylon** — не просто магазин, а уже партнёр iGooods (доставка = iGooods)
 6. **Коммерческое соглашение** с сетью даёт больше, чем публичный API (EDI, XLS-выгрузки)
+7. **Лента** имеет два API: старый PHP RPC (`/api/rest/`) и новый REST Gateway (`/api-gateway/v1/`). Оба недокументированы. Для доступа требуется headless-браузер (Qrator).
+8. **API Gateway Ленты** — RESTful, без MarketingPartnerKey, через JWT/куки. Перспективен для интеграции.
+9. **Angular-фронтенд Ленты** — SSR (Angular Universal), lazy-loaded модули, Service Worker, feature flags через GrowthBook.
+10. **Мульти-брендовая платформа:** фронтенд Ленты обслуживает также ДомЛента, Утконос, Монетку через единую кодовую базу.
+11. **Продуктовый эндпоинт не найден** — товары по категории загружаются через виджеты (`pages/places/widgets`) и коллекции (`catalog/items/collections`). Для точного эндпоинта нужно открыть каталог в браузере и перехватить запросы из Network-вкладки.
