@@ -6,12 +6,17 @@
 
 ```
 docs/
-├── README.md                          # Этот файл
-├── ПЛАН_ОПТИМИЗАЦИИ_АЙГУДС.md         # План миграции на микросервисы
-├── ШАБЛОН_СПЕЦИФИКАЦИИ_ПРОДУКТА.md     # Шаблон для описания бизнес-процессов
-├── RESEARCH_GITHUB.md                  # Результаты поиска по GitHub (igooods)
+├── README.md                                # Этот файл
+├── ПЛАН_ОПТИМИЗАЦИИ_АЙГУДС.md               # План миграции на микросервисы
+├── ШАБЛОН_СПЕЦИФИКАЦИИ_ПРОДУКТА.md           # Шаблон для описания бизнес-процессов
 └── references/
-    └── catalog-data.js                 # Модель данных каталога (из DATA.js igooods)
+    └── github/                              # Всё, что найдено на GitHub
+        ├── README.md
+        ├── research.md                      # Анализ найденного
+        ├── catalog-data.js                  # Модель каталога (DATA.js)
+        └── dependencies/
+            ├── frontend-package.json        # Next.js + React
+            └── backend-gemfile              # Ruby on Rails
 ```
 
 ## Назначение файлов
@@ -20,5 +25,6 @@ docs/
 |---|---|
 | `ПЛАН_ОПТИМИЗАЦИИ_АЙГУДС.md` | Технический план перехода с монолита на микросервисы |
 | `ШАБЛОН_СПЕЦИФИКАЦИИ_ПРОДУКТА.md` | Шаблон для описания бизнес-процессов с оценками |
-| `RESEARCH_GITHUB.md` | Анализ найденного на GitHub по iGooods |
-| `references/catalog-data.js` | Эталонная структура каталога товаров |
+| `references/github/research.md` | Анализ найденного на GitHub по iGooods |
+| `references/github/catalog-data.js` | Эталонная структура каталога товаров |
+| `references/github/dependencies/*` | Зависимости фронтенда и бэкенда |
