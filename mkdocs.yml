@@ -25,7 +25,6 @@ theme:
     - navigation.sections
     - navigation.top
     - navigation.tracking
-    - toc.integrate
     - search.highlight
     - search.suggest
     - content.code.copy
@@ -46,9 +45,6 @@ markdown_extensions:
   - md_in_html
   - tables
   - toc:
-      permalink: true
-      toc_depth: 4
-  - pymdownx.toc:
       permalink: true
       toc_depth: 4
   - pymdownx.highlight:
