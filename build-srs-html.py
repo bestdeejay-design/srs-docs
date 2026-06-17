@@ -17,7 +17,7 @@ def build_html(input_md):
     stack = [tree]
     for tag, attrs, text in headings:
         level = int(tag[1]) - 2  # 0=h2, 1=h3, 2=h4
-        clean = re.sub(r'<[^>]+>', '', text).strip()
+        clean = re.sub(r'<[^>]+>', '', text).strip().replace('&amp;', '&')
         eid = (re.search(r'id="([^"]+)"', attrs or '') or ['', ''])[1]
         node = (level, clean, eid, [])
         while len(stack) <= level:
