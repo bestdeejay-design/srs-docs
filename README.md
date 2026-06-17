@@ -20,7 +20,7 @@ docs/
         ├── dependencies/
         │   ├── frontend-package.json        # Next.js + React
         │   └── backend-gemfile              # Ruby on Rails
-        └── repos/                           # Склонированные OS-репозитории (8 шт, ~52MB)
+        └── repos/                           # Склонированные OS-репозитории (12 шт)
             ├── go-food-delivery-microservices/   # Архитектура (Go, DDD/CQRS/ES)
             ├── ftgo-application/                 # Food Delivery (Java, Saga)
             ├── mobo_delivery/                    # Курьер (Flutter, offline-first)
@@ -28,7 +28,11 @@ docs/
             ├── sentry-wms/                       # WMS (React Native)
             ├── project-allot/                    # Dispatch (TypeScript)
             ├── nextjs-rails-postgresql-docker/   # Docker config
-            └── Track-Cart/                       # Full-stack delivery (Next.js)
+            ├── Track-Cart/                       # Full-stack delivery (Next.js)
+            ├── checkjebon/                       # Multi-store price comparison (JS, 234⭐)
+            ├── rohlik-mcp/                       # Grocery delivery MCP server (TS, 113⭐)
+            ├── price-comparison-project/         # Supermarket scraper (Python/Django, 97⭐)
+            └── fastapi-price-aggregator/         # Price aggregator FastAPI (Python)
 ```
 
 ## Назначение файлов

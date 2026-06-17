@@ -175,6 +175,61 @@
 - **Модель:** Альтернативная food delivery — поставщики → кооперативы → покупатели
 - **Что даёт:** Близкий стек (Rails), модуль поставщиков (аналог сетей), управление зонами доставки, ценообразование
 
+---
+
+## 12. Multi-Store Price Aggregation & Catalog Management
+
+### supermarkt/checkjebon ⭐234
+- https://github.com/supermarkt/checkjebon
+- **Стек:** JavaScript, Node.js, HTML
+- **Что делает:** Сравнение цен продуктов в 12+ сетях супермаркетов Нидерландов (Albert Heijn, Jumbo, Aldi, Lidl и др.) одновременно. Парсинг чеков, поиск товаров, стоимость корзины по магазинам, открытые данные в JSON
+- **Прямое отношение:** **Самый релевантный референс для агрегатора.** Демонстрирует multi-store каталог, алгоритмы сравнения цен, нечёткое сопоставление товаров (fuzzy matching). Данные публикуются как open data
+- **Локально:** ✅ `repos/checkjebon`
+
+### unopim/unopim ⭐10k
+- https://github.com/unopim/unopim
+- **Стек:** PHP (Laravel), MySQL/PostgreSQL, Redis
+- **Что делает:** Open-source PIM (Product Information Management) для каталогов до 10M+ товаров. Multi-channel, multi-currency, локализация (33 языка, включая русский), REST API, AI-генерация контента, импорт/экспорт CSV/XLSX
+- **Прямое отношение:** Нормализация и обогащение данных из разных сетей (Лента, Ашан, METRO) в единый каталог. REST API для слоя интеграции
+- **Локально:** не клонирован (крупный, скачать при необходимости)
+
+### akeneo/pim-community-dev ⭐1k
+- https://github.com/akeneo/pim-community-dev
+- **Стек:** PHP (Symfony), MySQL/PostgreSQL, Elasticsearch
+- **Что делает:** Индустриальный стандарт open-source PIM. Управление каталогом, варианты товаров, семейства атрибутов, API-синдикация
+- **Прямое отношение:** Боевой PIM для нормализации каталога от разных поставщиков
+
+### tomaspavlin/rohlik-mcp ⭐113
+- https://github.com/tomaspavlin/rohlik-mcp
+- **Стек:** TypeScript, MCP (Model Context Protocol)
+- **Что делает:** MCP-сервер для реальных API доставки продуктов Rohlik Group (Rohlik.cz, Knuspr.de, Gurkerl.at, Kifli.hu, Sezamo.ro). Поиск товаров, корзина, оформление через единый интерфейс
+- **Прямое отношение:** **Единственный open-source проект с реальной интеграцией grocery delivery API.** Показывает как абстрагировать несколько сетей за единым API-слоем
+- **Локально:** ✅ `repos/rohlik-mcp`
+
+---
+
+## 13. Supermarket Scrapers / Price Aggregators
+
+### RamonWill/price-comparison-project ⭐97
+- https://github.com/RamonWill/price-comparison-project
+- **Стек:** Python (Django), BeautifulSoup, PostgreSQL
+- **Что делает:** Сравнение цен в 6+ сетях UK (Tesco, Asda, Sainsbury's). Регистрация, поиск, корзина, сравнение
+- **Прямое отношение:** Архитектура парсинга для магазинов без API (как и большинство российских сетей). Django + BeautifulSoup — готовый паттерн
+- **Локально:** ✅ `repos/price-comparison-project`
+
+### michaeloliverx/fullstack-fastapi-vuejs-price-aggregator ⭐24
+- https://github.com/michaeloliverx/fullstack-fastapi-vuejs-price-aggregator
+- **Стек:** Python (FastAPI), Vue.js, PostgreSQL
+- **Что делает:** Агрегатор цен супермаркетов UK на FastAPI + асинхронный парсинг
+- **Прямое отношение:** FastAPI — современный стек для API-слоя агрегатора. Асинхронный парсинг нескольких сетей параллельно
+- **Локально:** ✅ `repos/fastapi-price-aggregator`
+
+### Axedd/discount-etl
+- https://github.com/Axedd/discount-etl
+- **Стек:** Python, PostgreSQL
+- **Что делает:** ETL-пайплайн для сбора скидок из сетей Дании. Модульная архитектура парсеров
+- **Прямое отношение:** Паттерн «один парсер на сеть» → нормализация → PostgreSQL. Идеально для добавления/удаления сетей динамически
+
 ## Матрица покрытия
 
 | Раздел чеклиста | Референс | Язык | Локально | Сложность внедрения |
@@ -187,5 +242,9 @@
 | Назначение курьера | project-allot | TypeScript | ✅ `repos/` | Низкая (наш стек) |
 | ETA | Food_Delivery_ETA_Prediction | Python | — | Средняя |
 | Rails + Next.js стек | nextjs-rails-postgresql-docker | Ruby/TS | ✅ `repos/` | Низкая (наш стек) |
-| Full-stack delivery | Track-Cart | Next.js | ✅ `repos/` | Низкая |
-| Тестирование | go-food-delivery-microservices | Go | ✅ `repos/` | Средняя |
+| Multi-store price comparison | checkjebon | JS | ✅ `repos/` | Средняя |
+| Grocery delivery API integration | rohlik-mcp | TS | ✅ `repos/` | Низкая (наш стек) |
+| Supermarket scraper | price-comparison-project | Python | ✅ `repos/` | Средняя |
+| Price aggregator (FastAPI) | fastapi-price-aggregator | Python | ✅ `repos/` | Низкая |
+| PIM / Catalog management | unopim | PHP | — (крупный) | Средняя |
+| PIM / Catalog management | akeneo/pim-community-dev | PHP | — (крупный) | Высокая |
