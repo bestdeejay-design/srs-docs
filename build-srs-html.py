@@ -139,6 +139,7 @@ function c(){const i=document.getElementById('search');i.value='';i.focus();s(''
 function d(){document.body.classList.toggle('dark');document.getElementById('theme-switch').textContent=document.body.classList.contains('dark')?'◐':'●';try{localStorage.setItem('dark',document.body.classList.contains('dark')?'1':'0')}catch(e){}}
 try{if(localStorage.getItem('dark')==='1')d()}catch(e){}
 window.addEventListener('scroll',function(){const h=document.documentElement;p=(h.scrollTop/(h.scrollHeight-h.clientHeight))*100;document.getElementById('progress-bar').style.width=p+'%';let a='';document.querySelectorAll('#content h2,#content h3,#content h4').forEach(h=>{if(h.getBoundingClientRect().top<80)a=''+h.id});document.querySelectorAll('#toc-container a').forEach(l=>l.classList.toggle('active',l.getAttribute('href')==='#'+a));document.querySelectorAll('.s').forEach(s=>{const w=s.querySelector('.sw');if(w&&w.querySelector('a.active')){s.querySelector('.tb').classList.add('open');w.classList.add('open')}})})
+</script>
 </body>
 </html>'''
 
