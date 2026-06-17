@@ -1450,6 +1450,8 @@ Content-Type: application/json
 - [migrations/notifications_promotions.sql](migrations/notifications_promotions.sql) — §3.6 Notifications & Promotions
 - [db/schema.rb](db/schema.rb) — сводная схема
 
+## 3. Data Model
+
 ### 3.2 Catalog Schema (Архитектура хранения каталога)
 **Источник:** Раздел 5.4 исходного документа.
 
@@ -3523,6 +3525,8 @@ gh workflow run deploy.yml -f region=standby -f db_host=localhost
 curl -f https://api.igoods.ru/health && echo "OK"
 ```
 
+## 6. Security & Compliance (Безопасность)
+
 ### 6.1 Authentication & Authorization
 **Источник:** Раздел 5.13.1 исходного документа.
 
@@ -3694,7 +3698,7 @@ curl -f https://api.igoods.ru/health && echo "OK"
 
 ---
 
-**Источник:** Раздел 5.9 исходного документа.
+## 7. Testing Strategy (Стратегия тестирования)
 
 ### 7.1 Test Levels
 
