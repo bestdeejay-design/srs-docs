@@ -48,7 +48,27 @@ def build_html(input_md):
 <html lang="ru">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SRS</title>
+<title>SRS — Агрегатор доставки продуктов</title>
+<meta name="description" content="Software Requirements Specification — агрегатор доставки продуктов из супермаркетов. Бизнес-требования, архитектура, функциональные и нефункциональные требования.">
+<meta name="keywords" content="SRS, спецификация, доставка продуктов, агрегатор, требования, архитектура, API">
+<meta name="author" content="SRS Team">
+<meta name="robots" content="index, follow">
+
+<!-- Open Graph -->
+<meta property="og:title" content="SRS — Агрегатор доставки продуктов">
+<meta property="og:description" content="Полная спецификация программного продукта: бизнес-требования, архитектура микросервисов, API, 14 бизнес-процессов, модель данных и план разработки.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://bestdeejay-design.github.io/srs-docs/">
+<meta property="og:image" content="https://bestdeejay-design.github.io/srs-docs/assets/feature-map.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ru_RU">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="SRS — Агрегатор доставки продуктов">
+<meta name="twitter:description" content="Software Requirements Specification — агрегатор доставки продуктов из супермаркетов.">
+<meta name="twitter:image" content="https://bestdeejay-design.github.io/srs-docs/assets/feature-map.png">
 <style>
 :root{--bg:#fff;--bg2:#f6f8fa;--text:#1a1a1a;--text2:#444;--border:#ddd;--accent:#0052cc;--accent2:#003d99;--code:#f6f8fa;--font:-apple-system,BlinkMacSystemFont,sans-serif;--font-mono:'SF Mono','Menlo',monospace;--shadow:rgba(0,0,0,0.06);--radius:6px}
 body.dark{--bg:#0d1117;--bg2:#161b22;--text:#e6edf3;--text2:#8b949e;--border:#30363d;--accent:#58a6ff;--accent2:#79c0ff;--code:#161b22;--shadow:rgba(0,0,0,0.3)}
