@@ -6,6 +6,32 @@
 
 ---
 
+## Changelog
+
+| Версия | Дата | Автор | Изменения |
+|--------|------|-------|-----------|
+| 1.0 | 2026-06-17 | — | Структурная реорганизация: разделение на 2 тома (Business Requirements + Technical Specification), вынос артефактов в отдельные файлы, сокращение §6.4 Accessibility |
+
+---
+
+## How to read this document
+
+SRS разделён на два тома. В зависимости от вашей роли читайте соответствующие разделы:
+
+| Роль | Что читать |
+|------|-----------|
+| **Product Owner / Менеджер** | Том 1 целиком. §8 Project Estimation & Roadmap |
+| **Backend-разработчик** | Том 2 целиком. §4 Functional Requirements (BP) — технические заметки внутри каждого BP |
+| **Frontend-разработчик** | Том 1: §1.3 NFR (Usability, Performance Budget). Том 2: §2.2 Technology Stack, §4 Functional Requirements (интерфейсные BP) |
+| **Mobile-разработчик** | Том 2: §2.8 Mobile App Architecture (→ ADR-007), §4.2–§4.3 (Picker/Courier Domain), §4.8 Offline Strategy |
+| **QA-инженер** | Том 1: §1.3 NFR. Том 2: §4 Functional Requirements, §7 Testing Strategy |
+| **DevOps / SRE** | Том 2: §2 Architecture, §5 Infrastructure & DevOps, §6 Security |
+| **Аналитик / Data Scientist** | Том 1: §1.6 Business Model, §4.6 Cross-Cutting (Analytics). Том 2: §3 Data Model |
+
+---
+
+# Том 1: Business Requirements
+
 ## 1. Product Overview (Общие сведения)
 
 ### 1.1 Purpose & Scope
@@ -166,18 +192,13 @@
 
 #### 1.6.6 Франшиза (Franchise Model)
 
-Референс-сервис построен по франчайзинговой модели. Агрегатор может масштабироваться аналогично:
-
-| Параметр | Описание |
-|---|---|
-| **Модель** | Мастер-франшиза на город/регион. Франчайзи открывает магазины под брендом, использует платформу и технологии |
-| **Доход** | Паушальный взнос (вход) + роялти (ежемесячный % от оборота) |
-| **Обязанности франчайзи** | Операционное управление (пикеры, курьеры), маркетинг в регионе, аренда и логистика |
-| **Обязанности платформы** | Технологии (сайт, приложения, dispatch), бренд, поддержка, обучение |
-| **Администрирование** | BP-11: управление партнёрами (франчайзи), отчёты по роялти, рейтинг партнёров |
-| **Этап внедрения** | V3 (после отработки операционной модели на собственных магазинах) |
+Подробнее — в [docs/roadmap/V3_FRANCHISE.md](docs/roadmap/V3_FRANCHISE.md). Этап внедрения: V3.
 
 ---
+
+---
+
+# Том 2: Technical Specification
 
 ## 2. System Architecture (Архитектура системы)
 
@@ -268,22 +289,10 @@
 
 #### 2.5.1 Store API Integration Details
 
-**Лента (первая сеть, MVP):**
-- **Защита:** Qrator Labs (JS Challenge) — требуется headless browser (Playwright/Puppeteer) для обхода
-- **Два API:** (1) Старое PHP RPC `/api/rest/*` с MarketingPartnerKey, (2) Новый REST Gateway `/api-gateway/v1/*` с JWT/guest token
-- **Рендеринг:** Angular SSR — данные каталога в HTML, коллекции через API widgets
-- **Мультибренд:** единая платформа для DomLenta, Utkonos, Monetka (API: `api.domlenta.ru`, `api.utkonos.ru`, `api.monetka.ru`)
-- **Feature flags:** GrowthBook (CDN `growthbook-cdn.api.lenta.com`) — эндпоинты могут меняться без предупреждения
-
-**Вкусвилл (V2):**
-- **Протокол:** MCP JSON-RPC (экспериментальный)
-- **Эндпоинты:** `vkusvill_products_search(q, page, sort)`, `vkusvill_product_details(id)`, `vkusvill_cart_link_create(products[])`
-- **Ограничения:** макс 20 товаров за запрос, нет адресных остатков
-- **Это единственная сеть с открытым API** — самая простая интеграция
-
-**Super Babylon (V2):**
-- **Особенность:** эксклюзивный партнёр сети (доставка работает через платформу)
-- **Интеграция:** без API — физическое присутствие сборщика в магазине
+Детальные описания интеграций вынесены в отдельные файлы:
+- **Лента (MVP):** [docs/integrations/lenta.md](docs/integrations/lenta.md)
+- **Вкусвилл (V2):** [docs/integrations/vkusvill.md](docs/integrations/vkusvill.md)
+- **Super Babylon (V2):** без API — физическое присутствие сборщика в магазине
 
 ### 2.6 Observability
 **Источник:** Раздел 5.7.5 исходного документа.
@@ -329,18 +338,9 @@
 
 ### 2.8 Mobile Application Architecture
 
-Клиентские приложения на Flutter 3.x, единая кодовая база для iOS/Android.
+Подробное описание мобильной архитектуры вынесено в отдельный ADR: **`ADR-007: Mobile Architecture`**.
 
-| Компонент | Решение |
-|---|---|
-| **State management** | Provider (пикер), BLoC + Provider (курьер), MobX (клиент) |
-| **Offline** | Hive (курьер), Firestore offline persistence (пикер) |
-| **Push-уведомления** | Firebase Cloud Messaging |
-| **Карты** | Яндекс.Карты (Web), Google Maps (iOS), Yandex Maps (Android) |
-| **Сканер** | Scandit (flutter_scandit_datacapture_barcode) |
-| **Build flavors** | dev / prod (разные Firebase проекты, API endpoints) |
-| **CI/CD** | GitHub Actions → Firebase App Distribution / TestFlight / RuStore |
-| **Минимальные версии** | iOS 14+, Android 7.0+ (API 24) |
+Кратко: клиентские приложения на Flutter 3.x, единая кодовая база для iOS/Android. State management: Provider (пикер), BLoC + Provider (курьер), MobX (клиент). Offline: Hive (курьер), Firestore offline persistence (пикер).
 
 ### 2.9 Event Catalog
 
@@ -1570,124 +1570,9 @@ final_fee = base_delivery_fee * product(multipliers)
 
 **Источник:** Раздел 4 исходного документа.
 
-Карта всех функций продукта на основе описанных процессов:
-
 ![Feature Map](./exports/diagrams/features.png)
 
-**Текстовый список функций (для печати):**
-
-- **Регистрация и безопасность**
-  - Вход по телефону
-  - SMS-подтверждение
-  - Роли: клиент/пикер/курьер/админ/суперадмин
-  - JWT access + refresh токены
-  - Rate limiting
-  - Audit log
-- **Каталог**
-  - Выбор магазина по адресу
-  - Категории (3 уровня)
-  - Поиск (Elasticsearch)
-  - Динамические фильтры (по категории)
-  - Карточка товара
-  - Нормализация данных сетей
-  - Маппинг категорий сети → платформа
-  - Адаптеры сетей (Лента, METRO, Вкусвилл и др.)
-  - Синхронизация цен/остатков (шедулер)
-- **Корзина**
-  - Добавление товаров
-  - Промокоды и баллы
-  - Dynamic Pricing (надбавка за время/погоду/загрузку)
-  - Пересчёт стоимости
-  - Оформление
-- **Заказы**
-  - Создание
-  - Статусы (оплачен → сборка → доставка → завершён)
-  - Добавление товаров после оформления
-  - История
-  - Замена товара (пикер → звонок → альтернатива)
-  - Возврат и отмена (до/после сборки, комиссия)
-  - Event Sourcing (цепочка событий заказа)
-- **Доставка**
-  - Временные слоты (3 дня вперёд)
-  - Dispatch (multi-objective optimization)
-    - Cheapest Insertion + 2-opt
-    - 6 целей: время, SLA, дистанция, fairness, disruption, zone
-    - Constraint satisfaction
-  - ETA (OSRM + ML гибрид)
-    - OSRM маршрут → XGBoost коррекция
-    - 13 признаков: погода, трафик, время суток, праздники
-    - Пересчёт каждые 5 мин
-  - Трекинг для клиента
-  - Опция «Можно раньше»
-- **Платежи**
-  - Т-Банк (онлайн, 3DSecure)
-  - СБП (QR от курьера)
-  - Карта курьеру (POS-терминал)
-  - Наличные
-  - Refund (полный/частичный)
-  - Чек (54-ФЗ, ОФД)
-- **Уведомления**
-  - Push (FCM)
-  - SMS
-  - Email
-  - Telegram
-  - События: заказ создан, сборка начата, курьер выехал, доставлен
-- **Админка**
-  - Управление заказами (CRUD, статусы, комментарии)
-  - Управление товарами (CRUD, импорт/экспорт CSV)
-  - Пользователи (блокировка, роли)
-  - Промокоды (создание, статистика)
-  - Курьеры и пикеры (зоны, рейтинг)
-  - Магазины и зоны доставки (полигоны)
-  - Управление сетями-адаптерами (вкл/выкл)
-  - Audit log (кто, когда, что сделал)
-- **B2B**
-  - Корпоративные заказы в офис
-  - Регулярные поставки (ежедневно/еженедельно)
-  - Индивидуальные цены по договору
-  - Отсрочка платежа (3–30 дней)
-  - ЭДО (Диадок / СБИС, УПД)
-  - Счета и закрывающие документы
-- **Dynamic Pricing**
-  - Факторы: загрузка курьеров, время, погода, расстояние, вес
-  - Формула: base_fee × product(multipliers)
-  - Max надбавка: 2×
-  - Отображение в корзине до подтверждения
-- **Приложение пикера**
-  - Список заказов (FIFO)
-  - Сканер штрихкодов (Scandit)
-  - Замены товаров (поиск альтернатив)
-  - Звонок клиенту (скрытый номер)
-  - Offline-режим (Firestore cache)
-  - Smart Sync Queue (batch upload)
-  - Подтверждение упаковки
-- **Приложение курьера**
-  - Навигация с multi-stop маршрутом
-  - Offline-режим (Hive + Smart Sync)
-  - Off-route detection (визуальный + звуковой алерт)
-  - Приём оплаты (офлайн hold → sync)
-  - Digital Signature (POD)
-  - Photo POD
-  - Сканер
-  - Статусы доставки
-- **Инфраструктура**
-  - CI/CD (GitHub Actions, testcontainers)
-  - Docker Compose → Kubernetes
-  - Мониторинг (Prometheus + Grafana + Loki + Jaeger)
-  - Sentry (error tracking)
-  - Feature flags (Flipper / LaunchDarkly)
-  - Rollback (git revert + rolling update)
-- **Тестирование**
-  - Unit (mockery + testify)
-  - Integration (testcontainers)
-  - Contract (Pact CDC)
-  - E2E (Cypress + K6)
-  - Load (K6: stress, soak, spike)
-  - Security (SonarCloud + Trivy + Aikido)
-- **Аналитика**
-  - Дашборды (Grafana)
-  - Отчёты (выручка, заказы, конверсия)
-  - Метрики (DAU/MAU, время сборки, ETA, топ товаров)
+Полная карта функций с текстовым списком вынесена в [docs/feature-map.md](docs/feature-map.md).
 
 ---
 
@@ -1826,14 +1711,7 @@ final_fee = base_delivery_fee * product(multipliers)
 
 ### 5.8 FinOps (Оптимизация расходов на облако)
 
-| Практика | Описание | Этап |
-|---|---|---|
-| **Spot-инстансы** | Некритичные сервисы (staging, Catalog Write worker) на spot-экземплярах Selectel | MVP |
-| **HPA/VPA** | Горизонтальное автомасштабирование по CPU/memory для K8s | V3 |
-| **Managed services** | Использовать managed PostgreSQL (Selectel) вместо самостоятельного администрирования | MVP |
-| **Storage tiering** | Selectel CDN для изображений (hot), S3 для логов (warm), Glacier для бэкапов (cold) | V2 |
-| **Бюджетные алерты** | Уведомления при превышении 80% бюджетного лимита (GitHub → Telegram) | MVP |
-| **Resource tagging** | Все ресурсы с тегами `env`, `service`, `owner` для анализа cost allocation | MVP |
+Подробнее — в [docs/finops.md](docs/finops.md).
 
 ### 5.9 Service Readiness Checklist
 
@@ -1900,17 +1778,17 @@ final_fee = base_delivery_fee * product(multipliers)
 
 ### 6.4 Accessibility (Доступность)
 
-| Требование | Стандарт | Реализация |
-|---|---|---|
-| **Контрастность** | WCAG 2.1 AA (4.5:1 текст, 3:1 крупный текст) | Web: Next.js с focus-visible, ARIA-метки на формах. Mobile: стандартные Flutter-компоненты с accessibility |
-| **Навигация с клавиатуры** | WCAG 2.1.1 | Все интерактивные элементы доступны с Tab/Enter. Skip-to-content ссылка |
-| **Скринридеры** | WCAG 4.1.2 | ARIA-атрибуты на динамическом контенте. `alt` на всех изображениях товаров |
-| **Размер текста** | Возможность увеличения до 200% без потери функциональности | Responsive layout, rem-единицы в CSS |
-| **Цветовая слепота** | Не использовать цвет как единственный индикатор | Статусы заказа: иконка + текст + цвет. Ошибки валидации: текст + иконка |
-| **Целевые области** | Минимум 44×44 CSS-пикселя | Кнопки, ссылки, тач-цели |
-| **Анимация** | WCAG 2.3.3 (предпочтение reduced motion) | `prefers-reduced-motion` для CSS-анимаций. Flutter: `AnimationController` с `disableAnimation` |
+Базовые требования (MVP):
 
-**Проверка:** Axe DevTools (Web — каждый PR), Flutter accessibility scanner (Mobile — перед релизом)
+| Требование | Реализация |
+|---|---|
+| **Контрастность** | Минимум 4.5:1 для текста, 3:1 для крупного текста |
+| **Навигация с клавиатуры** | Все интерактивные элементы доступны с Tab/Enter |
+| **Скринридеры** | `alt` на всех изображениях товаров, ARIA-атрибуты на динамическом контенте |
+| **Размер текста** | Увеличение до 200% без потери функциональности (rem-единицы) |
+| **Цветовая слепота** | Статусы заказа: иконка + текст + цвет (не только цвет) |
+
+**Проверка:** Axe DevTools (Web — каждый PR).
 
 ---
 
@@ -1963,34 +1841,10 @@ final_fee = base_delivery_fee * product(multipliers)
 ## 8. Project Estimation & Roadmap (Оценка и план)
 
 ### 8.1 Effort Estimation by BP
-**Источник:** Раздел 3.1 исходного документа.
 
-<table class="estimation">
-<thead>
-<tr><th>ID</th><th>Процесс</th><th>Backend</th><th>Frontend</th><th>Mobile (кл)</th><th>Mobile (п/к)</th><th>DevOps</th><th>QA</th><th>Всего</th></tr>
-</thead>
-<tbody>
-<tr><td>BP-01</td><td>Регистрация и аутентификация</td><td>5</td><td>3</td><td>4</td><td>—</td><td>1</td><td>2</td><td><strong>15</strong></td></tr>
-<tr><td>BP-02</td><td>Каталог и поиск товаров</td><td>10</td><td>6</td><td>8</td><td>—</td><td>1</td><td>4</td><td><strong>29</strong></td></tr>
-<tr><td>BP-03</td><td>Оформление заказа</td><td>12</td><td>8</td><td>10</td><td>—</td><td>1</td><td>4</td><td><strong>35</strong></td></tr>
-<tr><td>BP-04</td><td>Оплата заказа</td><td>15</td><td>3</td><td>3</td><td>—</td><td>1</td><td>5</td><td><strong>27</strong></td></tr>
-<tr><td>BP-05</td><td>Сборка и упаковка</td><td>8</td><td>—</td><td>—</td><td>10</td><td>1</td><td>3</td><td><strong>22</strong></td></tr>
-<tr><td>BP-06</td><td>Доставка заказа</td><td>10</td><td>3</td><td>4</td><td>12</td><td>1</td><td>4</td><td><strong>34</strong></td></tr>
-<tr><td>BP-07</td><td>Возврат и отмена</td><td>6</td><td>2</td><td>3</td><td>1</td><td>1</td><td>3</td><td><strong>16</strong></td></tr>
-<tr><td>BP-08</td><td>Промокоды и акции</td><td>5</td><td>3</td><td>—</td><td>—</td><td>—</td><td>2</td><td><strong>10</strong></td></tr>
-<tr><td>BP-09</td><td>Уведомления</td><td>5</td><td>—</td><td>2</td><td>2</td><td>1</td><td>2</td><td><strong>12</strong></td></tr>
-<tr><td>BP-10</td><td>Личный кабинет</td><td>4</td><td>3</td><td>4</td><td>—</td><td>—</td><td>2</td><td><strong>13</strong></td></tr>
-<tr><td>BP-11</td><td>Админ-панель</td><td>15</td><td>20</td><td>—</td><td>—</td><td>—</td><td>5</td><td><strong>40</strong></td></tr>
-<tr><td>BP-12</td><td>Аналитика</td><td>8</td><td>5</td><td>—</td><td>—</td><td>2</td><td>2</td><td><strong>17</strong></td></tr>
-<tr><td>BP-13</td><td>B2B: Корпоративные заказы</td><td>15</td><td>8</td><td>—</td><td>—</td><td>—</td><td>4</td><td><strong>27</strong></td></tr>
-<tr><td>BP-14</td><td>Dynamic Pricing</td><td>10</td><td>3</td><td>—</td><td>—</td><td>—</td><td>2</td><td><strong>15</strong></td></tr>
-<tr style="background:#f5f5f5"><td><strong>Cross</strong></td><td>Инфраструктура, CI/CD</td><td>—</td><td>—</td><td>—</td><td>—</td><td>20</td><td>—</td><td><strong>20</strong></td></tr>
-<tr style="background:#f5f5f5"><td><strong>Cross</strong></td><td>Интеграции (Т-Банк, СБП, SMS)</td><td>10</td><td>—</td><td>—</td><td>—</td><td>—</td><td>5</td><td><strong>15</strong></td></tr>
-<tr style="background:#e8e8e8"><td></td><td><strong>Итого</strong></td><td><strong>138</strong></td><td><strong>70</strong></td><td><strong>38</strong></td><td><strong>25</strong></td><td><strong>30</strong></td><td><strong>49</strong></td><td><strong>350</strong></td></tr>
-</tbody>
-</table>
+Полная таблица оценок вынесена в [ESTIMATION.md](ESTIMATION.md).
 
-> **Общая оценка:** ~350 человеко-дней (≈ 17–18 месяцев работы команды из 3–4 человек)
+> **Итого:** ~350 человеко-дней (≈ 17–18 месяцев работы команды из 3–4 человек)
 > С поправкой на риски (×1.2 интеграции ×1.3 новизна) = **546 чел.-дней** (~27 месяцев / 3 dev)
 
 ### 8.2 Store Integration Costs
@@ -2048,43 +1902,7 @@ final_fee = base_delivery_fee * product(multipliers)
 
 ### 9.2 References & Open-Source
 
-#### Документы репозитория
-- `references/github/store-apis-research.md` — API Ленты, Вкусвилл
-- `references/github/analysis.md` — анализ стека референсного сервиса
-- `references/github/catalog-data.js` — модель каталога из DATA.js
-- `references/github/open-source-references.md` — полный каталог OS-референсов (все разделы ниже)
-- `ПЛАН_ОПТИМИЗАЦИИ.md` — план миграции на микросервисы
-- `references/github/dependencies/` — Gemfile, package.json
-- `Discovery-фаза.txt` — описание Discovery-этапа и его артефактов
-
-#### Архитектура / Event-Driven / Saga
-- **[go-food-delivery-microservices](https://github.com/mehdihadeli/go-food-delivery-microservices)** (Go) — DDD + CQRS + Event Sourcing, testcontainers, Prometheus+Grafana+Jaeger
-- **[uitgo_monorepo](https://github.com/Hungquan5/uitgo_monorepo)** — 4 ADR, observability (Loki+Promtail+Sentry), K6, GitOps (ArgoCD), Terraform, security scanning
-- **[eventuate-tram-core](https://github.com/eventuate-tram/eventuate-tram-core)** (⭐1.2k) — Saga (choreography + orchestration), Transactional Outbox, CQRS, CDC (WAL/binlog tailing)
-- **[microservice-patterns/ftgo-application](https://github.com/microservice-patterns/ftgo-application)** — эталон food delivery из книги Microservice Patterns (Consumer, Order, Delivery, Kitchen, Accounting)
-
-#### Ecommerce-платформы
-- **[medusa](https://github.com/medusajs/medusa)** (⭐34k) — headless commerce (Node.js/TS): Product, Cart, Order, B2B, плагины
-- **[saleor](https://github.com/saleor/saleor)** (⭐21k) — GraphQL ecommerce (Python/Django): product variants, multi-warehouse, полнотекстовый поиск
-- **[spree](https://github.com/spree/spree)** (⭐13k) — Rails ecommerce: тот же стек (Rails), референт для админки, промокодов, корзины
-- **[sharetribe](https://github.com/sharetribe/sharetribe)** (⭐2.5k) — маркетплейс-платформа (Rails+React): агрегаторная модель, комиссия, управление продавцами
-- **[openfoodnetwork](https://github.com/openfoodfoundation/openfoodnetwork)** (⭐1.1k) — Rails food delivery: поставщики, зоны доставки, ценообразование
-
-#### Приложения пикера/курьера
-- **[heymigrolino-picking-app](https://github.com/gpietro/heymigrolino-picking-app)** — Flutter, build flavors `dev_gooods`/`prod_gooods`, Scandit barcode scan
-- **[mobo_delivery](https://github.com/mobo-open-source/mobo_delivery)** — Flutter, offline-first (Hive + Smart Sync Queue), multi-stop route, GPS, photo POD
-- **[sentry-wms](https://github.com/hightower-systems/sentry-wms)** — React Native WMS: multi-order batch picking, wave picking, pick/confirm/short
-
-#### Dispatch / ETA
-- **[project-allot](https://github.com/sjlouji/project-allot)** — multi-objective dispatch (6 целей), Cheapest Insertion + 2-opt, batching 15–60s
-- **[Dynamic-Dispatch-and-Route-Optimization](https://github.com/tule2236/Dynamic-Dispatch-and-Route-Optimization-Application)** — K-means → Hungarian → Simulated Annealing, dynamic re-optimisation
-- **[Food_Delivery_ETA_Prediction](https://github.com/ronchaudhuri1998/Food_Delivery_ETA_Prediction)** — ML ETA (KNN, RF, XGBoost), feature engineering
-- **[last-mile-route-optimization](https://github.com/Tthaodangiu/last-mile-route-optimization-system)** — OSRM + VROOM + ML ETA
-
-#### Технологический стек
-- **[nextjs-rails-postgresql-docker](https://github.com/wimpykid719/nextjs-rails-postgresql-docker)** — Docker Compose для Rails+Next.js+PostgreSQL
-- **[Track-Cart](https://github.com/PranshuChauhan149/Track-Cart)** — Next.js 15 + MongoDB + Socket.io live tracking
-- **[flipper](https://github.com/jnunemaker/flipper)** (⭐3.7k) — feature flags в Rails (percentage rollout, A/B тесты, UI-админка)
+Полный каталог референсов вынесен в [references/README.md](references/README.md).
 
 ### 9.3 Completeness Checklist
 **Источник:** Приложение B исходного документа.
@@ -2141,56 +1959,4 @@ npm run dev                # frontend (dev)
 
 ### 9.5 Текущее состояние системы (AS IS)
 
-**Источник:** Раздел 6 исходного документа.
-
-> Если есть доступ к текущей системе — вот точный список, что попросить.
-> Отсортировано от самого важного к опциональному.
-
-#### 9.5.1 Схема БД (критично)
-
-Готовая модель данных со всеми таблицами, типами полей, связями и индексами:
-
-```sql
--- PostgreSQL:
-pg_dump --schema-only -h host -U user -d database > schema.sql
-
--- MySQL:
-mysqldump --no-data -h host -u user -p database > schema.sql
-```
-
-Если нет доступа — попросите ER-диаграмму (экспорт из DBeaver / DataGrip / pgAdmin в PNG/PDF).
-
-#### 9.5.2 API-запросы (критично)
-
-Попросите **Har-файл** (Chrome DevTools → Network → Export HAR) — просто откройте сайт и сделайте основные действия:
-
-| Действие | Что даст |
-|---|---|
-| Зайти в каталог → выбрать товар | Эндпоинты каталога, структуру товара |
-| Добавить в корзину → оформить заказ | API корзины и заказов |
-| Оплатить | Платёжный flow |
-| Посмотреть историю заказов | API личного кабинета |
-
-Или ссылку на **Swagger / OpenAPI / Postman-коллекцию**.
-
-**Формулировка запроса:**
-> «Скинь дамп схемы БД (pg_dump --schema-only) и har-файл с парой запросов из приложения — оформление заказа и каталог. Это займёт 10 минут.»
-
-#### 9.5.3 Ключевые алгоритмы (текущая реализация)
-
-| Алгоритм | Как работает сейчас |
-|---|---|
-| **Назначение курьера (dispatch)** | Курьеры закреплены за конкретным гипермаркетом и зоной доставки. В редких случаях перебрасываются между зонами при высокой загрузке или невыходе на смену. Плановый dispatch engine (multi-objective optimization) — на V3 |
-| **Расчёт ETA** | Гибрид OSRM + XGBoost: OSRM строит маршрут → ML-модель корректирует с учётом 13 признаков (погода, трафик, время суток, праздники, день недели, дистанция, кол-во стопов). Пересчёт каждые 5 мин, кэш в Redis |
-| **Остатки товаров** | Два отдельных процесса: (1) **обновление каталога** — загрузка ассортимента, цен, акций от сети, (2) **остатки в конкретном гипермаркете** — запрос остатков по API магазина. Фактическое наличие фиксирует сборщик на месте: сканер → товара нет → звонок клиенту → согласование замены |
-| **Замены товаров** | Полный сценарий (7 шагов): сканер показал отсутствие → пикер звонит клиенту (скрытый номер) → предлагает альтернативы по категории/бренду/цене → клиент подтверждает устно → замена фиксируется в системе. Все замены логируются в `order_events` |
-
-#### 9.5.4 Инфраструктура и состав команды (опционально)
-
-| Вопрос | Ответ |
-|---|---|
-| Сколько backend / frontend / mobile разработчиков? | Backend: 2, Frontend: 2, Mobile: 1 |
-| Есть ли DevOps / QA отдельно? | DevOps: 2, QA: отдельного нет (покрывается командой) |
-| Какая база данных и очереди? | PostgreSQL, RabbitMQ |
-| Текущий стек аутентификации | Sorcery (Rails gem) + access-granted (RBAC) |
-| Загрузка файлов | Carrierwave + MiniMagick |
+Полное описание AS IS вынесено в [AUDIT_AS_IS.md](AUDIT_AS_IS.md). Включает: схему БД, API-запросы, ключевые алгоритмы, инфраструктуру и состав команды.
