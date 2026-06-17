@@ -11,29 +11,38 @@ def build_html(input_md):
     if not body: raise RuntimeError("No <body>")
     body = body.group(1)
 
+    # Build heading tree
     headings = re.findall(r'<(h[234])(\s[^>]*)?>(.*?)</\1>', body, re.DOTALL)
-    toc, stack = '', []
+    tree = []  # list of (level, text, id, children)
+    stack = [tree]
     for tag, attrs, text in headings:
-        level = int(tag[1])
+        level = int(tag[1]) - 2  # 0=h2, 1=h3, 2=h4
         clean = re.sub(r'<[^>]+>', '', text).strip()
         eid = (re.search(r'id="([^"]+)"', attrs or '') or ['', ''])[1]
-
-        while stack and stack[-1] >= level:
+        node = (level, clean, eid, [])
+        while len(stack) <= level:
+            stack.append([])
+        while len(stack) > level + 1:
             stack.pop()
-            toc += '</ul></li>\n'
+        parent = stack[-1]
+        parent.append(node)
+        stack.append(node[3])
 
-        if level == 2:
-            toc += f'<li class="s"><button class="st" onclick="st(this)">▸</button><a href="#{html_mod.escape(eid)}">{html_mod.escape(clean)}</a><ul class="su">\n'
-        elif level == 3:
-            toc += f'<li class="s"><button class="st" onclick="st(this)">▸</button><a href="#{html_mod.escape(eid)}">{html_mod.escape(clean)}</a><ul class="su">\n'
-        else:
-            toc += f'<li><a href="#{html_mod.escape(eid)}">{html_mod.escape(clean)}</a></li>\n'
+    def render_toc(nodes, depth=0):
+        if not nodes: return ''
+        indent = depth * 14
+        html = '<ul>\n'
+        for level, text, eid, children in nodes:
+            has_children = bool(children)
+            toggle = '<button class="tb" onclick="tg(this)">▸</button>' if has_children else '<span class="tb"></span>'
+            cls = ' class="s"' if has_children else ''
+            child_html = render_toc(children, depth + 1)
+            wrap = f'<div class="sw">' + child_html + '</div>' if has_children else ''
+            html += f'<li{cls}>{toggle}<a href="#{html_mod.escape(eid)}">{html_mod.escape(text)}</a>{wrap}</li>\n'
+        html += '</ul>\n'
+        return html
 
-        stack.append(level)
-
-    while stack:
-        stack.pop()
-        toc += '</ul></li>\n'
+    toc = render_toc(tree)
 
     return '''<!DOCTYPE html>
 <html lang="ru">
@@ -63,22 +72,17 @@ body{font-family:var(--font);font-size:16px;line-height:1.6;color:var(--text);ba
 #search-results .sr-title{font-weight:600}
 #search-results .sr-context{font-size:12px;color:var(--text2);margin-top:1px}
 #toc-container{flex:1;overflow-y:auto;padding:4px 0}
-#toc-container ul{list-style:none;padding-left:0}
-#toc-container>ul{padding-left:0}
-#toc-container li{margin:0}
-#toc-container a{display:inline;padding:4px 6px;font-size:13px;color:var(--text2);text-decoration:none;line-height:1.35;border-radius:4px;transition:color .1s}
+#toc-container ul{list-style:none;padding:0;margin:0}
+#toc-container li{padding:1px 0;position:relative}
+#toc-container a{display:inline;padding:3px 6px;font-size:13px;color:var(--text2);text-decoration:none;line-height:1.4;border-radius:3px;transition:color .1s}
 #toc-container a:hover{color:var(--accent)}
-#toc-container a.active{color:var(--accent);font-weight:600;background:rgba(0,82,204,0.06)}
-body.dark #toc-container a.active{background:rgba(88,166,255,0.08)}
-.st{background:none;border:none;cursor:pointer;font-size:11px;color:var(--text2);padding:4px 2px;width:18px;text-align:center;transition:transform .15s;vertical-align:middle;flex-shrink:0}
-.st:hover{color:var(--accent)}
-.st.open{transform:rotate(90deg)}
-.s{display:flex;flex-wrap:wrap;align-items:baseline;padding:1px 0}
-.s .st{margin-left:4px}
-.s>a{order:-1}
-.su{overflow:hidden;max-height:0;transition:max-height .25s ease;width:100%;padding-left:10px;border-left:1px solid var(--border);margin:2px 0 2px 12px}
-.su.open{max-height:2000px}
-.s .su a{padding-left:4px}
+#toc-container a.active{color:var(--accent);font-weight:600;background:rgba(0,82,204,0.07)}
+body.dark #toc-container a.active{background:rgba(88,166,255,0.09)}
+.tb{background:none;border:none;cursor:pointer;font-size:10px;color:var(--text2);padding:0;width:16px;height:16px;line-height:16px;text-align:center;vertical-align:middle;transition:transform .12s;border-radius:3px}
+.tb:hover{color:var(--accent);background:rgba(0,0,0,0.04)}
+.tb.open{transform:rotate(90deg)}
+.sw{overflow:hidden;max-height:0;transition:max-height .2s ease;padding-left:10px;border-left:1px solid var(--border);margin:2px 0 2px 6px}
+.sw.open{max-height:3000px}
 #content{margin-left:270px;flex:1;max-width:960px;padding:40px 48px 80px}
 #content h1{font-size:30px;font-weight:700;margin:0 0 8px;color:var(--accent)}
 #content h2{font-size:22px;font-weight:600;margin:36px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--border)}
@@ -120,12 +124,12 @@ body.dark #toc-container a.active{background:rgba(88,166,255,0.08)}
     <button id="search-clear" onclick="c()">×</button>
     <div id="search-results"></div>
   </div>
-  <div id="toc-container"><ul>''' + toc + '''</ul></div>
+  <div id="toc-container">''' + toc + '''</div>
 </div>
 <div id="content">''' + body + '''</div>
 <script>
 function t(){document.getElementById('sidebar').classList.toggle('open')}
-function st(b){b.classList.toggle('open');b.nextElementSibling.nextElementSibling.classList.toggle('open')}
+function tg(b){b.classList.toggle('open');b.nextElementSibling.nextElementSibling.classList.toggle('open')}
 const si=[];document.querySelectorAll('#content h2,#content h3,#content h4').forEach(h=>{const id=h.id||'',t=h.textContent.trim();let e=h.nextElementSibling,c='';while(e&&!/^h[234]$/i.test(e.tagName)){c+=' '+(e.textContent||'').trim();e=e.nextElementSibling;if(c.length>200)break}si.push({id,text:t,context:c.trim().slice(0,300)})});
 function s(q){const r=document.getElementById('search-results');if(!q||q.length<2){r.classList.remove('show');return}q=q.toLowerCase();const m=si.filter(e=>e.text.toLowerCase().includes(q)||e.context.toLowerCase().includes(q)).slice(0,20);if(!m.length){r.classList.remove('show');return}r.innerHTML=m.map(x=>'<a href="#'+x.id+'" onclick="t()"><b>'+esc(x.text)+'</b><br><small>'+esc(x.context.slice(0,120))+'</small></a>').join('');r.classList.add('show')}
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
@@ -134,8 +138,7 @@ document.getElementById('search').addEventListener('input',function(){s(this.val
 function c(){const i=document.getElementById('search');i.value='';i.focus();s('');document.getElementById('search-clear').style.display='none'}
 function d(){document.body.classList.toggle('dark');document.getElementById('theme-switch').textContent=document.body.classList.contains('dark')?'◐':'●';try{localStorage.setItem('dark',document.body.classList.contains('dark')?'1':'0')}catch(e){}}
 try{if(localStorage.getItem('dark')==='1')d()}catch(e){}
-window.addEventListener('scroll',function(){const h=document.documentElement;p=(h.scrollTop/(h.scrollHeight-h.clientHeight))*100;document.getElementById('progress-bar').style.width=p+'%';let a='';document.querySelectorAll('#content h2,#content h3,#content h4').forEach(h=>{if(h.getBoundingClientRect().top<80)a=''+h.id});document.querySelectorAll('#toc-container a').forEach(l=>l.classList.toggle('active',l.getAttribute('href')==='#'+a));document.querySelectorAll('.s').forEach(s=>{const u=s.querySelector('.su');if(u&&u.querySelector('a.active')){s.querySelector('.st').classList.add('open');u.classList.add('open')}})})
-</script>
+window.addEventListener('scroll',function(){const h=document.documentElement;p=(h.scrollTop/(h.scrollHeight-h.clientHeight))*100;document.getElementById('progress-bar').style.width=p+'%';let a='';document.querySelectorAll('#content h2,#content h3,#content h4').forEach(h=>{if(h.getBoundingClientRect().top<80)a=''+h.id});document.querySelectorAll('#toc-container a').forEach(l=>l.classList.toggle('active',l.getAttribute('href')==='#'+a));document.querySelectorAll('.s').forEach(s=>{const w=s.querySelector('.sw');if(w&&w.querySelector('a.active')){s.querySelector('.tb').classList.add('open');w.classList.add('open')}})})
 </body>
 </html>'''
 
