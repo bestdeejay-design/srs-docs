@@ -19,8 +19,6 @@ SRS разделён на два тома. В зависимости от ваш
 | **Аналитик / Data Scientist** | Том 1: §1.6 Business Model, §4.6 Cross-Cutting (Analytics). Том 2: §3 Data Model |
 
 
-# Том 1: Business Requirements
-
 ## 1. Product Overview (Общие сведения)
 
 ### 1.1 Purpose & Scope
