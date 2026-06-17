@@ -199,7 +199,7 @@ def build_html(input_md):
 <div id="sidebar">
   <div id="sidebar-header">SRS — Агрегатор доставки</div>
   <div id="search-wrap">
-    <input type="text" id="search" placeholder="Поиск…" oninput="searchDocs(this.value)">
+    <input type="text" id="search" placeholder="Поиск…">
     <div id="search-results"></div>
   </div>
   <div id="toc-container">
@@ -257,6 +257,10 @@ document.addEventListener('click', function(e) {{
   if (!e.target.closest('#search-wrap')) {{
     document.getElementById('search-results').classList.remove('show');
   }}
+}});
+// Search on input
+document.getElementById('search').addEventListener('input', function() {{
+  searchDocs(this.value);
 }});
 </script>
 </body>
