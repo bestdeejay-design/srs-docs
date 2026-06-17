@@ -10,6 +10,7 @@
 
 | Версия | Дата | Автор | Изменения |
 |--------|------|-------|-----------|
+| 1.4 | 2026-06-17 | — | Prompt 5: Event JSON Schemas — Envelope + 12 полных JSON Schema (draft-07) для всех событий из §2.9 |
 | 1.3 | 2026-06-17 | — | Prompt 4: Sequence Diagrams для 5 сценариев (Order flow, Substitution, Dispatch, Refund, Offline-sync) с Mermaid sequenceDiagram |
 | 1.2 | 2026-06-17 | — | Prompt 3: State Machine Diagrams для 5 сущностей (Order, Payment, Delivery, Courier, Picker Task) с Mermaid + таблицами переходов |
 | 1.1 | 2026-06-17 | — | Prompt 2: User Stories + Acceptance Criteria для всех 14 BP (BP-01…BP-14), Placeholder-ссылки на State Machine / Sequence / API |
@@ -649,6 +650,395 @@ sequenceDiagram
 
 ---
 
+### 2.12 Event JSON Schemas
+
+Стандартный envelope для всех событий и полные JSON Schema (draft-07) для каждого из 12 событий из §2.9.
+
+#### 2.12.1 Envelope
+
+Единая обёртка для всех событий в системе:
+
+```json
+{
+  "event_id": "uuid-v4",
+  "event_type": "order.created",
+  "occurred_at": "2026-06-17T10:00:00Z",
+  "aggregate_id": "order_12345",
+  "aggregate_type": "order",
+  "payload": { ... },
+  "metadata": {
+    "correlation_id": "uuid",
+    "causation_id": "uuid",
+    "user_id": "user_67890",
+    "source": "order-service",
+    "schema_version": "1.0"
+  }
+}
+```
+
+**Поля envelope:**
+
+| Поле | Тип | Обязательное | Описание |
+|------|-----|-------------|----------|
+| `event_id` | string (uuid) | ✅ | Уникальный ID события |
+| `event_type` | string (enum) | ✅ | Тип события из §2.9 |
+| `occurred_at` | string (ISO8601) | ✅ | Время наступления события |
+| `aggregate_id` | string | ✅ | ID сущности (напр. order_12345) |
+| `aggregate_type` | string | ✅ | Тип сущности (order/payment/delivery/courier) |
+| `payload` | object | ✅ | Тело события (зависит от event_type) |
+| `metadata.correlation_id` | string (uuid) | ✅ | Для tracing — сквозной ID всей цепочки |
+| `metadata.causation_id` | string (uuid) | ✅ | ID события-причины (parent event) |
+| `metadata.user_id` | string | ❌ | ID пользователя, инициировавшего действие |
+| `metadata.source` | string | ✅ | Сервис-отправитель |
+| `metadata.schema_version` | string | ✅ | Версия схемы (semver) |
+
+#### 2.12.2 Схемы событий
+
+##### `order.created`
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["order_id", "user_id", "store_id", "total", "items", "delivery_slot"],
+  "properties": {
+    "order_id": { "type": "string", "pattern": "^order_\\d+$" },
+    "user_id": { "type": "string", "pattern": "^user_\\d+$" },
+    "store_id": { "type": "string", "pattern": "^store_\\d+$" },
+    "total": { "type": "number", "minimum": 0, "multipleOf": 0.01 },
+    "delivery_fee": { "type": "number", "minimum": 0 },
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["product_id", "quantity", "price"],
+        "properties": {
+          "product_id": { "type": "string" },
+          "quantity": { "type": "integer", "minimum": 1 },
+          "price": { "type": "number", "minimum": 0 }
+        }
+      }
+    },
+    "delivery_slot": {
+      "type": "object",
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "type": "string", "format": "date-time" },
+        "end": { "type": "string", "format": "date-time" }
+      }
+    },
+    "payment_method": { "type": "string", "enum": ["card", "sbp", "cash", "card_courier"] }
+  }
+}
+```
+
+**Пример:**
+```json
+{
+  "order_id": "order_12345",
+  "user_id": "user_67890",
+  "store_id": "store_42",
+  "total": 1850.50,
+  "delivery_fee": 99.00,
+  "items": [
+    {"product_id": "prod_1001", "quantity": 2, "price": 450.00},
+    {"product_id": "prod_1002", "quantity": 1, "price": 350.50}
+  ],
+  "delivery_slot": {"start": "2026-06-17T18:00:00Z", "end": "2026-06-17T20:00:00Z"},
+  "payment_method": "card"
+}
+```
+
+##### `order.paid`
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["order_id", "payment_id", "amount", "method"],
+  "properties": {
+    "order_id": { "type": "string" },
+    "payment_id": { "type": "string" },
+    "amount": { "type": "number", "minimum": 0 },
+    "method": { "type": "string", "enum": ["card", "sbp", "cash", "card_courier"] },
+    "provider": { "type": "string", "enum": ["t-bank", "sbp"] },
+    "paid_at": { "type": "string", "format": "date-time" }
+  }
+}
+```
+
+**Пример:** `{"order_id": "order_12345", "payment_id": "pay_9876", "amount": 1850.50, "method": "card", "provider": "t-bank", "paid_at": "2026-06-17T10:05:00Z"}`
+
+##### `order.assigned`
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["order_id", "picker_id", "courier_id", "eta"],
+  "properties": {
+    "order_id": { "type": "string" },
+    "picker_id": { "type": "string" },
+    "courier_id": { "type": "string" },
+    "eta": {
+      "type": "object",
+      "required": ["delivery_min", "distance_km"],
+      "properties": {
+        "delivery_min": { "type": "integer", "minimum": 1 },
+        "distance_km": { "type": "number", "minimum": 0 }
+      }
+    }
+  }
+}
+```
+
+**Пример:** `{"order_id": "order_12345", "picker_id": "picker_55", "courier_id": "courier_88", "eta": {"delivery_min": 35, "distance_km": 4.2}}`
+
+##### `order.picking_started`
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["order_id", "picker_id", "started_at"],
+  "properties": {
+    "order_id": { "type": "string" },
+    "picker_id": { "type": "string" },
+    "started_at": { "type": "string", "format": "date-time" }
+  }
+}
+```
+
+**Пример:** `{"order_id": "order_12345", "picker_id": "picker_55", "started_at": "2026-06-17T10:10:00Z"}`
+
+##### `order.picking_completed`
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["order_id", "picker_id", "items_found", "items_substituted"],
+  "properties": {
+    "order_id": { "type": "string" },
+    "picker_id": { "type": "string" },
+    "packed_at": { "type": "string", "format": "date-time" },
+    "items_found": { "type": "integer", "minimum": 0 },
+    "items_substituted": { "type": "integer", "minimum": 0 },
+    "substitutions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "original_product_id": { "type": "string" },
+          "substitute_product_id": { "type": "string" },
+          "customer_approved": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}
+```
+
+**Пример:** `{"order_id": "order_12345", "picker_id": "picker_55", "packed_at": "2026-06-17T10:25:00Z", "items_found": 8, "items_substituted": 1, "substitutions": [{"original_product_id": "prod_1001", "substitute_product_id": "prod_1003", "customer_approved": true}]}`
+
+##### `order.in_transit`
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["order_id", "courier_id", "eta"],
+  "properties": {
+    "order_id": { "type": "string" },
+    "courier_id": { "type": "string" },
+    "eta": {
+      "type": "object",
+      "required": ["delivery_min", "distance_km"],
+      "properties": {
+        "delivery_min": { "type": "integer", "minimum": 1 },
+        "distance_km": { "type": "number", "minimum": 0 }
+      }
+    },
+    "route": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "lat": { "type": "number" },
+          "lng": { "type": "number" },
+          "timestamp": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  }
+}
+```
+
+**Пример:** `{"order_id": "order_12345", "courier_id": "courier_88", "eta": {"delivery_min": 18, "distance_km": 2.5}}`
+
+##### `order.delivered`
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["order_id", "courier_id", "delivered_at"],
+  "properties": {
+    "order_id": { "type": "string" },
+    "courier_id": { "type": "string" },
+    "delivered_at": { "type": "string", "format": "date-time" },
+    "pod_signature": { "type": "string", "description": "Base64-encoded signature image" },
+    "pod_photo": { "type": "string", "description": "URL to delivery photo" },
+    "payment_collected": { "type": "number", "description": "Amount collected on delivery" }
+  }
+}
+```
+
+**Пример:** `{"order_id": "order_12345", "courier_id": "courier_88", "delivered_at": "2026-06-17T10:50:00Z", "pod_signature": "iVBORw0KGgo...", "payment_collected": 350.00}`
+
+##### `order.cancelled`
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["order_id", "reason", "cancelled_at"],
+  "properties": {
+    "order_id": { "type": "string" },
+    "reason": { "type": "string", "enum": ["user_cancelled", "admin_cancelled", "delivery_failed", "payment_failed", "timeout"] },
+    "cancelled_at": { "type": "string", "format": "date-time" },
+    "refund_amount": { "type": "number", "minimum": 0 },
+    "refund_status": { "type": "string", "enum": ["pending", "processed", "none"] }
+  }
+}
+```
+
+**Пример:** `{"order_id": "order_12345", "reason": "user_cancelled", "cancelled_at": "2026-06-17T09:30:00Z", "refund_amount": 1850.50, "refund_status": "processed"}`
+
+##### `payment.refunded`
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["order_id", "refund_id", "amount", "refunded_at"],
+  "properties": {
+    "order_id": { "type": "string" },
+    "refund_id": { "type": "string" },
+    "amount": { "type": "number", "minimum": 0 },
+    "refunded_at": { "type": "string", "format": "date-time" },
+    "reason": { "type": "string" }
+  }
+}
+```
+
+**Пример:** `{"order_id": "order_12345", "refund_id": "refund_777", "amount": 1850.50, "refunded_at": "2026-06-17T11:00:00Z", "reason": "customer_return"}`
+
+##### `inventory.low`
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["store_id", "product_id", "quantity"],
+  "properties": {
+    "store_id": { "type": "string" },
+    "product_id": { "type": "string" },
+    "quantity": { "type": "integer", "minimum": 0 },
+    "threshold": { "type": "integer", "minimum": 1 }
+  }
+}
+```
+
+**Пример:** `{"store_id": "store_42", "product_id": "prod_1001", "quantity": 3, "threshold": 10}`
+
+##### `catalog.synced`
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["chain_id", "synced_at"],
+  "properties": {
+    "chain_id": { "type": "string" },
+    "synced_at": { "type": "string", "format": "date-time" },
+    "products_count": { "type": "integer", "minimum": 0 },
+    "categories_count": { "type": "integer", "minimum": 0 },
+    "errors": { "type": "array", "items": { "type": "string" } },
+    "duration_seconds": { "type": "integer", "minimum": 0 }
+  }
+}
+```
+
+**Пример:** `{"chain_id": "lenta", "synced_at": "2026-06-17T06:00:00Z", "products_count": 15234, "categories_count": 87, "errors": [], "duration_seconds": 145}`
+
+##### `dispatch.cycle`
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["zone_id", "cycle_id", "orders"],
+  "properties": {
+    "zone_id": { "type": "string" },
+    "cycle_id": { "type": "string" },
+    "orders": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["order_id", "store_id", "destination"],
+        "properties": {
+          "order_id": { "type": "string" },
+          "store_id": { "type": "string" },
+          "destination": {
+            "type": "object",
+            "properties": {
+              "lat": { "type": "number" },
+              "lng": { "type": "number" },
+              "address": { "type": "string" }
+            }
+          },
+          "weight_kg": { "type": "number", "maximum": 80 }
+        }
+      }
+    },
+    "available_couriers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "courier_id": { "type": "string" },
+          "current_location": { "type": "object", "properties": { "lat": { "type": "number" }, "lng": { "type": "number" } } },
+          "status": { "type": "string", "enum": ["free", "busy"] }
+        }
+      }
+    }
+  }
+}
+```
+
+**Пример:** `{"zone_id": "zone_central", "cycle_id": "cycle_20260617_1845", "orders": [{"order_id": "order_12345", "store_id": "store_42", "destination": {"lat": 55.7558, "lng": 37.6173, "address": "ул. Тверская, 1"}, "weight_kg": 12.5}], "available_couriers": [{"courier_id": "courier_88", "current_location": {"lat": 55.7600, "lng": 37.6200}, "status": "free"}]}`
+
+#### 2.12.3 Матрица соответствия
+
+| Событие | Envelope event_type | Агрегат | Payload required fields | PII в payload |
+|---------|---------------------|---------|------------------------|---------------|
+| order.created | `order.created` | order | 6 | ❌ (user_id только ID) |
+| order.paid | `order.paid` | order | 4 | ❌ |
+| order.assigned | `order.assigned` | order | 4 | ❌ |
+| order.picking_started | `order.picking_started` | order | 3 | ❌ |
+| order.picking_completed | `order.picking_completed` | order | 4 | ❌ |
+| order.in_transit | `order.in_transit` | delivery | 3 | ❌ |
+| order.delivered | `order.delivered` | delivery | 3 | ❌ |
+| order.cancelled | `order.cancelled` | order | 3 | ❌ |
+| payment.refunded | `payment.refunded` | payment | 4 | ❌ |
+| inventory.low | `inventory.low` | inventory | 3 | ❌ |
+| catalog.synced | `catalog.synced` | catalog | 2 | ❌ |
+| dispatch.cycle | `dispatch.cycle` | dispatch | 3 | ❌ |
+
+---
+
 ### 3.1 Entity Relationship Diagram (ERD)
 **Источник:** Раздел 5.4 + пункт 5 общего списка.
 
@@ -1099,7 +1489,7 @@ And I do not need to re-enter my profile details
 **Ссылки:**
 → State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
 → Sequence Diagram: [§2.11 Sequence Diagrams](#211-sequence-diagrams)
-→ API endpoint: [заглушка — будет добавлена в Prompt 6]
+→ API endpoint: [§2.7 API Versioning & Error Code Standard](#27-api-versioning--error-code-standard)
 
 **Триггер:** Пользователь открывает приложение / сайт
 
@@ -1170,7 +1560,7 @@ And filter options update dynamically based on available products
 **Ссылки:**
 → State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
 → Sequence Diagram: [§2.11 Sequence Diagrams](#211-sequence-diagrams)
-→ API endpoint: [заглушка — будет добавлена в Prompt 6]
+→ API endpoint: [§2.7 API Versioning & Error Code Standard](#27-api-versioning--error-code-standard)
 
 **Триггер:** Пользователь открывает каталог / вводит поисковый запрос
 
@@ -1256,7 +1646,7 @@ And I receive a confirmation on screen
 **Ссылки:**
 → State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
 → Sequence Diagram: [§2.11 Sequence Diagrams](#211-sequence-diagrams)
-→ API endpoint: [заглушка — будет добавлена в Prompt 6]
+→ API endpoint: [§2.7 API Versioning & Error Code Standard](#27-api-versioning--error-code-standard)
 
 **Триггер:** Пользователь выбирает товары и переходит к оформлению
 
@@ -1342,7 +1732,7 @@ And the order is marked as delivered
 **Ссылки:**
 → State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
 → Sequence Diagram: [§2.11 Sequence Diagrams](#211-sequence-diagrams)
-→ API endpoint: [заглушка — будет добавлена в Prompt 6]
+→ API endpoint: [§2.7 API Versioning & Error Code Standard](#27-api-versioning--error-code-standard)
 
 **Триггер:** Заказ создан со статусом «Ожидает оплаты»
 
@@ -1420,7 +1810,7 @@ And a CTA button to start shopping
 **Ссылки:**
 → State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
 → Sequence Diagram: [§2.11 Sequence Diagrams](#211-sequence-diagrams)
-→ API endpoint: [заглушка — будет добавлена в Prompt 6]
+→ API endpoint: [§2.7 API Versioning & Error Code Standard](#27-api-versioning--error-code-standard)
 
 **Триггер:** Пользователь заходит в профиль
 
@@ -1495,7 +1885,7 @@ And the order appears in the courier queue
 **Ссылки:**
 → State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
 → Sequence Diagram: [§2.11 Sequence Diagrams](#211-sequence-diagrams)
-→ API endpoint: [заглушка — будет добавлена в Prompt 6]
+→ API endpoint: [§2.7 API Versioning & Error Code Standard](#27-api-versioning--error-code-standard)
 
 **Триггер:** Заказ оплачен / подтверждён
 
@@ -1601,7 +1991,7 @@ And automatically synced when connectivity is restored
 **Ссылки:**
 → State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
 → Sequence Diagram: [§2.11 Sequence Diagrams](#211-sequence-diagrams)
-→ API endpoint: [заглушка — будет добавлена в Prompt 6]
+→ API endpoint: [§2.7 API Versioning & Error Code Standard](#27-api-versioning--error-code-standard)
 
 **Триггер:** Заказ собран и упакован пикером
 
@@ -1750,7 +2140,7 @@ And the remaining amount is refunded
 **Ссылки:**
 → State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
 → Sequence Diagram: [§2.11 Sequence Diagrams](#211-sequence-diagrams)
-→ API endpoint: [заглушка — будет добавлена в Prompt 6]
+→ API endpoint: [§2.7 API Versioning & Error Code Standard](#27-api-versioning--error-code-standard)
 
 **Триггер:** Клиент хочет отменить заказ / вернуть товар
 
@@ -1811,7 +2201,7 @@ And no discount is applied
 **Ссылки:**
 → State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
 → Sequence Diagram: [§2.11 Sequence Diagrams](#211-sequence-diagrams)
-→ API endpoint: [заглушка — будет добавлена в Prompt 6]
+→ API endpoint: [§2.7 API Versioning & Error Code Standard](#27-api-versioning--error-code-standard)
 
 **Триггер:** Администратор создаёт акцию
 
@@ -1875,7 +2265,7 @@ And I can block/unblock the user or change their role
 **Ссылки:**
 → State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
 → Sequence Diagram: [§2.11 Sequence Diagrams](#211-sequence-diagrams)
-→ API endpoint: [заглушка — будет добавлена в Prompt 6]
+→ API endpoint: [§2.7 API Versioning & Error Code Standard](#27-api-versioning--error-code-standard)
 
 **Триггер:** Менеджер заходит в админку
 
@@ -1942,7 +2332,7 @@ And empty charts with a prompt to adjust the filter
 **Ссылки:**
 → State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
 → Sequence Diagram: [§2.11 Sequence Diagrams](#211-sequence-diagrams)
-→ API endpoint: [заглушка — будет добавлена в Prompt 6]
+→ API endpoint: [§2.7 API Versioning & Error Code Standard](#27-api-versioning--error-code-standard)
 
 **Триггер:** Запрос аналитика / руководителя
 
@@ -2007,7 +2397,7 @@ And the documents are sent electronically
 **Ссылки:**
 → State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
 → Sequence Diagram: [§2.11 Sequence Diagrams](#211-sequence-diagrams)
-→ API endpoint: [заглушка — будет добавлена в Prompt 6]
+→ API endpoint: [§2.7 API Versioning & Error Code Standard](#27-api-versioning--error-code-standard)
 
 **Триггер:** Представитель юрлица оформляет заказ для офиса
 
@@ -2098,7 +2488,7 @@ But still receive order-related notifications
 **Ссылки:**
 → State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
 → Sequence Diagram: [§2.11 Sequence Diagrams](#211-sequence-diagrams)
-→ API endpoint: [заглушка — будет добавлена в Prompt 6]
+→ API endpoint: [§2.7 API Versioning & Error Code Standard](#27-api-versioning--error-code-standard)
 
 **Триггер:** Событие в системе (заказ создан, оплачен, доставлен)
 
@@ -2164,7 +2554,7 @@ And the customer sees the reason for the surcharge
 **Ссылки:**
 → State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
 → Sequence Diagram: [§2.11 Sequence Diagrams](#211-sequence-diagrams)
-→ API endpoint: [заглушка — будет добавлена в Prompt 6]
+→ API endpoint: [§2.7 API Versioning & Error Code Standard](#27-api-versioning--error-code-standard)
 
 **Триггер:** Изменение внешних факторов (пиковые часы, погода, праздники, загрузка курьеров)
 
