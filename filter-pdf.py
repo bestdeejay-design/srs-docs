@@ -4,8 +4,22 @@ import sys
 def filter_for_pdf(md_content):
     lines = md_content.split('\n')
     result = []
-    skip_changelog = False
     in_code_block = False
+
+    # Sections to skip entirely (heading text → skip until next heading or ---)
+    skip_sections = [
+        '#### 1.6.6 Франшиза (Franchise Model)',
+        '### 2.8 Mobile Application Architecture',
+        '### 9.5 Текущее состояние системы (AS IS)',
+    ]
+
+    # Patterns for inline content to skip
+    skip_inline_patterns = [
+        r'^\*\*Локальный запуск:\*\*$',
+        r'^\*\*Первый PR:\*\*$',
+    ]
+
+    skip_until_heading = False
 
     for i, line in enumerate(lines):
         stripped = line.rstrip()
@@ -13,16 +27,38 @@ def filter_for_pdf(md_content):
         # Track code blocks
         if stripped.startswith('```'):
             in_code_block = not in_code_block
-            result.append(line)
+            if not skip_until_heading:
+                result.append(line)
             continue
 
-        # Skip Changelog section (## Changelog up to ---)
-        if stripped == '## Changelog':
-            skip_changelog = True
+        # Check if this line starts a section to skip
+        if stripped in skip_sections:
+            skip_until_heading = True
             continue
-        if skip_changelog:
-            if stripped == '---':
-                skip_changelog = False
+
+        # Check if this is an inline block to skip
+        is_skip_inline = any(re.match(p, stripped) for p in skip_inline_patterns)
+
+        # If skipping and we hit a new heading or ---, stop skipping
+        if skip_until_heading:
+            if stripped.startswith('###') or stripped.startswith('##') or stripped.startswith('#') or stripped == '---':
+                skip_until_heading = False
+                # Don't skip the heading itself (unless it's the section we're skipping)
+                if stripped not in skip_sections:
+                    result.append(line)
+                continue
+            # Skip all lines while in a skipped section
+            # But still process code blocks
+            continue
+
+        # Skip inline blocks (local run, first PR, etc.)
+        if is_skip_inline:
+            # Skip this line and the next block (code block or list)
+            continue
+
+        # Skip Changelog section
+        if stripped == '## Changelog':
+            skip_until_heading = True
             continue
 
         # Skip "Источник данных:" line
@@ -33,7 +69,6 @@ def filter_for_pdf(md_content):
         if re.match(r'\*\*Источник:\*\* Раздел .+ исходного документа\.$', stripped):
             continue
 
-        # Also handle "**Источник:** Раздел ..." without trailing period
         if re.match(r'\*\*Источник:\*\* Раздел .+', stripped) and 'исходного документа' in stripped:
             continue
 
@@ -53,6 +88,5 @@ if __name__ == '__main__':
         else:
             print(filtered)
     else:
-        # Read from stdin
         content = sys.stdin.read()
         print(filter_for_pdf(content))

@@ -3,17 +3,25 @@ body {
   font-size: 11pt;
   line-height: 1.5;
   color: #222;
+  orphans: 3;
+  widows: 3;
 }
 table {
   border-collapse: collapse;
   width: 100%;
   margin: 1em 0;
   font-size: 10pt;
+  page-break-inside: avoid;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  table-layout: fixed;
 }
 table th, table td {
   border: 1px solid #999;
   padding: 6px 10px;
   text-align: left;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 table th {
   background-color: #f0f0f0;
@@ -42,6 +50,7 @@ table.estimation td:nth-child(2) {
 }
 img {
   max-width: 100%;
+  max-height: 70vh;
   height: auto;
   display: block;
   page-break-inside: avoid;
@@ -63,10 +72,29 @@ pre {
   padding: 10px;
   overflow-x: auto;
   border: 1px solid #ddd;
+  page-break-inside: avoid;
 }
 blockquote {
   border-left: 4px solid #ccc;
   padding-left: 12px;
   margin-left: 0;
   color: #555;
+}
+ul, ol, dl {
+  page-break-inside: avoid;
+}
+/* Hide checkboxes for readonly PDF */
+input[type="checkbox"] {
+  display: none;
+}
+/* Keep heading + content together on same page */
+h2, h3, h4 {
+  page-break-after: avoid;
+}
+h2 + *, h3 + *, h4 + * {
+  page-break-before: avoid;
+}
+/* Section wrapper for discovery table */
+h2 + table, h3 + table {
+  page-break-inside: avoid;
 }
