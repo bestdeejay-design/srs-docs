@@ -175,12 +175,17 @@
 - **Модель:** Альтернативная food delivery — поставщики → кооперативы → покупатели
 - **Что даёт:** Близкий стек (Rails), модуль поставщиков (аналог сетей), управление зонами доставки, ценообразование
 
-| Раздел чеклиста | Референс | Язык | Сложность внедрения |
-|---|---|---|---|
-| Архитектура системы | go-food-delivery-microservices | Go | Средняя |
-| Приложение пикера | heymigrolino-picking-app | Flutter | Низкая (наш стек) |
-| Приложение курьера | mobo_delivery | Flutter | Низкая (наш стек) |
-| Назначение курьера | project-allot | TypeScript | Низкая (наш стек) |
-| ETA | Food_Delivery_ETA_Prediction | Python | Средняя |
-| Rails + Next.js стек | nextjs-rails-postgresql-docker | Ruby/TS | Низкая (наш стек) |
-| Тестирование | go-food-delivery-microservices | Go | Средняя |
+## Матрица покрытия
+
+| Раздел чеклиста | Референс | Язык | Локально | Сложность внедрения |
+|---|---|---|---|---|
+| Архитектура системы | go-food-delivery-microservices | Go | ✅ `repos/` | Средняя |
+| Архитектура / Saga | ftgo-application | Java | ✅ `repos/` | Высокая |
+| Приложение пикера | heymigrolino-picking-app | Flutter | ✅ `repos/` | Низкая (наш стек) |
+| Приложение курьера | mobo_delivery | Flutter | ✅ `repos/` | Низкая (наш стек) |
+| WMS для сборщиков | sentry-wms | React Native | ✅ `repos/` | Средняя |
+| Назначение курьера | project-allot | TypeScript | ✅ `repos/` | Низкая (наш стек) |
+| ETA | Food_Delivery_ETA_Prediction | Python | — | Средняя |
+| Rails + Next.js стек | nextjs-rails-postgresql-docker | Ruby/TS | ✅ `repos/` | Низкая (наш стек) |
+| Full-stack delivery | Track-Cart | Next.js | ✅ `repos/` | Низкая |
+| Тестирование | go-food-delivery-microservices | Go | ✅ `repos/` | Средняя |

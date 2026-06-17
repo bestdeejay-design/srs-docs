@@ -17,9 +17,18 @@ docs/
         ├── store-apis-research.md           # API Ленты, Вкусвилл
         ├── igooods-analysis.md              # Анализ стека iGooods
         ├── catalog-data.js                  # Модель каталога (DATA.js)
-        └── dependencies/
-            ├── frontend-package.json        # Next.js + React
-            └── backend-gemfile              # Ruby on Rails
+        ├── dependencies/
+        │   ├── frontend-package.json        # Next.js + React
+        │   └── backend-gemfile              # Ruby on Rails
+        └── repos/                           # Склонированные OS-репозитории (8 шт, ~52MB)
+            ├── go-food-delivery-microservices/   # Архитектура (Go, DDD/CQRS/ES)
+            ├── ftgo-application/                 # Food Delivery (Java, Saga)
+            ├── mobo_delivery/                    # Курьер (Flutter, offline-first)
+            ├── heymigrolino-picking-app/         # Пикер (Flutter, iGooods-adjacent)
+            ├── sentry-wms/                       # WMS (React Native)
+            ├── project-allot/                    # Dispatch (TypeScript)
+            ├── nextjs-rails-postgresql-docker/   # Docker config
+            └── Track-Cart/                       # Full-stack delivery (Next.js)
 ```
 
 ## Назначение файлов
