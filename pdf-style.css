@@ -94,11 +94,20 @@ input[type="checkbox"] {
   display: none;
 }
 /* Keep heading + content together on same page */
-h2, h3, h4 {
+h1, h2, h3, h4 {
   page-break-after: avoid;
 }
-h2 + *, h3 + *, h4 + * {
+h1 + *, h2 + *, h3 + *, h4 + * {
   page-break-before: avoid;
+}
+/* Prevent headings from being orphaned at page bottom */
+h1, h2, h3, h4 {
+  orphans: 3;
+}
+/* Force lists and tables to stay with their preceding heading when possible */
+h3 + ul, h3 + ol, h3 + table,
+h4 + ul, h4 + ol, h4 + table {
+  page-break-inside: avoid;
 }
 /* Section wrapper for discovery table */
 h2 + table, h3 + table {
