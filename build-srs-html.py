@@ -12,23 +12,24 @@ def build_html(input_md):
     body = body.group(1)
 
     headings = re.findall(r'<(h[234])(\s[^>]*)?>(.*?)</\1>', body, re.DOTALL)
-    toc, prev = '', 1
-    stack = []
+    toc, stack = '', []
     for tag, attrs, text in headings:
         level = int(tag[1])
         clean = re.sub(r'<[^>]+>', '', text).strip()
         eid = (re.search(r'id="([^"]+)"', attrs or '') or ['', ''])[1]
-        indent = level - 2
 
         while stack and stack[-1] >= level:
             stack.pop()
             toc += '</ul></li>\n'
-        stack.append(level)
 
         if level == 2:
             toc += f'<li class="s"><button class="st" onclick="st(this)">▸</button><a href="#{html_mod.escape(eid)}">{html_mod.escape(clean)}</a><ul class="su">\n'
+        elif level == 3:
+            toc += f'<li class="s"><button class="st" onclick="st(this)">▸</button><a href="#{html_mod.escape(eid)}">{html_mod.escape(clean)}</a><ul class="su">\n'
         else:
             toc += f'<li><a href="#{html_mod.escape(eid)}">{html_mod.escape(clean)}</a></li>\n'
+
+        stack.append(level)
 
     while stack:
         stack.pop()
@@ -65,16 +66,19 @@ body{font-family:var(--font);font-size:16px;line-height:1.6;color:var(--text);ba
 #toc-container ul{list-style:none;padding-left:0}
 #toc-container>ul{padding-left:0}
 #toc-container li{margin:0}
-#toc-container a{display:inline-block;padding:4px 10px;font-size:13px;color:var(--text2);text-decoration:none;line-height:1.35;border-radius:4px;transition:color .1s}
+#toc-container a{display:inline;padding:4px 6px;font-size:13px;color:var(--text2);text-decoration:none;line-height:1.35;border-radius:4px;transition:color .1s}
 #toc-container a:hover{color:var(--accent)}
 #toc-container a.active{color:var(--accent);font-weight:600;background:rgba(0,82,204,0.06)}
 body.dark #toc-container a.active{background:rgba(88,166,255,0.08)}
-.st{background:none;border:none;cursor:pointer;font-size:11px;color:var(--text2);padding:4px 2px 4px 6px;width:20px;text-align:left;transition:transform .15s;vertical-align:middle}
+.st{background:none;border:none;cursor:pointer;font-size:11px;color:var(--text2);padding:4px 2px;width:18px;text-align:center;transition:transform .15s;vertical-align:middle;flex-shrink:0}
 .st:hover{color:var(--accent)}
 .st.open{transform:rotate(90deg)}
-.su{overflow:hidden;max-height:0;transition:max-height .25s ease}
+.s{display:flex;flex-wrap:wrap;align-items:baseline;padding:1px 0}
+.s .st{margin-left:4px}
+.s>a{order:-1}
+.su{overflow:hidden;max-height:0;transition:max-height .25s ease;width:100%;padding-left:10px;border-left:1px solid var(--border);margin:2px 0 2px 12px}
 .su.open{max-height:2000px}
-.s{margin:1px 0}
+.s .su a{padding-left:4px}
 #content{margin-left:270px;flex:1;max-width:960px;padding:40px 48px 80px}
 #content h1{font-size:30px;font-weight:700;margin:0 0 8px;color:var(--accent)}
 #content h2{font-size:22px;font-weight:600;margin:36px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--border)}
@@ -116,7 +120,7 @@ body.dark #toc-container a.active{background:rgba(88,166,255,0.08)}
     <button id="search-clear" onclick="c()">×</button>
     <div id="search-results"></div>
   </div>
-  <div id="toc-container">''' + toc + '''</div>
+  <div id="toc-container"><ul>''' + toc + '''</ul></div>
 </div>
 <div id="content">''' + body + '''</div>
 <script>
