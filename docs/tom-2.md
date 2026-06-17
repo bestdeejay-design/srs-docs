@@ -1,5 +1,7 @@
 # Том 2: Technical Specification
 
+[TOC]
+
 ## 2. System Architecture (Архитектура системы)
 
 ### 2.1 Architecture Style & Patterns
