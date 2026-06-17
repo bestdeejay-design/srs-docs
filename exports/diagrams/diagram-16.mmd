@@ -1,0 +1,19 @@
+stateDiagram-v2
+    [*] --> pending : customer files dispute
+    pending --> auto_review : system starts check
+    auto_review --> auto_accepted : clear evidence (no delivery, no POD photo)
+    auto_review --> auto_rejected : clear evidence (POD photo, tracking OK)
+    auto_review --> manual_review : ambiguous case
+    manual_review --> approved : manager confirms refund
+    manual_review --> rejected : manager rejects
+    auto_accepted --> refund_initiated : process refund
+    approved --> refund_initiated : process refund
+    refund_initiated --> refunded : payment processed
+    rejected --> [*] : closed
+    refunded --> [*] : closed
+    refunded --> chargeback : bank initiates chargeback
+    chargeback --> bank_review : respond to bank
+    bank_review --> lost : bank sides with customer
+    bank_review --> won : bank sides with aggregator
+    lost --> [*] : financial loss booked
+    won --> [*] : chargeback reversed

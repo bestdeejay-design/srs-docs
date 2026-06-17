@@ -1,0 +1,40 @@
+sequenceDiagram
+    participant Client as Client App
+    participant Gateway as API Gateway
+    participant Cart as Cart Service
+    participant Order as Order Service
+    participant Payment as Payment Service
+    participant Bank as T-Bank
+    participant Notif as Notification Service
+
+    Client->>Gateway: POST /orders (Idempotency-Key)
+    Gateway->>Cart: GET /cart/{userId}
+    Cart-->>Gateway: cart items
+    Gateway->>Order: POST /orders {items, address, slot}
+    alt stock insufficient
+        Order-->>Gateway: 409 Conflict {insufficient_items}
+        Gateway-->>Client: show unavailable items
+    else stock ok
+        Order->>Order: calculate total, reserve stock
+        Order-->>Gateway: 201 Created {order_id, status:pending}
+        Gateway-->>Client: order created
+    end
+    Client->>Gateway: POST /payments/init {order_id, method:card} (Idempotency-Key)
+    Gateway->>Payment: POST /payments/init
+    Payment->>Bank: create payment link
+    Bank-->>Payment: payment_url
+    Payment-->>Gateway: {payment_url, payment_id}
+    Gateway-->>Client: redirect to payment_url
+    Client->>Bank: enter card details, 3DSecure
+    Bank-->>Bank: process payment
+    alt payment failed
+        Bank->>Payment: webhook: payment.failed
+        Payment->>Order: update status → cancelled
+        Order->>Notif: emit order.cancelled
+        Notif-->>Client: push: "Payment failed"
+    else payment succeeded
+        Bank->>Payment: webhook: payment.succeeded (retry up to 3x, Idempotency-Key)
+        Payment->>Order: update status → paid
+        Order->>Notif: emit order.paid
+        Notif-->>Client: push: "Order paid"
+    end

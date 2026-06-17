@@ -1,0 +1,8 @@
+stateDiagram-v2
+    [*] --> assigned : order assigned to picker
+    assigned --> started : picker starts picking
+    started --> substituted : substitution needed
+    substituted --> packed : substitution resolved
+    started --> packed : all items found
+    packed --> handed_over : courier picks up
+    handed_over --> [*]

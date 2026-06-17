@@ -1,0 +1,11 @@
+sequenceDiagram
+    participant New as New DB
+    participant Reverse as Reverse Sync
+    participant Old as Old Monolith DB
+
+    Note over Reverse: Запускается при откате
+    Reverse->>New: read records since last sync
+    Reverse->>Old: upsert into legacy tables
+    alt conflict
+        Reverse->>Reverse: log conflict, manual resolution
+    end

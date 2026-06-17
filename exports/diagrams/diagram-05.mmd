@@ -1,0 +1,10 @@
+stateDiagram-v2
+    [*] --> offline : shift ends
+    offline --> free : comes online
+    free --> busy : assigned to delivery
+    busy --> free : delivery completed
+    free --> on_break : takes break
+    on_break --> free : break ends
+    busy --> on_break : break (if allowed)
+    free --> offline : shift ends
+    busy --> offline : shift ends (force)

@@ -1,0 +1,23 @@
+sequenceDiagram
+    participant Client as Client App
+    participant Gateway as API Gateway
+    participant Order as Order Service
+    participant Payment as Payment Service
+    participant Bank as T-Bank
+    participant Notif as Notification Service
+
+    Client->>Gateway: POST /orders/{id}/refund (Idempotency-Key)
+    Gateway->>Order: validate return policy (14 days)
+    Order-->>Gateway: refund allowed {amount}
+    Gateway->>Payment: POST /refunds {payment_id, amount}
+    Payment->>Bank: refund API call
+    alt success
+        Bank-->>Payment: refund succeeded
+        Payment->>Order: emit payment.refunded
+        Order->>Notif: emit order.cancelled
+        Notif-->>Client: push: "Refund processed, X RUB returned"
+    else failure
+        Bank-->>Payment: refund declined
+        Payment->>Order: refund_failed
+        Order->>Notif: notify support needed
+    end

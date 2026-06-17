@@ -1,0 +1,21 @@
+sequenceDiagram
+    participant Client as Client
+    participant Gateway as API Gateway (Nginx)
+    participant Redis as Redis Cluster
+    participant Service as Microservice
+
+    Client->>Gateway: POST /orders
+    Gateway->>Gateway: check limit_req zone
+    alt burst exceeded
+        Gateway-->>Client: 429 Too Many Requests
+    else within limit
+        Gateway->>Service: forward request
+        Service->>Redis: INCR rate_limit:{user_id}:orders
+        Redis-->>Service: current count
+        alt soft limit exceeded
+            Service-->>Client: 429 + Retry-After
+        else within limit
+            Service->>Service: process request
+            Service-->>Client: 200 OK + RateLimit headers
+        end
+    end

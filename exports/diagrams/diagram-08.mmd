@@ -1,0 +1,28 @@
+sequenceDiagram
+    participant Picker as Picker App
+    participant PickerSvc as Picker Service
+    participant Order as Order Service
+    participant Notif as Notification Service
+    participant Client as Client (phone)
+
+    Picker->>PickerSvc: open task {order_id}
+    PickerSvc-->>Picker: picking list
+    loop each item
+        Picker->>PickerSvc: scan barcode → confirm
+    end
+    Picker->>PickerSvc: mark item unavailable
+    PickerSvc->>PickerSvc: find alternatives (same category/brand)
+    PickerSvc-->>Picker: 5 alternatives
+    Picker->>Client: call via hidden number
+    alt client answers
+        Client-->>Picker: accept alternative #2
+        Picker->>PickerSvc: select substitute {product_id}
+        PickerSvc->>Order: log substitution
+    else client doesn't answer or rejects all
+        Picker->>PickerSvc: skip item (keep order without substitution)
+    end
+    Picker->>PickerSvc: confirm packing complete
+    PickerSvc->>Order: emit order.picking_completed
+    Order->>Notif: emit order.picking_completed
+    Note over Order,Notif: retry + Idempotency-Key on delivery failure
+    Notif-->>Client: push: "Order picked"
