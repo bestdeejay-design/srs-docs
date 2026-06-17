@@ -73,9 +73,10 @@ body{font-family:var(--font);font-size:16px;line-height:1.6;color:var(--text);ba
 #search-results .sr-context{font-size:12px;color:var(--text2);margin-top:1px}
 #toc-container{flex:1;overflow-y:auto;padding:4px 0}
 #toc-container ul{list-style:none;padding:0;margin:0}
+#toc-container>ul{padding-left:6px}
 #toc-container li{padding:1px 0;position:relative}
-#toc-container a{display:inline;padding:3px 6px;font-size:13px;color:var(--text2);text-decoration:none;line-height:1.4;border-radius:3px;transition:color .1s}
-#toc-container a:hover{color:var(--accent)}
+#toc-container a{display:inline;padding:3px 6px 3px 2px;font-size:13px;color:var(--text2);text-decoration:none;line-height:1.4;border-radius:3px;transition:color .1s}
+#toc-container .sw a{padding-left:6px}
 #toc-container a.active{color:var(--accent);font-weight:600;background:rgba(0,82,204,0.07)}
 body.dark #toc-container a.active{background:rgba(88,166,255,0.09)}
 .tb{background:none;border:none;cursor:pointer;font-size:10px;color:var(--text2);padding:0;width:16px;height:16px;line-height:16px;text-align:center;vertical-align:middle;transition:transform .12s;border-radius:3px}
