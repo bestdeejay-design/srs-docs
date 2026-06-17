@@ -13,16 +13,26 @@ def build_html(input_md):
 
     headings = re.findall(r'<(h[234])(\s[^>]*)?>(.*?)</\1>', body, re.DOTALL)
     toc, prev = '', 1
+    stack = []
     for tag, attrs, text in headings:
         level = int(tag[1])
         clean = re.sub(r'<[^>]+>', '', text).strip()
         eid = (re.search(r'id="([^"]+)"', attrs or '') or ['', ''])[1]
         indent = level - 2
-        if indent > prev - 2: toc += '\n' + '  ' * indent + '<ul>\n'
-        elif indent < prev - 2: toc += '\n' + '  ' * (indent + 1) + '</ul>\n' * (prev - 2 - indent)
-        toc += f'{"  " * (indent + 1)}<li><a href="#{html_mod.escape(eid)}">{html_mod.escape(clean)}</a></li>\n'
-        prev = level
-    for _ in range(prev - 2): toc += '</ul>\n'
+
+        while stack and stack[-1] >= level:
+            stack.pop()
+            toc += '</ul></li>\n'
+        stack.append(level)
+
+        if level == 2:
+            toc += f'<li class="s"><button class="st" onclick="st(this)">▸</button><a href="#{html_mod.escape(eid)}">{html_mod.escape(clean)}</a><ul class="su">\n'
+        else:
+            toc += f'<li><a href="#{html_mod.escape(eid)}">{html_mod.escape(clean)}</a></li>\n'
+
+    while stack:
+        stack.pop()
+        toc += '</ul></li>\n'
 
     return '''<!DOCTYPE html>
 <html lang="ru">
@@ -52,12 +62,19 @@ body{font-family:var(--font);font-size:16px;line-height:1.6;color:var(--text);ba
 #search-results .sr-title{font-weight:600}
 #search-results .sr-context{font-size:12px;color:var(--text2);margin-top:1px}
 #toc-container{flex:1;overflow-y:auto;padding:4px 0}
-#toc-container ul{list-style:none;padding-left:14px}
+#toc-container ul{list-style:none;padding-left:0}
 #toc-container>ul{padding-left:0}
-#toc-container a{display:block;padding:4px 14px 4px 10px;font-size:13px;color:var(--text2);text-decoration:none;line-height:1.35;border-left:2px solid transparent}
+#toc-container li{margin:0}
+#toc-container a{display:inline-block;padding:4px 10px;font-size:13px;color:var(--text2);text-decoration:none;line-height:1.35;border-radius:4px;transition:color .1s}
 #toc-container a:hover{color:var(--accent)}
-#toc-container a.active{color:var(--accent);border-left-color:var(--accent);font-weight:600;background:rgba(0,82,204,0.06)}
+#toc-container a.active{color:var(--accent);font-weight:600;background:rgba(0,82,204,0.06)}
 body.dark #toc-container a.active{background:rgba(88,166,255,0.08)}
+.st{background:none;border:none;cursor:pointer;font-size:11px;color:var(--text2);padding:4px 2px 4px 6px;width:20px;text-align:left;transition:transform .15s;vertical-align:middle}
+.st:hover{color:var(--accent)}
+.st.open{transform:rotate(90deg)}
+.su{overflow:hidden;max-height:0;transition:max-height .25s ease}
+.su.open{max-height:2000px}
+.s{margin:1px 0}
 #content{margin-left:270px;flex:1;max-width:960px;padding:40px 48px 80px}
 #content h1{font-size:30px;font-weight:700;margin:0 0 8px;color:var(--accent)}
 #content h2{font-size:22px;font-weight:600;margin:36px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--border)}
@@ -104,6 +121,7 @@ body.dark #toc-container a.active{background:rgba(88,166,255,0.08)}
 <div id="content">''' + body + '''</div>
 <script>
 function t(){document.getElementById('sidebar').classList.toggle('open')}
+function st(b){b.classList.toggle('open');b.nextElementSibling.nextElementSibling.classList.toggle('open')}
 const si=[];document.querySelectorAll('#content h2,#content h3,#content h4').forEach(h=>{const id=h.id||'',t=h.textContent.trim();let e=h.nextElementSibling,c='';while(e&&!/^h[234]$/i.test(e.tagName)){c+=' '+(e.textContent||'').trim();e=e.nextElementSibling;if(c.length>200)break}si.push({id,text:t,context:c.trim().slice(0,300)})});
 function s(q){const r=document.getElementById('search-results');if(!q||q.length<2){r.classList.remove('show');return}q=q.toLowerCase();const m=si.filter(e=>e.text.toLowerCase().includes(q)||e.context.toLowerCase().includes(q)).slice(0,20);if(!m.length){r.classList.remove('show');return}r.innerHTML=m.map(x=>'<a href="#'+x.id+'" onclick="t()"><b>'+esc(x.text)+'</b><br><small>'+esc(x.context.slice(0,120))+'</small></a>').join('');r.classList.add('show')}
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
@@ -112,7 +130,7 @@ document.getElementById('search').addEventListener('input',function(){s(this.val
 function c(){const i=document.getElementById('search');i.value='';i.focus();s('');document.getElementById('search-clear').style.display='none'}
 function d(){document.body.classList.toggle('dark');document.getElementById('theme-switch').textContent=document.body.classList.contains('dark')?'◐':'●';try{localStorage.setItem('dark',document.body.classList.contains('dark')?'1':'0')}catch(e){}}
 try{if(localStorage.getItem('dark')==='1')d()}catch(e){}
-window.addEventListener('scroll',function(){const h=document.documentElement;p=(h.scrollTop/(h.scrollHeight-h.clientHeight))*100;document.getElementById('progress-bar').style.width=p+'%';let a='';document.querySelectorAll('#content h2,#content h3,#content h4').forEach(h=>{if(h.getBoundingClientRect().top<80)a=''+h.id});document.querySelectorAll('#toc-container a').forEach(l=>l.classList.toggle('active',l.getAttribute('href')==='#'+a))});
+window.addEventListener('scroll',function(){const h=document.documentElement;p=(h.scrollTop/(h.scrollHeight-h.clientHeight))*100;document.getElementById('progress-bar').style.width=p+'%';let a='';document.querySelectorAll('#content h2,#content h3,#content h4').forEach(h=>{if(h.getBoundingClientRect().top<80)a=''+h.id});document.querySelectorAll('#toc-container a').forEach(l=>l.classList.toggle('active',l.getAttribute('href')==='#'+a));document.querySelectorAll('.s').forEach(s=>{const u=s.querySelector('.su');if(u&&u.querySelector('a.active')){s.querySelector('.st').classList.add('open');u.classList.add('open')}})})
 </script>
 </body>
 </html>'''
