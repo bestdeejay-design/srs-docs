@@ -1,9 +1,8 @@
-site_name: iGoods SRS
+site_name: SRS — Агрегатор доставки продуктов
 site_description: Software Requirements Specification — агрегатор доставки продуктов
 site_author: iGoods Team
-repo_url: https://github.com/bestdeejay-design/docs
-repo_name: bestdeejay-design/docs
-edit_uri: edit/main/docs/docs/
+repo_url: https://github.com/bestdeejay-design/srs-docs
+repo_name: bestdeejay-design/srs-docs
 
 theme:
   name: material

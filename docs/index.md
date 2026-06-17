@@ -1,4 +1,4 @@
-# Software Requirements Specification
+# Software Requirements Specification (SRS)
 
 **Назначение:** Документ спецификации программного продукта — агрегатора доставки продуктов из супермаркетов.
 
