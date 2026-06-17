@@ -10,6 +10,7 @@
 
 | Версия | Дата | Автор | Изменения |
 |--------|------|-------|-----------|
+| 1.5 | 2026-06-17 | — | Prompt 6: Idempotency Policy — общие правила, таблица эндпоинтов, edge cases, примеры кода (Rails/Go) |
 | 1.4 | 2026-06-17 | — | Prompt 5: Event JSON Schemas — Envelope + 12 полных JSON Schema (draft-07) для всех событий из §2.9 |
 | 1.3 | 2026-06-17 | — | Prompt 4: Sequence Diagrams для 5 сценариев (Order flow, Substitution, Dispatch, Refund, Offline-sync) с Mermaid sequenceDiagram |
 | 1.2 | 2026-06-17 | — | Prompt 3: State Machine Diagrams для 5 сущностей (Order, Payment, Delivery, Courier, Picker Task) с Mermaid + таблицами переходов |
@@ -1106,6 +1107,109 @@ sequenceDiagram
 | dispatch.cycle | `dispatch.cycle` | dispatch | 3 | ❌ |
 
 ---
+
+### 2.13 Idempotency Policy
+
+Политика идемпотентности для всех mutating-запросов. Предотвращает дубли заказов и двойные списания при повторных отправках запросов (retry, network issues, mobile offline).
+
+#### 2.13.1 Общие правила
+
+| Правило | Значение |
+|---------|----------|
+| Header | `Idempotency-Key` |
+| Формат | UUID v4 |
+| Обязателен для | Все POST/PUT/PATCH запросы |
+| TTL ключа | 24 часа (настраивается) |
+| Привязка | `user_id` + `Idempotency-Key` (один пользователь не может использовать чужой ключ) |
+| Повторный запрос с тем же ключом | Тот же HTTP-код и тело ответа |
+| Хранилище | Redis: `idempotency:{user_id}:{key}` → `{status_code, response_body, created_at}` |
+
+#### 2.13.2 Таблица идемпотентности по эндпоинтам
+
+| Endpoint | Idempotent? | TTL | Почему |
+|----------|-------------|-----|--------|
+| `POST /orders` | ✅ Да | 24h | Предотвращение дублей заказов |
+| `POST /payments/init` | ✅ Да | 24h | Предотвращение двойных списаний |
+| `POST /payments/webhook` | ✅ Да | 72h | Bank retry — расширенный TTL |
+| `POST /carts/items` | ❌ Нет | — | Additive operation (идемпотентна по природе) |
+| `POST /notifications/send` | ✅ Да | 1h | Предотвращение двойных SMS |
+| `PATCH /orders/{id}/cancel` | ✅ Да | 24h | Предотвращение двойной отмены |
+| `POST /refunds` | ✅ Да | 72h | Финансовая операция, расширенный TTL |
+| `POST /deliveries/sync` | ✅ Да | 48h | Offline sync курьера |
+
+#### 2.13.3 Edge cases
+
+| Ситуация | Поведение |
+|----------|-----------|
+| Ключ уже существует, запрос ещё в обработке | `409 Conflict` — клиент ждёт и ретраит |
+| TTL истёк | Новый запрос обрабатывается как первый |
+| Ключ валиден, но тело запроса отличается | `422 Unprocessable Entity` — конфликт данных |
+| Повторный запрос после успеха | `200 OK` с тем же телом ответа (из кэша Redis) |
+| Redis недоступен | Fail open (пропускаем проверку) + alarm в мониторинг |
+
+#### 2.13.4 Пример реализации (Rails middleware)
+
+```ruby
+class IdempotencyMiddleware
+  def initialize(app)
+    @app = app
+  end
+
+  def call(env)
+    key = env['HTTP_IDEMPOTENCY_KEY']
+    user_id = env['HTTP_X_USER_ID']
+    cache_key = "idempotency:#{user_id}:#{key}"
+
+    if key && user_id
+      cached = Redis.current.get(cache_key)
+      if cached
+        data = JSON.parse(cached)
+        return [data['status'], {}, [data['body']]]
+      end
+
+      status, headers, body = @app.call(env)
+      Redis.current.setex(cache_key, 86_400, {status: status, body: body.join}.to_json)
+      [status, headers, body]
+    else
+      @app.call(env)
+    end
+  end
+end
+```
+
+#### 2.13.5 Пример реализации (Go middleware)
+
+```go
+func IdempotencyMiddleware(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        key := r.Header.Get("Idempotency-Key")
+        userID := r.Header.Get("X-User-Id")
+        if key == "" || userID == "" {
+            next.ServeHTTP(w, r)
+            return
+        }
+
+        cacheKey := fmt.Sprintf("idempotency:%s:%s", userID, key)
+        if cached, err := redis.Get(ctx, cacheKey).Result(); err == nil {
+            var resp CachedResponse
+            json.Unmarshal([]byte(cached), &resp)
+            w.WriteHeader(resp.Status)
+            w.Write([]byte(resp.Body))
+            return
+        }
+
+        recorder := &statusRecorder{ResponseWriter: w, status: 200}
+        next.ServeHTTP(recorder, r)
+
+        data, _ := json.Marshal(CachedResponse{Status: recorder.status, Body: recorder.body.String()})
+        redis.Set(ctx, cacheKey, data, 24*time.Hour)
+    })
+}
+```
+
+---
+
+## 3. Data Model (Модель данных)
 
 ### 3.1 Entity Relationship Diagram (ERD)
 **Источник:** Раздел 5.4 + пункт 5 общего списка.
