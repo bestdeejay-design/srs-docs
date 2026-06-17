@@ -10,6 +10,7 @@
 
 | Версия | Дата | Автор | Изменения |
 |--------|------|-------|-----------|
+| 1.2 | 2026-06-17 | — | Prompt 3: State Machine Diagrams для 5 сущностей (Order, Payment, Delivery, Courier, Picker Task) с Mermaid + таблицами переходов |
 | 1.1 | 2026-06-17 | — | Prompt 2: User Stories + Acceptance Criteria для всех 14 BP (BP-01…BP-14), Placeholder-ссылки на State Machine / Sequence / API |
 | 1.0 | 2026-06-17 | — | Структурная реорганизация: разделение на 2 тома (Business Requirements + Technical Specification), вынос артефактов в отдельные файлы, сокращение §6.4 Accessibility |
 
@@ -432,7 +433,135 @@ flowchart LR
 
 ---
 
-## 3. Data Model (Модель данных)
+### 2.10 State Machine Diagrams
+
+Формальные State Machine Diagrams для ключевых сущностей. Каждый переход включает триггер, preconditions, postconditions, инициатора и публикуемое событие.
+
+#### 2.10.1 Order
+
+```mermaid
+stateDiagram-v2
+    [*] --> pending : order created
+    pending --> paid : payment.succeeded
+    pending --> cancelled : user cancels
+    paid --> picking : order.picking_started
+    paid --> cancelled : user cancels (fee deducted)
+    picking --> packed : order.picking_completed
+    picking --> cancelled : admin cancels
+    packed --> in_transit : courier picked up
+    in_transit --> delivered : delivery.confirmed
+    in_transit --> cancelled : delivery failed + refund
+    delivered --> refunded : return requested
+    cancelled --> [*]
+    refunded --> [*]
+    delivered --> [*]
+```
+
+| Переход | Триггер | Preconditions | Postconditions | Инициатор | Событие |
+|---------|---------|---------------|----------------|-----------|---------|
+| `pending → paid` | `payment.succeeded` webhook | order.status == 'pending', payment.status == 'succeeded' | order.status = 'paid', payment recorded | Payment Service | `order.paid` |
+| `pending → cancelled` | User clicks "Cancel" | order.status == 'pending' | order.status = 'cancelled', full refund | Customer | `order.cancelled` |
+| `paid → picking` | Dispatcher assigns picker | order.status == 'paid', picker available | order.status = 'picking', picker_id set | Dispatcher | `order.picking_started` |
+| `paid → cancelled` | User clicks "Cancel" | order.status == 'paid', picking not started | order.status = 'cancelled', refund minus fee | Customer | `order.cancelled` |
+| `picking → packed` | Picker confirms packing | order.status == 'picking', all items processed | order.status = 'packed', packed_at set | Picker App | `order.picking_completed` |
+| `picking → cancelled` | Admin cancels | order.status == 'picking' | order.status = 'cancelled', refund processed | Admin | `order.cancelled` |
+| `packed → in_transit` | Courier picks up | order.status == 'packed', courier assigned | order.status = 'in_transit', picked_up_at set | Courier App | `order.in_transit` |
+| `in_transit → delivered` | Courier confirms delivery | order.status == 'in_transit', POD captured | order.status = 'delivered', delivered_at set | Courier App | `order.delivered` |
+| `in_transit → cancelled` | Delivery failed | order.status == 'in_transit', delivery failed | order.status = 'cancelled', full refund | System | `order.cancelled` |
+| `delivered → refunded` | Return requested | order.status == 'delivered', within 14 days | order.status = 'refunded', refund processed | Customer | `payment.refunded` |
+
+#### 2.10.2 Payment
+
+```mermaid
+stateDiagram-v2
+    [*] --> pending : order created
+    pending --> processing : payment.initiated
+    processing --> succeeded : bank confirms
+    processing --> failed : bank declines
+    succeeded --> refunded : refund initiated
+    failed --> processing : user retries
+    refunded --> [*]
+    succeeded --> [*]
+```
+
+| Переход | Триггер | Preconditions | Postconditions | Инициатор | Событие |
+|---------|---------|---------------|----------------|-----------|---------|
+| `pending → processing` | User submits payment | payment.status == 'pending', payment method selected | payment.status = 'processing', bank request sent | Payment Service | — |
+| `processing → succeeded` | Bank webhook (success) | payment.status == 'processing', 3DSecure passed | payment.status = 'succeeded', order.status = 'paid' | T-Bank | `order.paid` |
+| `processing → failed` | Bank webhook (decline) | payment.status == 'processing', bank declined | payment.status = 'failed', error stored | T-Bank | — |
+| `succeeded → refunded` | Admin initiates refund | payment.status == 'succeeded', refund requested | payment.status = 'refunded', money returned | Payment Service | `payment.refunded` |
+| `failed → processing` | User retries payment | payment.status == 'failed', within retry limit | payment.status = 'processing', new bank request | Payment Service | — |
+
+#### 2.10.3 Delivery
+
+```mermaid
+stateDiagram-v2
+    [*] --> pending : order packed
+    pending --> assigned : courier found
+    assigned --> picking_up : courier at store
+    picking_up --> in_transit : package loaded
+    in_transit --> delivered : POD captured
+    in_transit --> failed : delivery impossible
+    failed --> returned : courier returns to store
+    delivered --> [*]
+    returned --> [*]
+```
+
+| Переход | Триггер | Preconditions | Postconditions | Инициатор | Событие |
+|---------|---------|---------------|----------------|-----------|---------|
+| `pending → assigned` | Dispatcher assigns courier | delivery.status == 'pending', courier found | delivery.status = 'assigned', courier_id, ETA set | Dispatcher | `order.assigned` |
+| `assigned → picking_up` | Courier arrives at store | delivery.status == 'assigned', courier at store location | delivery.status = 'picking_up' | Courier App | — |
+| `picking_up → in_transit` | Courier loads package | delivery.status == 'picking_up', package scanned | delivery.status = 'in_transit', route started | Courier App | `order.in_transit` |
+| `in_transit → delivered` | Courier confirms delivery | delivery.status == 'in_transit', POD captured | delivery.status = 'delivered', delivered_at set | Courier App | `order.delivered` |
+| `in_transit → failed` | Delivery timeout / customer unavailable | delivery.status == 'in_transit', max attempts reached | delivery.status = 'failed', return initiated | System | — |
+| `failed → returned` | Courier returns package to store | delivery.status == 'failed', package intact | delivery.status = 'returned', stock restored | Courier App | — |
+
+#### 2.10.4 Courier
+
+```mermaid
+stateDiagram-v2
+    [*] --> offline : shift ends
+    offline --> free : comes online
+    free --> busy : assigned to delivery
+    busy --> free : delivery completed
+    free --> on_break : takes break
+    on_break --> free : break ends
+    busy --> on_break : break (if allowed)
+    free --> offline : shift ends
+    busy --> offline : shift ends (force)
+```
+
+| Переход | Триггер | Preconditions | Postconditions | Инициатор | Событие |
+|---------|---------|---------------|----------------|-----------|---------|
+| `offline → free` | Courier comes online | courier.status == 'offline', shift scheduled | courier.status = 'free', available for dispatch | Courier App | — |
+| `free → busy` | Delivery assigned | courier.status == 'free', dispatch picks courier | courier.status = 'busy', active_delivery_id set | Dispatcher | — |
+| `busy → free` | Delivery completed | courier.status == 'busy', delivery marked done | courier.status = 'free', ready for next | Courier App | — |
+| `free → on_break` | Courier starts break | courier.status == 'free', break quota remaining | courier.status = 'on_break', break_start set | Courier App | — |
+| `on_break → free` | Break ends | courier.status == 'on_break', break_duration >= min | courier.status = 'free' | System | — |
+| `free → offline` | Courier goes offline | courier.status == 'free' | courier.status = 'offline' | Courier App | — |
+
+#### 2.10.5 Picker Task
+
+```mermaid
+stateDiagram-v2
+    [*] --> assigned : order assigned to picker
+    assigned --> started : picker starts picking
+    started --> substituted : substitution needed
+    substituted --> packed : substitution resolved
+    started --> packed : all items found
+    packed --> handed_over : courier picks up
+    handed_over --> [*]
+```
+
+| Переход | Триггер | Preconditions | Postconditions | Инициатор | Событие |
+|---------|---------|---------------|----------------|-----------|---------|
+| `assigned → started` | Picker opens task | task.status == 'assigned', picker accepted | task.status = 'started', started_at set | Picker App | `order.picking_started` |
+| `started → substituted` | Item out of stock, alternative found | task.status == 'started', item unavailable, customer agreed | task.status = 'substituted', substitution logged | Picker App | — |
+| `substituted → packed` | All items processed | task.status == 'substituted', remaining items picked | task.status = 'packed', packed_at set | Picker App | — |
+| `started → packed` | All items found | task.status == 'started', no substitutions needed | task.status = 'packed', packed_at set | Picker App | `order.picking_completed` |
+| `packed → handed_over` | Courier receives package | task.status == 'packed', courier at store | task.status = 'handed_over', handover_at set | Courier App | — |
+
+---
 
 ### 3.1 Entity Relationship Diagram (ERD)
 **Источник:** Раздел 5.4 + пункт 5 общего списка.
@@ -882,7 +1011,7 @@ Then the system recognizes my account and logs me in after SMS verification
 And I do not need to re-enter my profile details
 
 **Ссылки:**
-→ State Machine: [заглушка — будет добавлена в Prompt 4]
+→ State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
 → Sequence Diagram: [заглушка — будет добавлена в Prompt 5]
 → API endpoint: [заглушка — будет добавлена в Prompt 6]
 
@@ -953,7 +1082,7 @@ Then only products matching the filter are shown
 And filter options update dynamically based on available products
 
 **Ссылки:**
-→ State Machine: [заглушка — будет добавлена в Prompt 4]
+→ State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
 → Sequence Diagram: [заглушка — будет добавлена в Prompt 5]
 → API endpoint: [заглушка — будет добавлена в Prompt 6]
 
@@ -1039,7 +1168,7 @@ Then the order status is set to "Awaiting Payment" (online) or "Accepted" (cash)
 And I receive a confirmation on screen
 
 **Ссылки:**
-→ State Machine: [заглушка — будет добавлена в Prompt 4]
+→ State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
 → Sequence Diagram: [заглушка — будет добавлена в Prompt 5]
 → API endpoint: [заглушка — будет добавлена в Prompt 6]
 
@@ -1125,7 +1254,7 @@ Then I can pay in cash and receive change
 And the order is marked as delivered
 
 **Ссылки:**
-→ State Machine: [заглушка — будет добавлена в Prompt 4]
+→ State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
 → Sequence Diagram: [заглушка — будет добавлена в Prompt 5]
 → API endpoint: [заглушка — будет добавлена в Prompt 6]
 
@@ -1203,7 +1332,7 @@ Then I see a message that my order history is empty
 And a CTA button to start shopping
 
 **Ссылки:**
-→ State Machine: [заглушка — будет добавлена в Prompt 4]
+→ State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
 → Sequence Diagram: [заглушка — будет добавлена в Prompt 5]
 → API endpoint: [заглушка — будет добавлена в Prompt 6]
 
@@ -1278,7 +1407,7 @@ Then the status changes to "Ready for Delivery"
 And the order appears in the courier queue
 
 **Ссылки:**
-→ State Machine: [заглушка — будет добавлена в Prompt 4]
+→ State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
 → Sequence Diagram: [заглушка — будет добавлена в Prompt 5]
 → API endpoint: [заглушка — будет добавлена в Prompt 6]
 
@@ -1384,7 +1513,7 @@ Then the status update is queued locally
 And automatically synced when connectivity is restored
 
 **Ссылки:**
-→ State Machine: [заглушка — будет добавлена в Prompt 4]
+→ State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
 → Sequence Diagram: [заглушка — будет добавлена в Prompt 5]
 → API endpoint: [заглушка — будет добавлена в Prompt 6]
 
@@ -1533,7 +1662,7 @@ Then the cancellation is processed with a service fee deducted
 And the remaining amount is refunded
 
 **Ссылки:**
-→ State Machine: [заглушка — будет добавлена в Prompt 4]
+→ State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
 → Sequence Diagram: [заглушка — будет добавлена в Prompt 5]
 → API endpoint: [заглушка — будет добавлена в Prompt 6]
 
@@ -1594,7 +1723,7 @@ Then the system rejects it with "Promo code usage limit reached"
 And no discount is applied
 
 **Ссылки:**
-→ State Machine: [заглушка — будет добавлена в Prompt 4]
+→ State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
 → Sequence Diagram: [заглушка — будет добавлена в Prompt 5]
 → API endpoint: [заглушка — будет добавлена в Prompt 6]
 
@@ -1658,7 +1787,7 @@ Then I see the user's profile, order history, and account status
 And I can block/unblock the user or change their role
 
 **Ссылки:**
-→ State Machine: [заглушка — будет добавлена в Prompt 4]
+→ State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
 → Sequence Diagram: [заглушка — будет добавлена в Prompt 5]
 → API endpoint: [заглушка — будет добавлена в Prompt 6]
 
@@ -1725,7 +1854,7 @@ Then I see a message "No data available for this period"
 And empty charts with a prompt to adjust the filter
 
 **Ссылки:**
-→ State Machine: [заглушка — будет добавлена в Prompt 4]
+→ State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
 → Sequence Diagram: [заглушка — будет добавлена в Prompt 5]
 → API endpoint: [заглушка — будет добавлена в Prompt 6]
 
@@ -1790,7 +1919,7 @@ Then the system generates UPD through EDO (Diadoc/SBIS)
 And the documents are sent electronically
 
 **Ссылки:**
-→ State Machine: [заглушка — будет добавлена в Prompt 4]
+→ State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
 → Sequence Diagram: [заглушка — будет добавлена в Prompt 5]
 → API endpoint: [заглушка — будет добавлена в Prompt 6]
 
@@ -1881,7 +2010,7 @@ Then I stop receiving promo-related pushes
 But still receive order-related notifications
 
 **Ссылки:**
-→ State Machine: [заглушка — будет добавлена в Prompt 4]
+→ State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
 → Sequence Diagram: [заглушка — будет добавлена в Prompt 5]
 → API endpoint: [заглушка — будет добавлена в Prompt 6]
 
@@ -1947,7 +2076,7 @@ Then the holiday multiplier (up to 1.8x) is applied to the delivery fee
 And the customer sees the reason for the surcharge
 
 **Ссылки:**
-→ State Machine: [заглушка — будет добавлена в Prompt 4]
+→ State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
 → Sequence Diagram: [заглушка — будет добавлена в Prompt 5]
 → API endpoint: [заглушка — будет добавлена в Prompt 6]
 
