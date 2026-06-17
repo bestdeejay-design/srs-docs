@@ -105,7 +105,75 @@
 
 ---
 
-## Матрица покрытия
+## 7. Event-Driven / Saga / CQRS
+
+### eventuate-tram/eventuate-tram-core ⭐1.2k
+- https://github.com/eventuate-tram/eventuate-tram-core
+- **Стек:** Java/Spring, Micronaut, PostgreSQL/MySQL, Kafka/RabbitMQ/Redis
+- **Паттерны:** Transactional Outbox, Saga (choreography + orchestration), CQRS, Domain Events
+- **CDC:** Transaction log tailing (Postgres WAL, MySQL binlog) — at-least-once delivery без дубликатов
+- **Что даёт:** Production-grade реализация Event-Driven архитектуры для микросервисов. Сага для распределённых транзакций (order → payment → delivery)
+
+### microservice-patterns/ftgo-application (Food Delivery, книга Microservice Patterns)
+- https://github.com/microservice-patterns/ftgo-application
+- **Стек:** Java/Spring, RabbitMQ, PostgreSQL, Docker
+- **Архитектура:** Микросервисы + Event-Driven + Saga (orchestration-based)
+- **Сервисы:** Consumer, Restaurant, Order, Delivery, Accounting, Kitchen
+- **Что даёт:** Полный reference для архитектуры доставки еды из книги Криса Ричардсона — маппинг почти 1:1 на наши BP
+
+---
+
+## 8. Ecommerce-платформы (Catalog, Cart, Orders)
+
+### medusajs/medusa ⭐34k
+- https://github.com/medusajs/medusa
+- **Стек:** Node.js/TypeScript, PostgreSQL, Redis, Medusa JS
+- **Архитектура:** Headless commerce — модули: Product, Cart, Order, Payment, Fulfillment, Customer, Auth
+- **B2B:** Компании, индивидуальные цены, корпоративные заказы, лимиты
+- **Что даёт:** Референт для B2B-модуля (§4.5), API-дизайна каталога, платёжного flow. Можно использовать как готовый backend для админки
+
+### saleor/saleor ⭐21k
+- https://github.com/saleor/saleor
+- **Стек:** Python/Django, GraphQL, PostgreSQL, Redis, Celery
+- **Catalog:** Product variants, channels (multi-store), warehouses, stocks
+- **Поиск:** Полнотекстовый через PostgreSQL + триграммы, опционально ES
+- **Что даёт:** Референт для архитектуры каталога с variant'ами и multi-warehouse. GraphQL-схема продукта как пример API-дизайна
+
+### spree/spree ⭐13k
+- https://github.com/spree/spree
+- **Стек:** Ruby on Rails, PostgreSQL, Redis, Sidekiq
+- **Совместимость:** Тот же стек, что у текущего iGooods (Rails 5.1–7)
+- **Что даёт:** Зрелый Rails ecommerce — референт для админки, промокодов, корзины. Можно переиспользовать готовые модули
+
+---
+
+## 9. Маркетплейс-платформа (агрегаторная модель)
+
+### sharetribe/sharetribe ⭐2.5k
+- https://github.com/sharetribe/sharetribe
+- **Стек:** Ruby on Rails + React
+- **Модель:** Маркетплейс — продавцы (магазины) и покупатели (клиенты)
+- **Что даёт:** Архитектуру агрегатора: транзакции между сторонами, комиссия платформы, управление продавцами. Референт для бизнес-модели из §1.6
+
+---
+
+## 10. Feature Flags (Rollout / Release Strategy)
+
+### jnunemaker/flipper ⭐3.7k
+- https://github.com/jnunemaker/flipper
+- **Стек:** Ruby, Rails, Redis/PostgreSQL/MongoDB (адаптеры)
+- **Возможности:** Percentage rollout, group-based, user-based, actor-based. UI-админка. A/B тестирование
+- **Что даёт:** Готовое решение для feature flags в Rails-стеке (§5.3). Подходит для rollout-стратегии (канary → процент → все)
+
+---
+
+## 11. Food Delivery (Rails stack)
+
+### openfoodfoundation/openfoodnetwork ⭐1.1k
+- https://github.com/openfoodfoundation/openfoodnetwork
+- **Стек:** Ruby on Rails, PostgreSQL, Redis, AngularJS
+- **Модель:** Альтернативная food delivery — поставщики → кооперативы → покупатели
+- **Что даёт:** Близкий стек (Rails), модуль поставщиков (аналог сетей), управление зонами доставки, ценообразование
 
 | Раздел чеклиста | Референс | Язык | Сложность внедрения |
 |---|---|---|---|
