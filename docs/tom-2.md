@@ -1,7 +1,5 @@
 # Том 2: Technical Specification
 
-[TOC]
-
 ## 2. System Architecture (Архитектура системы)
 
 ### 2.1 Architecture Style & Patterns
@@ -174,6 +172,8 @@
 | PR (frontend/mobile) | Событие отправляется с правильными полями | Code review + TypeScript types |
 | Staging | Валидность JSON-схемы события | Integration test (event emitted → schema valid) |
 | Prod monitoring | Дельта событий (не упала ли какая-то воронка) | Grafana dashboard + alert
+
+### 2.7 API Versioning, Deprecation Policy & Error Code Standard
 
 #### 2.7.1 API Versioning
 
