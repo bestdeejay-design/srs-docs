@@ -123,12 +123,17 @@ def build_html(input_md):
   #toc-container a:hover {{ color: var(--accent); background: rgba(63,81,181,0.06); }}
   /* Search */
   #search-wrap {{ padding: 8px 12px; border-bottom: 1px solid var(--border); position: relative; }}
-  #search {{
-    width: 100%; padding: 8px 12px; font-size: 13px;
+  #search {{ width: 100%; padding: 8px 36px 8px 12px; font-size: 13px;
     border: 1px solid var(--border); border-radius: 6px;
-    background: var(--bg); color: var(--text); outline: none;
-  }}
+    background: var(--bg); color: var(--text); outline: none; }}
   #search:focus {{ border-color: var(--accent); }}
+  #search-clear {{
+    position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+    width: 24px; height: 24px; border: none; border-radius: 50%;
+    background: var(--text2); color: var(--bg); font-size: 14px; line-height: 24px;
+    text-align: center; cursor: pointer; display: none; padding: 0;
+  }}
+  #search-clear:hover {{ background: var(--accent); }}
   #search-results {{
     display: none; position: absolute; top: 100%; left: 0; right: 0;
     max-height: 50vh; overflow-y: auto;
@@ -200,6 +205,7 @@ def build_html(input_md):
   <div id="sidebar-header">SRS — Агрегатор доставки</div>
   <div id="search-wrap">
     <input type="text" id="search" placeholder="Поиск…">
+    <button id="search-clear" onclick="clearSearch()">×</button>
     <div id="search-results"></div>
   </div>
   <div id="toc-container">
@@ -261,7 +267,15 @@ document.addEventListener('click', function(e) {{
 // Search on input
 document.getElementById('search').addEventListener('input', function() {{
   searchDocs(this.value);
+  document.getElementById('search-clear').style.display = this.value ? 'block' : 'none';
 }});
+function clearSearch() {{
+  const input = document.getElementById('search');
+  input.value = '';
+  input.focus();
+  searchDocs('');
+  document.getElementById('search-clear').style.display = 'none';
+}}
 </script>
 </body>
 </html>'''
