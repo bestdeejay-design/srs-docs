@@ -10,6 +10,7 @@
 
 | Версия | Дата | Автор | Изменения |
 |--------|------|-------|-----------|
+| 1.6 | 2026-06-17 | — | Prompt 7: API Versioning & Deprecation Policy — SLA, уведомления, mobile strategy, feature flags, Error Code Standard |
 | 1.5 | 2026-06-17 | — | Prompt 6: Idempotency Policy — общие правила, таблица эндпоинтов, edge cases, примеры кода (Rails/Go) |
 | 1.4 | 2026-06-17 | — | Prompt 5: Event JSON Schemas — Envelope + 12 полных JSON Schema (draft-07) для всех событий из §2.9 |
 | 1.3 | 2026-06-17 | — | Prompt 4: Sequence Diagrams для 5 сценариев (Order flow, Substitution, Dispatch, Refund, Offline-sync) с Mermaid sequenceDiagram |
@@ -313,14 +314,58 @@ SRS разделён на два тома. В зависимости от ваш
 
 > **Разделение:** Prometheus/Grafana — технический мониторинг (латентность, ошибки, ёмкость). Яндекс.Метрика — бизнес-аналитика (поведение пользователей, конверсия).
 
-### 2.7 API Versioning & Error Code Standard
+### 2.7 API Versioning, Deprecation Policy & Error Code Standard
 
-**API Versioning:**
-- Формат: URL prefix `/api/v1/`, `/api/v2/`
-- Deprecation: заголовок `Sunset: Sat, 31 Dec 2026 23:59:59 GMT` за 6 месяцев до удаления
-- Changelog: `CHANGELOG.md` в каждом сервисе
+#### 2.7.1 API Versioning
 
-**Error Response Format:**
+- Формат URL: `/api/v1/`, `/api/v2/`
+- Версия передаётся в URL path (не header) — явно видна в логах и документации
+- Minor-изменения (добавление полей) — обратно совместимы, без смены версии
+- Major-изменения (удаление/переименование полей, изменение семантики) — новая версия URL
+
+#### 2.7.2 Deprecation Policy
+
+**SLA поддержки старых версий:**
+
+| Тип изменения | SLA поддержки после объявления deprecation |
+|---------------|------------------------------------------|
+| Minor (v1.1 → v1.2) | 3 месяца |
+| Major (v1 → v2) | 12 месяцев |
+| Критические security-фиксы | До конца SLA |
+
+**Механизмы уведомления клиентов:**
+
+| Канал | Когда | Для кого |
+|-------|-------|----------|
+| HTTP-заголовок `Sunset: <date>` (RFC 8594) | За 6 месяцев | Все API-клиенты |
+| HTTP-заголовок `Deprecation: true` | С момента объявления | Все API-клиенты |
+| HTTP-заголовок `Link: <url>; rel="successor-version"` | С момента объявления | Все API-клиенты |
+| Email-уведомление | За 3 месяца | B2B-клиенты |
+| In-app баннер | За 1 месяц | Мобильные приложения |
+
+**Migration Guide:**
+- Для каждой major-версии — отдельный документ `docs/migrations/v1-to-v2.md`
+- Changelog breaking changes
+- Примеры кода «было → стало»
+
+#### 2.7.3 Стратегия для мобильных приложений
+
+| Механизм | Описание |
+|----------|----------|
+| **Forced update** | При критических breaking changes — `X-Min-App-Version` header, блокировка старых версий |
+| **Soft deprecation** | In-app баннер «Обновите приложение» для не-критических изменений |
+| **N-2 support** | Поддержка двух последних major-версий (iOS/Android) |
+| **Graceful degradation** | Старая версия продолжает работать, но новые фичи недоступны |
+
+#### 2.7.4 Feature Flags для API
+
+- Возможность включать новые эндпоинты по одному (canary release)
+- A/B-тестирование версий API
+- Feature flag provider: LaunchDarkly / ConfigCat / встроенный в админку
+
+#### 2.7.5 Error Code Standard
+
+**Формат ответа с ошибкой:**
 ```json
 {
   "error": {
