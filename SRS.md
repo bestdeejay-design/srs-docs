@@ -81,6 +81,8 @@
 | **Maintainability** | — | Coverage > 80%, linting, ADR, feature flags, Swagger | — |
 | **Data Retention** | Orders 3y, PDn до удаления, audit 1y, cache 15min TTL | Logs 90d | — |
 | **Data Recovery** | Daily full backup + WAL streaming, RPO < 1h, RTO < 4h | DR in another DC | — |
+| **Food Safety** | Термоупаковка (заморозка/охлаждение), разделение химии и продуктов, срок годности > 50% от остатка | Логирование температуры при доставке | — |
+| **Internationalization** | Русский язык (интерфейс, контент, платежи) | Locale-файлы, разделение кода и текста | EN/CN интерфейс (V3) |
 
 ### 1.4 External Integrations (Внешние интеграции)
 **Источник:** Раздел 1.4 исходного документа.
@@ -162,9 +164,20 @@
 | **LTV/CAC** | LTV / CAC | > 3 |
 | **NPS** | Опрос клиентов | > 40 |
 
+#### 1.6.6 Франшиза (Franchise Model)
+
+iGooods — франчайзинговая сеть. Агрегатор может масштабироваться по франшизе:
+
+| Параметр | Описание |
+|---|---|
+| **Модель** | Мастер-франшиза на город/регион. Франчайзи открывает магазины под брендом, использует платформу и технологии |
+| **Доход** | Паушальный взнос (вход) + роялти (ежемесячный % от оборота) |
+| **Обязанности франчайзи** | Операционное управление (пикеры, курьеры), маркетинг в регионе, аренда и логистика |
+| **Обязанности платформы** | Технологии (сайт, приложения, dispatch), бренд, поддержка, обучение |
+| **Администрирование** | BP-11: управление партнёрами (франчайзи), отчёты по роялти, рейтинг партнёров |
+| **Этап внедрения** | V3 (после отработки операционной модели на собственных магазинах) |
+
 ---
-
-
 
 ## 2. System Architecture (Архитектура системы)
 
@@ -183,6 +196,7 @@
 | **Event Sourcing** | Order Service | Полная аудитория заказа — цепочка событий (создан → оплачен → назначен пикер → собран → передан курьеру → доставлен) |
 | **Vertical Slice** | Каждый сервис | Каждая фича — сквозная реализация (handler → use case → repository) |
 | **Event-Driven** | Межсервисная коммуникация | RabbitMQ — асинхронная доставка событий (order.created → dispatch → eta) |
+| **Façade / Service-Adapter** | API Gateway | Три типа маршрутов: **proxy** (сквозной прокси без изменений), **transform** (адаптация формата между старым и новым API), **aggregate** (сборка ответа из нескольких сервисов). Ключевой паттерн миграции (Strangler-Fig) — новый сервис подключается за Façade, старый маршрут переключается без изменения клиента |
 
 ### 2.2 Technology Stack
 **Источник:** Раздел 1.1 исходного документа.
@@ -192,9 +206,11 @@
 | **Backend** | Ruby on Rails | 5.1+ | API, бизнес-логика, админка |
 | | Ruby | 2.6–2.7 | Язык рантайма (см. Gemfile) |
 | | Sidekiq | ~6.x | Фоновые задачи (уведомления, синхронизация) |
+| | Carrierwave + MiniMagick | ~1.0 | Загрузка и обработка изображений |
 | **Frontend** | Next.js | 10 | SSR + SPA-роутинг |
 | | React | 17 | UI-компоненты |
 | | MobX | ~6.x | State management |
+| | Webpack + Babel 7 + PostCSS + CSS Modules | — | Сборка фронтенда |
 | **Mobile** | Flutter | 3.x | Кроссплатформенное мобильное приложение |
 | **Базы данных** | PostgreSQL | 13+ | Основное хранилище |
 | | Redis | 6+ | Кэш, очередь (Sidekiq), сессии |
@@ -226,6 +242,9 @@
 | **ETA Estimator** | BP-06 | Python / Go | Redis (кэш OSRM) | Events + REST |
 | **Notification Service** | BP-09 | Rails (Sidekiq) | PostgreSQL (templates) | Events (RabbitMQ) |
 | **Admin API** | BP-11 | Rails Admin | PostgreSQL | REST |
+| **Inventory Service** | BP-05, BP-02, Store sync | Go / Ruby (Sidekiq) | PostgreSQL + Redis (TTL cache) | Events (RabbitMQ) |
+
+**Inventory Service** — управление остатками: синхронизация с API магазинов, резервирование при оформлении заказа, TTL-кэш горячих остатков в Redis. Отдельный сервис, так как остатки (a) обновляются с другой частотой (минуты vs часы), (б) требуют reservation-логики, (в) живут по своим SLA.
 
 *Коммуникация:* сервисы общаются через RabbitMQ (event-driven). REST/gRPC — только для синхронных запросов (API Gateway → сервисы). Event Sourcing — EventStoreDB для Order.
 
@@ -316,6 +335,25 @@ flowchart TB
     ADMIN --> PG & CAT_W
 ```
 
+#### 2.5.1 Store API Integration Details
+
+**Лента (первая сеть, MVP):**
+- **Защита:** Qrator Labs (JS Challenge) — требуется headless browser (Playwright/Puppeteer) для обхода
+- **Два API:** (1) Старое PHP RPC `/api/rest/*` с MarketingPartnerKey, (2) Новый REST Gateway `/api-gateway/v1/*` с JWT/guest token
+- **Рендеринг:** Angular SSR — данные каталога в HTML, коллекции через API widgets
+- **Мультибренд:** единая платформа для DomLenta, Utkonos, Monetka (API: `api.domlenta.ru`, `api.utkonos.ru`, `api.monetka.ru`)
+- **Feature flags:** GrowthBook (CDN `growthbook-cdn.api.lenta.com`) — эндпоинты могут меняться без предупреждения
+
+**Вкусвилл (V2):**
+- **Протокол:** MCP JSON-RPC (экспериментальный)
+- **Эндпоинты:** `vkusvill_products_search(q, page, sort)`, `vkusvill_product_details(id)`, `vkusvill_cart_link_create(products[])`
+- **Ограничения:** макс 20 товаров за запрос, нет адресных остатков
+- **Это единственная сеть с открытым API** — самая простая интеграция
+
+**Super Babylon (V2):**
+- **Особенность:** эксклюзивный партнёр iGooods («Доставка работает через iGooods»)
+- **Интеграция:** без API — физическое присутствие сборщика в магазине
+
 ### 2.6 Observability
 **Источник:** Раздел 5.7.5 исходного документа.
 
@@ -326,6 +364,9 @@ flowchart TB
 | **Loki + Promtail** | Централизованный сбор логов (JSON-structured) | LogQL для поиска |
 | **Jaeger** | Distributed tracing | OpenTelemetry instrumentation |
 | **Sentry** | Error tracking (backend + Flutter) | SDK на всех сервисах |
+| **Яндекс.Метрика** | Бизнес-аналитика: конверсии, воронки, источники трафика | Установка счётчика на Web (Next.js) |
+
+> **Разделение:** Prometheus/Grafana — технический мониторинг (латентность, ошибки, ёмкость). Яндекс.Метрика — бизнес-аналитика (поведение пользователей, конверсия).
 
 ### 2.7 API Versioning & Error Code Standard
 
@@ -369,6 +410,25 @@ flowchart TB
 | **Build flavors** | dev / prod (разные Firebase проекты, API endpoints) |
 | **CI/CD** | GitHub Actions → Firebase App Distribution / TestFlight / RuStore |
 | **Минимальные версии** | iOS 14+, Android 7.0+ (API 24) |
+
+### 2.9 Event Catalog
+
+Система событий (Event-Driven через RabbitMQ). Каждое событие публикуется одним сервисом, потребляется одним или несколькими.
+
+| Событие | Publisher | Consumers | Схема (ключевые поля) |
+|---|---|---|---|
+| `order.created` | Order Service | Dispatcher, Notification, Analytics | `order_id`, `user_id`, `store_id`, `total`, `items[]` |
+| `order.paid` | Payment Service | Order, Dispatcher, Notification | `order_id`, `payment_id`, `amount`, `method` |
+| `order.assigned` | Dispatcher | Order, Picker, Courier, Notification | `order_id`, `picker_id`, `courier_id`, `eta` |
+| `order.picking_started` | Picker Service | Order, Notification, Analytics | `order_id`, `picker_id`, `started_at` |
+| `order.picking_completed` | Picker Service | Delivery, Order, Notification | `order_id`, `picker_id`, `items_found`, `items_substituted` |
+| `order.in_transit` | Delivery Service | Order, Notification, Tracking | `order_id`, `courier_id`, `eta`, `route[]` |
+| `order.delivered` | Courier App | Order, Payment, Notification, Analytics | `order_id`, `courier_id`, `pod_signature`, `pod_photo` |
+| `order.cancelled` | Order Service | Payment, Inventory, Notification | `order_id`, `reason`, `refund_amount` |
+| `payment.refunded` | Payment Service | Order, Notification, Analytics | `order_id`, `refund_id`, `amount` |
+| `inventory.low` | Inventory Service | Admin, Notification | `store_id`, `product_id`, `quantity` |
+| `catalog.synced` | Catalog Write Service | Inventory, Analytics | `chain_id`, `products_count`, `errors` |
+| `dispatch.cycle` | Dispatcher | ETA Estimator, Delivery | `zone_id`, `orders[]`, `couriers[]` |
 
 ---
 
@@ -449,7 +509,9 @@ CREATE TABLE categories (
     parent_id INTEGER REFERENCES categories(id),
     name TEXT NOT NULL,
     icon_url TEXT,
-    sort_order INTEGER DEFAULT 0
+    sort_order INTEGER DEFAULT 0,
+    price_from NUMERIC,         -- минимальная цена товара в категории (для фильтрации)
+    price_to NUMERIC            -- максимальная цена товара в категории
 );
 
 -- Привязка товара сети к категории iGooods
@@ -1830,6 +1892,35 @@ flowchart LR
 | **DR-план** | Selectel → резервный регион. DNS-переключение через Cloudflare. Восстановление: Terraform apply → restore DB → verify healthcheck |
 | **Критические данные** | Таблицы заказов (`orders`, `payments`, `deliveries`), пользователи (`users`), конфигурация адаптеров (`chains`) |
 
+### 5.8 FinOps (Оптимизация расходов на облако)
+
+| Практика | Описание | Этап |
+|---|---|---|
+| **Spot-инстансы** | Некритичные сервисы (staging, Catalog Write worker) на spot-экземплярах Selectel | MVP |
+| **HPA/VPA** | Горизонтальное автомасштабирование по CPU/memory для K8s | V3 |
+| **Managed services** | Использовать managed PostgreSQL (Selectel) вместо самостоятельного администрирования | MVP |
+| **Storage tiering** | Selectel CDN для изображений (hot), S3 для логов (warm), Glacier для бэкапов (cold) | V2 |
+| **Бюджетные алерты** | Уведомления при превышении 80% бюджетного лимита (GitHub → Telegram) | MVP |
+| **Resource tagging** | Все ресурсы с тегами `env`, `service`, `owner` для анализа cost allocation | MVP |
+
+### 5.9 Service Readiness Checklist
+
+Перед запуском каждого нового сервиса в production:
+
+- [ ] Healthcheck endpoint (`/health` + `/ready`)
+- [ ] Prometheus metrics (`/metrics`)
+- [ ] Sentry SDK (error tracking)
+- [ ] Structured logging (JSON, correlation_id)
+- [ ] Graceful shutdown (SIGTERM → drain connections → exit)
+- [ ] Rate limiting (100 req/s per instance)
+- [ ] Resource limits (CPU/memory requests + limits)
+- [ ] Readiness/liveness probes (K8s) или healthcheck (Docker Compose)
+- [ ] Backup: WAL archiving + PgBouncer
+- [ ] Runbook: как деплоить, как откатывать, как диагностировать
+- [ ] On-call: кто дежурный, куда слать алерт
+- [ ] Тесты: unit + integration + contract
+- [ ] API documentation (Swagger/OpenAPI для REST endpoints)
+
 ---
 
 ## 6. Security & Compliance (Безопасность)
@@ -2036,16 +2127,16 @@ flowchart LR
 
 *Разделы считаются готовыми после переноса содержимого из исходного документа.*
 
-- ✅ 1.1 Purpose & Scope
+- ✅ 1.1 Purpose & Scope (включая AS IS, Geography, Personas)
 - ✅ 1.2 Glossary
-- ✅ 1.3 Non-Functional Requirements
+- ✅ 1.3 Non-Functional Requirements (включая Food Safety, i18n)
 - ✅ 1.4 External Integrations
 - ✅ 1.5 Error Handling
-- ✅ 1.6 Business Model
-- ✅ 2.1–2.8 Architecture (включая API versioning, mobile arch)
+- ✅ 1.6 Business Model (включая Franchise)
+- ✅ 2.1–2.9 Architecture (включая Event Catalog, Лента API, Façade)
 - ✅ 3.1–3.6 Data Model
 - ✅ 4.1–4.9 Functional Requirements (все 14 BP + Feature Map + Offline + Support)
-- ✅ 5.1–5.7 Infrastructure (включая Incident Response, Backup & DR)
+- ✅ 5.1–5.9 Infrastructure (включая Incident, Backup, FinOps, Readiness Checklist)
 - ✅ 6.1–6.4 Security & Compliance (включая Accessibility)
 - ✅ 7.1–7.4 Testing
 - ✅ 8.1–8.3 Estimation & Roadmap
@@ -2137,3 +2228,5 @@ mysqldump --no-data -h host -u user -p database > schema.sql
 | Сколько backend / frontend / mobile разработчиков? | Backend: 2, Frontend: 2, Mobile: 1 |
 | Есть ли DevOps / QA отдельно? | DevOps: 2, QA: отдельного нет (покрывается командой) |
 | Какая база данных и очереди? | PostgreSQL, RabbitMQ |
+| Текущий стек аутентификации | Sorcery (Rails gem) + access-granted (RBAC) |
+| Загрузка файлов | Carrierwave + MiniMagick |
