@@ -263,76 +263,8 @@
 ### 2.5 Integration Context Map (Context Map)
 **Источник:** Раздел 5.7.4 исходного документа.
 
-```mermaid
-flowchart LR
-    subgraph CLIENTS["Client Layer"]
-        WEB[Next.js Web]
-        APP[Flutter App]
-        PICKER[Picker App]
-        COURIER[Courier App]
-    end
+![Architecture](./exports/diagrams/architecture.png)
 
-    GW(API Gateway<br/>Nginx / Traefik)
-
-    subgraph SRV["Domain Services"]
-        AUTH[Auth]
-        CAT_R[Catalog Read]
-        CAT_W[Catalog Write]
-        CART[Cart]
-        ORD[Order<br/>Event Sourced]
-        PAY[Payment]
-        PICK[Picker]
-        DEL[Delivery]
-        DISP[Dispatcher]
-        ETA[ETA]
-        NOTIF[Notifications]
-        ADMIN[Admin]
-    end
-
-    subgraph INFRA["Infrastructure"]
-        PG[(PostgreSQL)]
-        REDIS[(Redis)]
-        ES[(Elasticsearch)]
-        EVDB[(EventStoreDB)]
-        RABBIT{{RabbitMQ}}
-    end
-
-    subgraph EXT["External Systems"]
-        STORE[Store APIs<br/>Лента, METRO...]
-        BANK[Т-Банк API]
-        MAPS[Яндекс / Google<br/>Карты]
-        SMS[SMS Provider]
-        CDN[Selectel CDN]
-    end
-
-    WEB & APP & PICKER & COURIER --> GW
-    GW --> AUTH & CAT_R & CART & ORD & PAY & PICK & DEL & NOTIF & ADMIN
-
-    AUTH --> PG
-    CAT_R --> PG & REDIS & ES
-    CAT_W --> PG & EVDB
-    CAT_W -.-> STORE
-    CAT_W -.-> RABBIT
-    CART --> REDIS
-    ORD --> PG & EVDB
-    ORD -.-> RABBIT
-    PAY --> PG
-    PAY -.-> BANK
-    PICK --> PG
-    PICK -.-> PICKER
-    DEL --> PG & REDIS
-    DEL --> DISP
-    DISP --> REDIS
-    DISP --> ETA
-    DISP -.-> RABBIT
-    ETA -.-> MAPS
-    NOTIF -.-> RABBIT
-    NOTIF --> SMS
-    NOTIF -.-> APP
-    ADMIN --> PG
-
-    CDN -.-> WEB & APP
-```
 
 #### 2.5.1 Store API Integration Details
 
@@ -1640,122 +1572,7 @@ final_fee = base_delivery_fee * product(multipliers)
 
 Карта всех функций продукта на основе описанных процессов:
 
-```mermaid
-mindmap
-  root((Продукт))
-    Регистрация и безопасность
-      Вход по телефону
-      SMS-подтверждение
-      Роли: клиент/пикер/курьер/админ/суперадмин
-      JWT access + refresh токены
-      Rate limiting
-      Audit log
-    Каталог
-      Выбор магазина по адресу
-      Категории (3 уровня)
-      Поиск (Elasticsearch)
-      Динамические фильтры (по категории)
-      Карточка товара
-      Нормализация данных сетей
-      Маппинг категорий сети → платформа
-      Адаптеры сетей (Лента, METRO, Вкусвилл и др.)
-      Синхронизация цен/остатков (шедулер)
-    Корзина
-      Добавление товаров
-      Промокоды и баллы
-      Dynamic Pricing (надбавка за время/погоду/загрузку)
-      Пересчёт стоимости
-      Оформление
-    Заказы
-      Создание
-      Статусы (оплачен → сборка → доставка → завершён)
-      Добавление товаров после оформления
-      История
-      Замена товара (пикер → звонок → альтернатива)
-      Возврат и отмена (до/после сборки, комиссия)
-      Event Sourcing (цепочка событий заказа)
-    Доставка
-      Временные слоты (3 дня вперёд)
-      Dispatch (multi-objective optimization)
-        Cheapest Insertion + 2-opt
-        6 целей: время, SLA, дистанция, fairness, disruption, zone
-        Constraint satisfaction
-      ETA (OSRM + ML гибрид)
-        OSRM маршрут → XGBoost коррекция
-        13 признаков: погода, трафик, время суток, праздники
-        Пересчёт каждые 5 мин
-      Трекинг для клиента
-      Опция «Можно раньше»
-    Платежи
-      Т-Банк (онлайн, 3DSecure)
-      СБП (QR от курьера)
-      Карта курьеру (POS-терминал)
-      Наличные
-      Refund (полный/частичный)
-      Чек (54-ФЗ, ОФД)
-    Уведомления
-      Push (FCM)
-      SMS
-      Email
-      Telegram
-      События: заказ создан, сборка начата, курьер выехал, доставлен
-    Админка
-      Управление заказами (CRUD, статусы, комментарии)
-      Управление товарами (CRUD, импорт/экспорт CSV)
-      Пользователи (блокировка, роли)
-      Промокоды (создание, статистика)
-      Курьеры и пикеры (зоны, рейтинг)
-      Магазины и зоны доставки (полигоны)
-      Управление сетями-адаптерами (вкл/выкл)
-      Audit log (кто, когда, что сделал)
-    B2B
-      Корпоративные заказы в офис
-      Регулярные поставки (ежедневно/еженедельно)
-      Индивидуальные цены по договору
-      Отсрочка платежа (3–30 дней)
-      ЭДО (Диадок / СБИС, УПД)
-      Счета и закрывающие документы
-    Dynamic Pricing
-      Факторы: загрузка курьеров, время, погода, расстояние, вес
-      Формула: base_fee × product(multipliers)
-      Max надбавка: 2×
-      Отображение в корзине до подтверждения
-    Приложение пикера
-      Список заказов (FIFO)
-      Сканер штрихкодов (Scandit)
-      Замены товаров (поиск альтернатив)
-      Звонок клиенту (скрытый номер)
-      Offline-режим (Firestore cache)
-      Smart Sync Queue (batch upload)
-      Подтверждение упаковки
-    Приложение курьера
-      Навигация с multi-stop маршрутом
-      Offline-режим (Hive + Smart Sync)
-      Off-route detection (визуальный + звуковой алерт)
-      Приём оплаты (офлайн hold → sync)
-      Digital Signature (POD)
-      Photo POD
-      Сканер
-      Статусы доставки
-    Инфраструктура
-      CI/CD (GitHub Actions, testcontainers)
-      Docker Compose → Kubernetes
-      Мониторинг (Prometheus + Grafana + Loki + Jaeger)
-      Sentry (error tracking)
-      Feature flags (Flipper / LaunchDarkly)
-      Rollback (git revert + rolling update)
-    Тестирование
-      Unit (mockery + testify)
-      Integration (testcontainers)
-      Contract (Pact CDC)
-      E2E (Cypress + K6)
-      Load (K6: stress, soak, spike)
-      Security (SonarCloud + Trivy + Aikido)
-    Аналитика
-      Дашборды (Grafana)
-      Отчёты (выручка, заказы, конверсия)
-      Метрики (DAU/MAU, время сборки, ETA, топ товаров)
-```
+![Feature Map](./exports/diagrams/features.png)
 
 **Текстовый список функций (для печати):**
 
@@ -1914,21 +1731,8 @@ mindmap
 ### 5.2 CI/CD Pipeline
 **Источник:** Раздел 5.10.2 исходного документа.
 
-```mermaid
-flowchart LR
-    PR[PR created] --> CHECK{Проверки}
-    CHECK --> LINT[lint + typecheck]
-    CHECK --> UNIT[unit tests]
-    CHECK --> SEC[security scan<br/>Trivy + Aikido]
-    LINT --> INTEGRATION[integration tests<br/>testcontainers]
-    UNIT --> INTEGRATION
-    INTEGRATION --> BUILD[Build Docker images]
-    BUILD --> PUSH[Push to registry<br/>Selectel Registry]
-    PUSH --> DEPLOY_STAGING[Deploy to staging]
-    DEPLOY_STAGING --> E2E[E2E tests<br/>Cypress / K6]
-    E2E --> APPROVE{Approval}
-    APPROVE -->|manual| DEPLOY_PROD[Deploy to prod<br/>rolling update]
-```
+![CI/CD Pipeline](./exports/diagrams/cicd.png)
+
 
 **Ключевые правила:**
 - Ветка `main` всегда зелёная — все проверки обязательны
