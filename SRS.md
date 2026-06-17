@@ -1976,8 +1976,8 @@ mysqldump --no-data -h host -u user -p database > schema.sql
 
 #### 9.5.4 Инфраструктура и состав команды (опционально)
 
-| Что спросить |
-|---|
-| Сколько backend / frontend / mobile разработчиков? |
-| Есть ли DevOps / QA отдельно? |
-| Какая база данных (PostgreSQL / MySQL) и очереди (RabbitMQ / Kafka)? |
+| Вопрос | Ответ |
+|---|---|
+| Сколько backend / frontend / mobile разработчиков? | Backend: 2, Frontend: 2, Mobile: 1 |
+| Есть ли DevOps / QA отдельно? | DevOps: 2, QA: отдельного нет (покрывается командой) |
+| Какая база данных и очереди? | PostgreSQL, RabbitMQ |
