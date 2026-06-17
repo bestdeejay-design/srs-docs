@@ -10,6 +10,7 @@
 
 | Версия | Дата | Автор | Изменения |
 |--------|------|-------|-----------|
+| 1.7 | 2026-06-17 | — | Review fix: Courier SM (добавлены 2 перехода в таблицу), Idempotency Policy (противоречие, код), Sequence 2.11.1/2.11.2 (retry/fallback), созданы migrations/*.sql и db/schema.rb |
 | 1.6 | 2026-06-17 | — | Prompt 7: API Versioning & Deprecation Policy — SLA, уведомления, mobile strategy, feature flags, Error Code Standard |
 | 1.5 | 2026-06-17 | — | Prompt 6: Idempotency Policy — общие правила, таблица эндпоинтов, edge cases, примеры кода (Rails/Go) |
 | 1.4 | 2026-06-17 | — | Prompt 5: Event JSON Schemas — Envelope + 12 полных JSON Schema (draft-07) для всех событий из §2.9 |
@@ -587,6 +588,8 @@ stateDiagram-v2
 | `free → on_break` | Courier starts break | courier.status == 'free', break quota remaining | courier.status = 'on_break', break_start set | Courier App | — |
 | `on_break → free` | Break ends | courier.status == 'on_break', break_duration >= min | courier.status = 'free' | System | — |
 | `free → offline` | Courier goes offline | courier.status == 'free' | courier.status = 'offline' | Courier App | — |
+| `busy → on_break` | Courier takes break (if allowed) | courier.status == 'busy', no active delivery, break quota remaining | courier.status = 'on_break', break_start set | Courier App | — |
+| `busy → offline` | Shift ends (force) | courier.status == 'busy', shift ended | courier.status = 'offline', active_delivery_id unset | System | — |
 
 #### 2.10.5 Picker Task
 
@@ -633,10 +636,15 @@ sequenceDiagram
     Gateway->>Cart: GET /cart/{userId}
     Cart-->>Gateway: cart items
     Gateway->>Order: POST /orders {items, address, slot}
-    Order->>Order: validate stock, calculate total
-    Order-->>Gateway: 201 Created {order_id, status:pending}
-    Gateway-->>Client: order created
-    Client->>Gateway: POST /payments/init {order_id, method:card}
+    alt stock insufficient
+        Order-->>Gateway: 409 Conflict {insufficient_items}
+        Gateway-->>Client: show unavailable items
+    else stock ok
+        Order->>Order: calculate total, reserve stock
+        Order-->>Gateway: 201 Created {order_id, status:pending}
+        Gateway-->>Client: order created
+    end
+    Client->>Gateway: POST /payments/init {order_id, method:card} (Idempotency-Key)
     Gateway->>Payment: POST /payments/init
     Payment->>Bank: create payment link
     Bank-->>Payment: payment_url
@@ -644,10 +652,17 @@ sequenceDiagram
     Gateway-->>Client: redirect to payment_url
     Client->>Bank: enter card details, 3DSecure
     Bank-->>Bank: process payment
-    Bank->>Payment: webhook: payment.succeeded
-    Payment->>Order: update status → paid
-    Order->>Notif: emit order.paid
-    Notif-->>Client: push: "Order paid"
+    alt payment failed
+        Bank->>Payment: webhook: payment.failed
+        Payment->>Order: update status → cancelled
+        Order->>Notif: emit order.cancelled
+        Notif-->>Client: push: "Payment failed"
+    else payment succeeded
+        Bank->>Payment: webhook: payment.succeeded (retry up to 3x, Idempotency-Key)
+        Payment->>Order: update status → paid
+        Order->>Notif: emit order.paid
+        Notif-->>Client: push: "Order paid"
+    end
 ```
 
 #### 2.11.2 Сборка с заменой товара
@@ -671,12 +686,17 @@ sequenceDiagram
     PickerSvc->>PickerSvc: find alternatives (same category/brand)
     PickerSvc-->>Picker: 5 alternatives
     Picker->>Client: call via hidden number
-    Client-->>Picker: accept alternative #2
-    Picker->>PickerSvc: select substitute {product_id}
-    PickerSvc->>Order: log substitution
+    alt client answers
+        Client-->>Picker: accept alternative #2
+        Picker->>PickerSvc: select substitute {product_id}
+        PickerSvc->>Order: log substitution
+    else client doesn't answer or rejects all
+        Picker->>PickerSvc: skip item (keep order without substitution)
+    end
     Picker->>PickerSvc: confirm packing complete
     PickerSvc->>Order: emit order.picking_completed
     Order->>Notif: emit order.picking_completed
+    Note over Order,Notif: retry + Idempotency-Key on delivery failure
     Notif-->>Client: push: "Order picked"
 ```
 
@@ -1163,7 +1183,7 @@ sequenceDiagram
 |---------|----------|
 | Header | `Idempotency-Key` |
 | Формат | UUID v4 |
-| Обязателен для | Все POST/PUT/PATCH запросы |
+| Обязателен для | Все POST/PUT/PATCH запросы (кроме аддитивных операций — см. таблицу) |
 | TTL ключа | 24 часа (настраивается) |
 | Привязка | `user_id` + `Idempotency-Key` (один пользователь не может использовать чужой ключ) |
 | Повторный запрос с тем же ключом | Тот же HTTP-код и тело ответа |
@@ -1176,7 +1196,7 @@ sequenceDiagram
 | `POST /orders` | ✅ Да | 24h | Предотвращение дублей заказов |
 | `POST /payments/init` | ✅ Да | 24h | Предотвращение двойных списаний |
 | `POST /payments/webhook` | ✅ Да | 72h | Bank retry — расширенный TTL |
-| `POST /carts/items` | ❌ Нет | — | Additive operation (идемпотентна по природе) |
+| `POST /carts/items` | ✅ Да (по природе) | — | Additive operation — повторный запрос с тем же body не создаёт дубль, а увеличивает quantity. Не требует заголовка Idempotency-Key |
 | `POST /notifications/send` | ✅ Да | 1h | Предотвращение двойных SMS |
 | `PATCH /orders/{id}/cancel` | ✅ Да | 24h | Предотвращение двойной отмены |
 | `POST /refunds` | ✅ Да | 72h | Финансовая операция, расширенный TTL |
@@ -1196,8 +1216,9 @@ sequenceDiagram
 
 ```ruby
 class IdempotencyMiddleware
-  def initialize(app)
+  def initialize(app, redis = Redis.new)
     @app = app
+    @redis = redis
   end
 
   def call(env)
@@ -1206,14 +1227,14 @@ class IdempotencyMiddleware
     cache_key = "idempotency:#{user_id}:#{key}"
 
     if key && user_id
-      cached = Redis.current.get(cache_key)
+      cached = @redis.get(cache_key)
       if cached
         data = JSON.parse(cached)
-        return [data['status'], {}, [data['body']]]
+        return [data['status'], data['headers'], [data['body']]]
       end
 
       status, headers, body = @app.call(env)
-      Redis.current.setex(cache_key, 86_400, {status: status, body: body.join}.to_json)
+      @redis.setex(cache_key, 86_400, {status: status, headers: headers, body: body.join}.to_json)
       [status, headers, body]
     else
       @app.call(env)
@@ -1225,30 +1246,46 @@ end
 #### 2.13.5 Пример реализации (Go middleware)
 
 ```go
-func IdempotencyMiddleware(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        key := r.Header.Get("Idempotency-Key")
-        userID := r.Header.Get("X-User-Id")
-        if key == "" || userID == "" {
-            next.ServeHTTP(w, r)
-            return
-        }
+type cachedResponse struct {
+    Status  int    `json:"status"`
+    Headers map[string]string `json:"headers,omitempty"`
+    Body    string `json:"body"`
+}
 
-        cacheKey := fmt.Sprintf("idempotency:%s:%s", userID, key)
-        if cached, err := redis.Get(ctx, cacheKey).Result(); err == nil {
-            var resp CachedResponse
-            json.Unmarshal([]byte(cached), &resp)
-            w.WriteHeader(resp.Status)
-            w.Write([]byte(resp.Body))
-            return
-        }
+func IdempotencyMiddleware(rdb *redis.Client) func(http.Handler) http.Handler {
+    return func(next http.Handler) http.Handler {
+        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+            key := r.Header.Get("Idempotency-Key")
+            userID := r.Header.Get("X-User-Id")
+            if key == "" || userID == "" {
+                next.ServeHTTP(w, r)
+                return
+            }
 
-        recorder := &statusRecorder{ResponseWriter: w, status: 200}
-        next.ServeHTTP(recorder, r)
+            ctx := r.Context()
+            cacheKey := fmt.Sprintf("idempotency:%s:%s", userID, key)
+            if cached, err := rdb.Get(ctx, cacheKey).Result(); err == nil {
+                var resp cachedResponse
+                json.Unmarshal([]byte(cached), &resp)
+                for k, v := range resp.Headers {
+                    w.Header().Set(k, v)
+                }
+                w.WriteHeader(resp.Status)
+                w.Write([]byte(resp.Body))
+                return
+            }
 
-        data, _ := json.Marshal(CachedResponse{Status: recorder.status, Body: recorder.body.String()})
-        redis.Set(ctx, cacheKey, data, 24*time.Hour)
-    })
+            recorder := &statusRecorder{ResponseWriter: w, status: 200}
+            next.ServeHTTP(recorder, r)
+
+            data, _ := json.Marshal(cachedResponse{
+                Status: recorder.status,
+                Headers: recorder.Header(),
+                Body:   recorder.body.String(),
+            })
+            rdb.Set(ctx, cacheKey, data, 24*time.Hour)
+        })
+    }
 }
 ```
 
@@ -1260,6 +1297,14 @@ func IdempotencyMiddleware(next http.Handler) http.Handler {
 **Источник:** Раздел 5.4 + пункт 5 общего списка.
 
 *Визуальная ER-диаграмма и ссылки на SQL-схемы.*
+
+Полные DDL-схемы вынесены в отдельные файлы:
+- [migrations/catalog.sql](migrations/catalog.sql) — §3.2 Catalog Schema
+- [migrations/orders_payments.sql](migrations/orders_payments.sql) — §3.3 Orders & Payments
+- [migrations/users_auth.sql](migrations/users_auth.sql) — §3.4 Users & Auth
+- [migrations/delivery_dispatch.sql](migrations/delivery_dispatch.sql) — §3.5 Delivery & Dispatch
+- [migrations/notifications_promotions.sql](migrations/notifications_promotions.sql) — §3.6 Notifications & Promotions
+- [db/schema.rb](db/schema.rb) — сводная схема
 
 ### 3.2 Catalog Schema (Архитектура хранения каталога)
 **Источник:** Раздел 5.4 исходного документа.

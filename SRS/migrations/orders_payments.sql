@@ -1,0 +1,3 @@
+-- Orders & Payments Schema
+-- Полные DDL-схемы хранятся в SRS.md §3.3
+-- См. SRS.md строка 1399: Orders & Payments Schema
