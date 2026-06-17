@@ -10,6 +10,7 @@
 
 | Версия | Дата | Автор | Изменения |
 |--------|------|-------|-----------|
+| 1.3 | 2026-06-17 | — | Prompt 4: Sequence Diagrams для 5 сценариев (Order flow, Substitution, Dispatch, Refund, Offline-sync) с Mermaid sequenceDiagram |
 | 1.2 | 2026-06-17 | — | Prompt 3: State Machine Diagrams для 5 сущностей (Order, Payment, Delivery, Courier, Picker Task) с Mermaid + таблицами переходов |
 | 1.1 | 2026-06-17 | — | Prompt 2: User Stories + Acceptance Criteria для всех 14 BP (BP-01…BP-14), Placeholder-ссылки на State Machine / Sequence / API |
 | 1.0 | 2026-06-17 | — | Структурная реорганизация: разделение на 2 тома (Business Requirements + Technical Specification), вынос артефактов в отдельные файлы, сокращение §6.4 Accessibility |
@@ -563,6 +564,159 @@ stateDiagram-v2
 
 ---
 
+### 2.11 Sequence Diagrams
+
+Sequence Diagrams для 5 критических сценариев. Участники — реальные сервисы из §2.3, события из §2.9. Сплошные стрелки (`→`) — синхронные вызовы, пунктирные (`-->>`) — асинхронные события.
+
+#### 2.11.1 Оформление заказа
+
+**Сценарий:** Клиент выбирает товары, оформляет заказ, оплачивает онлайн через Т-Банк.
+
+```mermaid
+sequenceDiagram
+    participant Client as Client App
+    participant Gateway as API Gateway
+    participant Cart as Cart Service
+    participant Order as Order Service
+    participant Payment as Payment Service
+    participant Bank as T-Bank
+    participant Notif as Notification Service
+
+    Client->>Gateway: POST /orders (Idempotency-Key)
+    Gateway->>Cart: GET /cart/{userId}
+    Cart-->>Gateway: cart items
+    Gateway->>Order: POST /orders {items, address, slot}
+    Order->>Order: validate stock, calculate total
+    Order-->>Gateway: 201 Created {order_id, status:pending}
+    Gateway-->>Client: order created
+    Client->>Gateway: POST /payments/init {order_id, method:card}
+    Gateway->>Payment: POST /payments/init
+    Payment->>Bank: create payment link
+    Bank-->>Payment: payment_url
+    Payment-->>Gateway: {payment_url, payment_id}
+    Gateway-->>Client: redirect to payment_url
+    Client->>Bank: enter card details, 3DSecure
+    Bank-->>Bank: process payment
+    Bank->>Payment: webhook: payment.succeeded
+    Payment->>Order: update status → paid
+    Order->>Notif: emit order.paid
+    Notif-->>Client: push: "Order paid"
+```
+
+#### 2.11.2 Сборка с заменой товара
+
+**Сценарий:** Пикер собирает заказ, обнаруживает отсутствующий товар, звонит клиенту, предлагает замену.
+
+```mermaid
+sequenceDiagram
+    participant Picker as Picker App
+    participant PickerSvc as Picker Service
+    participant Order as Order Service
+    participant Notif as Notification Service
+    participant Client as Client (phone)
+
+    Picker->>PickerSvc: open task {order_id}
+    PickerSvc-->>Picker: picking list
+    loop each item
+        Picker->>PickerSvc: scan barcode → confirm
+    end
+    Picker->>PickerSvc: mark item unavailable
+    PickerSvc->>PickerSvc: find alternatives (same category/brand)
+    PickerSvc-->>Picker: 5 alternatives
+    Picker->>Client: call via hidden number
+    Client-->>Picker: accept alternative #2
+    Picker->>PickerSvc: select substitute {product_id}
+    PickerSvc->>Order: log substitution
+    Picker->>PickerSvc: confirm packing complete
+    PickerSvc->>Order: emit order.picking_completed
+    Order->>Notif: emit order.picking_completed
+    Notif-->>Client: push: "Order picked"
+```
+
+#### 2.11.3 Назначение курьера (Dispatch)
+
+**Сценарий:** Заказ собран — диспетчер назначает ближайшего курьера, рассчитывает ETA, уведомляет клиента.
+
+```mermaid
+sequenceDiagram
+    participant Order as Order Service
+    participant Disp as Dispatcher
+    participant ETA as ETA Estimator
+    participant Courier as Courier App
+    participant Notif as Notification Service
+
+    Order->>Disp: event: order.picking_completed
+    Disp->>Disp: batching (15-60s window)
+    Disp->>ETA: GET /eta {store, customer_address}
+    ETA->>ETA: OSRM query + ML correction
+    ETA-->>Disp: ETA {duration_min, distance_km}
+    Disp->>Disp: cheapest insertion heuristic
+    Disp->>Courier: assign delivery {order_id, route}
+    Courier-->>Disp: accept
+    Disp->>Order: event: order.assigned
+    Order->>Notif: emit order.assigned
+    Notif-->>Client: SMS + push: "Courier on way, ETA X min"
+    Note over Disp: fallback: if no courier found → retry in 60s
+```
+
+#### 2.11.4 Refund
+
+**Сценарий:** Клиент запрашивает возврат, система инициирует refund через платёжный шлюз.
+
+```mermaid
+sequenceDiagram
+    participant Client as Client App
+    participant Gateway as API Gateway
+    participant Order as Order Service
+    participant Payment as Payment Service
+    participant Bank as T-Bank
+    participant Notif as Notification Service
+
+    Client->>Gateway: POST /orders/{id}/refund (Idempotency-Key)
+    Gateway->>Order: validate return policy (14 days)
+    Order-->>Gateway: refund allowed {amount}
+    Gateway->>Payment: POST /refunds {payment_id, amount}
+    Payment->>Bank: refund API call
+    alt success
+        Bank-->>Payment: refund succeeded
+        Payment->>Order: emit payment.refunded
+        Order->>Notif: emit order.cancelled
+        Notif-->>Client: push: "Refund processed, X RUB returned"
+    else failure
+        Bank-->>Payment: refund declined
+        Payment->>Order: refund_failed
+        Order->>Notif: notify support needed
+    end
+```
+
+#### 2.11.5 Offline-sync курьера
+
+**Сценарий:** Курьер теряет интернет во время доставки, отмечает доставку офлайн, данные синхронизируются позже.
+
+```mermaid
+sequenceDiagram
+    participant Courier as Courier App
+    participant Hive as Local Queue (Hive)
+    participant Backend as Delivery Service
+    participant DB as PostgreSQL
+    participant Payment as Payment Service
+
+    Note over Courier: internet lost
+    Courier->>Courier: capture POD (signature + photo)
+    Courier->>Hive: save delivery.confirm {order_id, pod, timestamp}
+    Note over Courier: internet restored
+    Courier->>Backend: batch POST /deliveries/sync (retry + Idempotency-Key)
+    Backend->>Backend: dedup by order_id + updated_at
+    Backend->>DB: update delivery status → delivered
+    Backend->>Payment: POST /payments/capture {order_id, amount}
+    Payment-->>Backend: captured
+    Backend-->>Courier: 200 OK {synced: [order_ids]}
+    Courier->>Hive: mark synced
+    Note over Courier,Backend: if conflict → latest updated_at wins, alert if > 5 min diff
+```
+
+---
+
 ### 3.1 Entity Relationship Diagram (ERD)
 **Источник:** Раздел 5.4 + пункт 5 общего списка.
 
@@ -1012,7 +1166,7 @@ And I do not need to re-enter my profile details
 
 **Ссылки:**
 → State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
-→ Sequence Diagram: [заглушка — будет добавлена в Prompt 5]
+→ Sequence Diagram: [§2.11 Sequence Diagrams](#211-sequence-diagrams)
 → API endpoint: [заглушка — будет добавлена в Prompt 6]
 
 **Триггер:** Пользователь открывает приложение / сайт
@@ -1083,7 +1237,7 @@ And filter options update dynamically based on available products
 
 **Ссылки:**
 → State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
-→ Sequence Diagram: [заглушка — будет добавлена в Prompt 5]
+→ Sequence Diagram: [§2.11 Sequence Diagrams](#211-sequence-diagrams)
 → API endpoint: [заглушка — будет добавлена в Prompt 6]
 
 **Триггер:** Пользователь открывает каталог / вводит поисковый запрос
@@ -1169,7 +1323,7 @@ And I receive a confirmation on screen
 
 **Ссылки:**
 → State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
-→ Sequence Diagram: [заглушка — будет добавлена в Prompt 5]
+→ Sequence Diagram: [§2.11 Sequence Diagrams](#211-sequence-diagrams)
 → API endpoint: [заглушка — будет добавлена в Prompt 6]
 
 **Триггер:** Пользователь выбирает товары и переходит к оформлению
@@ -1255,7 +1409,7 @@ And the order is marked as delivered
 
 **Ссылки:**
 → State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
-→ Sequence Diagram: [заглушка — будет добавлена в Prompt 5]
+→ Sequence Diagram: [§2.11 Sequence Diagrams](#211-sequence-diagrams)
 → API endpoint: [заглушка — будет добавлена в Prompt 6]
 
 **Триггер:** Заказ создан со статусом «Ожидает оплаты»
@@ -1333,7 +1487,7 @@ And a CTA button to start shopping
 
 **Ссылки:**
 → State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
-→ Sequence Diagram: [заглушка — будет добавлена в Prompt 5]
+→ Sequence Diagram: [§2.11 Sequence Diagrams](#211-sequence-diagrams)
 → API endpoint: [заглушка — будет добавлена в Prompt 6]
 
 **Триггер:** Пользователь заходит в профиль
@@ -1408,7 +1562,7 @@ And the order appears in the courier queue
 
 **Ссылки:**
 → State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
-→ Sequence Diagram: [заглушка — будет добавлена в Prompt 5]
+→ Sequence Diagram: [§2.11 Sequence Diagrams](#211-sequence-diagrams)
 → API endpoint: [заглушка — будет добавлена в Prompt 6]
 
 **Триггер:** Заказ оплачен / подтверждён
@@ -1514,7 +1668,7 @@ And automatically synced when connectivity is restored
 
 **Ссылки:**
 → State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
-→ Sequence Diagram: [заглушка — будет добавлена в Prompt 5]
+→ Sequence Diagram: [§2.11 Sequence Diagrams](#211-sequence-diagrams)
 → API endpoint: [заглушка — будет добавлена в Prompt 6]
 
 **Триггер:** Заказ собран и упакован пикером
@@ -1663,7 +1817,7 @@ And the remaining amount is refunded
 
 **Ссылки:**
 → State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
-→ Sequence Diagram: [заглушка — будет добавлена в Prompt 5]
+→ Sequence Diagram: [§2.11 Sequence Diagrams](#211-sequence-diagrams)
 → API endpoint: [заглушка — будет добавлена в Prompt 6]
 
 **Триггер:** Клиент хочет отменить заказ / вернуть товар
@@ -1724,7 +1878,7 @@ And no discount is applied
 
 **Ссылки:**
 → State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
-→ Sequence Diagram: [заглушка — будет добавлена в Prompt 5]
+→ Sequence Diagram: [§2.11 Sequence Diagrams](#211-sequence-diagrams)
 → API endpoint: [заглушка — будет добавлена в Prompt 6]
 
 **Триггер:** Администратор создаёт акцию
@@ -1788,7 +1942,7 @@ And I can block/unblock the user or change their role
 
 **Ссылки:**
 → State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
-→ Sequence Diagram: [заглушка — будет добавлена в Prompt 5]
+→ Sequence Diagram: [§2.11 Sequence Diagrams](#211-sequence-diagrams)
 → API endpoint: [заглушка — будет добавлена в Prompt 6]
 
 **Триггер:** Менеджер заходит в админку
@@ -1855,7 +2009,7 @@ And empty charts with a prompt to adjust the filter
 
 **Ссылки:**
 → State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
-→ Sequence Diagram: [заглушка — будет добавлена в Prompt 5]
+→ Sequence Diagram: [§2.11 Sequence Diagrams](#211-sequence-diagrams)
 → API endpoint: [заглушка — будет добавлена в Prompt 6]
 
 **Триггер:** Запрос аналитика / руководителя
@@ -1920,7 +2074,7 @@ And the documents are sent electronically
 
 **Ссылки:**
 → State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
-→ Sequence Diagram: [заглушка — будет добавлена в Prompt 5]
+→ Sequence Diagram: [§2.11 Sequence Diagrams](#211-sequence-diagrams)
 → API endpoint: [заглушка — будет добавлена в Prompt 6]
 
 **Триггер:** Представитель юрлица оформляет заказ для офиса
@@ -2011,7 +2165,7 @@ But still receive order-related notifications
 
 **Ссылки:**
 → State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
-→ Sequence Diagram: [заглушка — будет добавлена в Prompt 5]
+→ Sequence Diagram: [§2.11 Sequence Diagrams](#211-sequence-diagrams)
 → API endpoint: [заглушка — будет добавлена в Prompt 6]
 
 **Триггер:** Событие в системе (заказ создан, оплачен, доставлен)
@@ -2077,7 +2231,7 @@ And the customer sees the reason for the surcharge
 
 **Ссылки:**
 → State Machine: [§2.10 State Machine Diagrams](#210-state-machine-diagrams)
-→ Sequence Diagram: [заглушка — будет добавлена в Prompt 5]
+→ Sequence Diagram: [§2.11 Sequence Diagrams](#211-sequence-diagrams)
 → API endpoint: [заглушка — будет добавлена в Prompt 6]
 
 **Триггер:** Изменение внешних факторов (пиковые часы, погода, праздники, загрузка курьеров)
