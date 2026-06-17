@@ -133,7 +133,21 @@
 ```
 Ответ содержит `items`, `filters` (с брендами, рейтингом и т.д.), `collections`.
 
-**Поиск товаров по категории — эндпоинт не найден.** Фронтенд Angular загружает товары через комбинацию:
+**Поиск товаров по категории — SSR + коллекции.** Каталог рендерится на сервере (Angular Universal), товары доставляются в HTML. Для API-доступа к товарам категории:
+
+1. Получить `collectionId` через виджеты страницы:
+   - `GET /api-gateway/v1/pages/types/{typeId}/widgets` — виджеты по типу страницы
+   - Или `POST /api-gateway/v1/pages/places/widgets` с `{"placeIds": [...], "categoryId": "153"}`
+2. Загрузить товары по коллекции:
+   - `POST /api-gateway/v1/catalog/items/collections` с `{"collectionId": 310004503}`
+3. **Product ID из SSR:** В HTML товары имеют ID вида `product-{id}` (напр. `product-94429`).
+4. **URL товара:** `https://lenta.com/product/{slug}-{id}/`
+
+Альтернативы для получения списка товаров:
+- **SSR-парсинг:** загрузить `https://lenta.com/catalog/{slug}-{id}/` и распарсить HTML
+- **Старый PHP API:** `POST /api/rest/catalogGetProducts` — существует, но класс не найден (возможно, удалён или переименован)
+
+Фронтенд Angular загружает товары каталога через комбинацию:
 1. `POST /api-gateway/v1/pages/places/widgets` — получение виджетов для страницы (содержат `collectionId`)
 2. `POST /api-gateway/v1/catalog/items/collections` — загрузка товаров коллекции
 3. `POST /api-gateway/v1/catalog/items/recommendations` — рекомендации
@@ -143,20 +157,24 @@
 - `GET /api-gateway/v1/catalog/categories` (400 — нужен параметр)
 - `POST /api-gateway/v1/catalog/items/search` (405 — неверный метод)
 
-**Формат товара (из коллекции):**
-```json
-{
-  "id": 12345,
-  "name": "Молоко питьевое 3.2% 720мл",
-  "slug": "moloko-pitevoe-3-2-720ml",
-  "brand": "...",
-  "price": 89.90,
-  "oldPrice": 109.90,
-  "image": "https://cdn.api.lenta.com/...",
-  "rating": 4.5,
-  "stock": { /* остатки */ }
-}
+**Формат товара (из SSR HTML):**
+```html
+<lu-product-card card-size="XL" card-hover="false">
+  <a href="https://lenta.com/product/limony-ves-094429/" class="product-card small-vertical">
+    <!-- картинка, название, цена, вес/объём -->
+  </a>
+</lu-product-card>
 ```
+
+**Пример данных из HTML:**
+- **ID товара:** `94429` (из `product-94429`)
+- **Название:** `Лимоны, весовые`
+- **URL:** `/product/limony-ves-094429/`
+- **Цена:** найдена через паттерн `[0-9]+\.[0-9]{2}[\s]*[₽р]`
+- **Картинка:** `https://sitecdn.api.lenta.com/assets-ng/ui-kit/empty-image.svg` (placeholder, реальная через lazy load)
+- **Компонент:** `<lu-product-card>` + `<lu-product-card-image>`
+
+**SSR:** Angular 21.1.1 с Universal (SSR). Страница категории рендерится полностью на сервере — 40+ товаров в HTML. Клиентская гидратация добавляет lazy-загрузку картинок и интерактив.
 
 **CDN для ассетов:** `https://sitecdn.api.lenta.com/`
 **CDN для изображений:** `https://cdn.api.lenta.com/resample/webp/{size}/photo/...`
