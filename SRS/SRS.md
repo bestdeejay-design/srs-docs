@@ -10,6 +10,13 @@
 
 | Версия | Дата | Автор | Изменения |
 |--------|------|-------|-----------|
+| 1.14 | 2026-06-17 | — | Prompt 14: Analytics Events Schema — §2.6.1, стандартная схема, каталог 17 событий с sampling, PII-фильтрация, интеграции (Яндекс.Метрика, Firebase, ClickHouse, Amplitude), enforcement |
+| 1.13 | 2026-06-17 | — | Prompt 13: Frontend Performance Budget — §1.3.1, Core Web Vitals, bundle/image/font/third-party бюджеты, monitoring, enforcement в CI |
+| 1.12 | 2026-06-17 | — | Prompt 12: Compliance Matrix — полная матрица (12 требований), риски несоответствия, roadmap MVP/V2/V3 |
+| 1.11 | 2026-06-17 | — | Prompt 11: Fraud Detection — §6.5, сигналы (velocity, geo, device, behavioral), scoring-модель, workflow (Mermaid), интеграции, feedback loop, метрики |
+| 1.10 | 2026-06-17 | — | Prompt 10: Dispute & Chargeback Workflow — BP-15, типы споров, workflow (Mermaid state machine), таблица ответственности, блокировка клиентов, SLA, финансовые последствия |
+| 1.9 | 2026-06-17 | — | Prompt 9: Rate Limits & Quotas — таблица лимитов по 10 эндпоинтам, лимиты по ролям, HTTP 429, реализация Nginx+Redis, burst-политика |
+| 1.8 | 2026-06-17 | — | Prompt 8: Data Migration Strategy — порядок миграции, Double Write + Transactional Outbox, reconciliation, cut-over criteria, rollback, backfill, таблица рисков |
 | 1.7 | 2026-06-17 | — | Review fix: Courier SM (добавлены 2 перехода в таблицу), Idempotency Policy (противоречие, код), Sequence 2.11.1/2.11.2 (retry/fallback), созданы migrations/*.sql и db/schema.rb |
 | 1.6 | 2026-06-17 | — | Prompt 7: API Versioning & Deprecation Policy — SLA, уведомления, mobile strategy, feature flags, Error Code Standard |
 | 1.5 | 2026-06-17 | — | Prompt 6: Idempotency Policy — общие правила, таблица эндпоинтов, edge cases, примеры кода (Rails/Go) |
@@ -116,6 +123,76 @@ SRS разделён на два тома. В зависимости от ваш
 | **Data Recovery** | Daily full backup + WAL streaming, RPO < 1h, RTO < 4h | DR in another DC | — |
 | **Food Safety** | Термоупаковка (заморозка/охлаждение), разделение химии и продуктов, срок годности > 50% от остатка | Логирование температуры при доставке | — |
 | **Internationalization** | Русский язык (интерфейс, контент, платежи) | Locale-файлы, разделение кода и текста | EN/CN интерфейс (V3) |
+
+#### 1.3.1 Frontend Performance Budget
+
+Конкретные бюджеты производительности для фронтенда (Web + Mobile Web). Согласовано с §2.2 Technology Stack (Next.js 10) и §7.4 Load Testing Targets.
+
+**Core Web Vitals:**
+
+| Метрика | Цель | Инструмент |
+|---------|------|------------|
+| LCP (Largest Contentful Paint) | < 2.5 с | Lighthouse CI / Yandex.Metrica RUM |
+| INP (Interaction to Next Paint) | < 200 мс | Lighthouse CI |
+| CLS (Cumulative Layout Shift) | < 0.1 | Lighthouse CI |
+| TTFB (Time to First Byte) | < 800 мс | Lighthouse CI / Grafana |
+
+**Bundle budget:**
+
+| Ресурс | Максимум (gzipped) |
+|--------|-------------------|
+| Initial JS (весь фреймворк + роутинг) | < 200 KB |
+| Initial CSS | < 50 KB |
+| Total initial (JS + CSS + HTML) | < 300 KB |
+| Per-route JS (код конкретной страницы) | < 50 KB |
+| Vendor JS (библиотеки) | < 100 KB |
+
+**Image budget:**
+
+| Тип изображения | Максимум | Формат | Примечание |
+|----------------|----------|--------|------------|
+| Hero (главный баннер) | < 100 KB | WebP / AVIF | Размеры: 1200×600 |
+| Product card (каталог) | < 30 KB | WebP / AVIF | Размеры: 300×300 |
+| Product detail (галерея) | < 80 KB | WebP / AVIF | Размеры: 600×600 |
+| Total images per page | < 500 KB | — | Сумма всех изображений |
+| Lazy loading | Обязательно | — | Всё ниже fold — loading="lazy" |
+
+**Font budget:**
+
+| Параметр | Лимит |
+|----------|-------|
+| Максимум семейств шрифтов | 2 (например, Inter + Roboto Mono для кода) |
+| Максимум начертаний на семейство | 4 (Regular, Medium, Semibold, Bold) |
+| Общий вес шрифтов | < 100 KB |
+| `font-display` | `swap` (обязательно для всех) |
+| Подгрузка | `preload` для основного шрифта, остальные — `preconnect` |
+
+**Third-party budget:**
+
+| Параметр | Лимит |
+|----------|-------|
+| Максимум сторонних скриптов | 5 (Метрика, Sentry, CDN-шрифты, чат поддержки, ретаргетинг) |
+| Общий вес third-party JS | < 100 KB |
+| Асинхронная загрузка | `async` / `defer` для всех (кроме critical) |
+| Self-hosted fallback | Sentry → self-hosted Sentry, шрифты → self-hosted |
+
+**Monitoring:**
+
+| Инструмент | Что измеряем | Порог алерта |
+|------------|-------------|--------------|
+| Яндекс.Метрика (RUM) | LCP, INP, CLS, TTFB реальных пользователей | LCP > 3 с у 10% пользователей |
+| Lighthouse CI (synthetic) | Performance score, bundle size | Score < 80 → fail |
+| Grafana + Prometheus | TTFB сервера (p95) | > 800 мс → alert |
+| sentry | JavaScript errors | > 1% сессий с ошибкой |
+
+**Enforcement:**
+
+| Этап | Инструмент | Действие |
+|------|-----------|----------|
+| PR (CI) | `bundlesize` + Lighthouse CI | Блокировка PR при превышении budget |
+| Code review | Чеклист: lazy loading, optimized images, no render-blocking | Ручная проверка |
+| Staging | Lighthouse CI diff против baseline | Предупреждение команде |
+| Production (ежедневно) | RUM dashboards (Grafana + Yandex.Metrica) | Автоматический алерт при нарушении SLA |
 
 ### 1.4 External Integrations (Внешние интеграции)
 **Источник:** Раздел 1.4 исходного документа.
@@ -383,7 +460,75 @@ flowchart LR
 
 > **Разделение:** Prometheus/Grafana — технический мониторинг (латентность, ошибки, ёмкость). Яндекс.Метрика — бизнес-аналитика (поведение пользователей, конверсия).
 
-### 2.7 API Versioning, Deprecation Policy & Error Code Standard
+#### 2.6.1 Analytics Events Schema
+
+Стандартная схема событий для продуктовой аналитики. Используется всеми сервисами (backend + frontend + mobile) для единообразного сбора данных. Согласовано с §2.9 Event Catalog (бизнес-события не дублируются) и §6.2 Data Protection (PII-фильтрация).
+
+**Стандартная схема:**
+
+```json
+{
+  "event_name": "product_clicked",
+  "timestamp": "2026-06-17T10:00:00Z",
+  "user_id": "uuid",
+  "session_id": "uuid",
+  "device_type": "web",
+  "properties": {
+    "product_id": "12345",
+    "price": 499.90,
+    "position": 3,
+    "source": "search_results"
+  }
+}
+```
+
+**Каталог событий:**
+
+| Событие | Когда | Ключевые properties | Sampling |
+|---------|-------|---------------------|----------|
+| `catalog_viewed` | Открытие каталога | store_id, category_id, sorting | 10% |
+| `product_viewed` | Открытие карточки товара | product_id, price, position | 10% |
+| `product_clicked` | Клик по товару в списке | product_id, position, source (search/category/promo) | 10% |
+| `search_performed` | Поиск | query, results_count, filters | 10% |
+| `cart_updated` | Изменение корзины | action (add/remove), product_id, delta, cart_value | 100% |
+| `checkout_started` | Переход к оформлению | cart_value, items_count, selected_slot | 100% |
+| `payment_started` | Начало оплаты | method (card/sbp/cash), amount | 100% |
+| `payment_completed` | Успешная оплата | method, amount, payment_id | 100% |
+| `payment_failed` | Неудачная оплата | method, amount, error_code, error_reason | 100% |
+| `order_created` | Заказ создан | order_id, value, items_count, store_id | 100% |
+| `order_cancelled` | Заказ отменён | order_id, reason (client/no_stock/other), stage | 100% |
+| `promo_applied` | Промокод применён | code, discount_percent, discount_value | 100% |
+| `courier_assigned` | Курьер назначен | order_id, eta_minutes | 100% |
+| `delivery_started` | Курьер выехал | order_id, courier_id | 100% |
+| `delivery_completed` | Доставка завершена | order_id, on_time (bool) | 100% |
+| `app_opened` | Открытие мобильного приложения | app_version, platform | 10% |
+| `screen_viewed` | Просмотр экрана (mobile) | screen_name, referrer | 10% |
+
+**PII-фильтрация:**
+
+| Категория | Данные | Разрешено? |
+|-----------|--------|-----------|
+| **НЕ трекать** | Телефон, email, точный адрес (улица+дом), ФИО, номер карты | ❌ Запрещено |
+| **МОЖНО трекать** | user_id (UUID, анонимизированный), город, категория товара, store_id | ✅ Разрешено |
+| **Только с согласия** | Точная геолокация (lat/lng), device ID | ⚠️ Требуется consent |
+
+**Интеграции:**
+
+| Система | Назначение | Статус |
+|---------|-----------|--------|
+| **Яндекс.Метрика** | Основная бизнес-аналитика (воронки, конверсии, отчёты) | MVP (Web) |
+| **Firebase Analytics** | Мобильная аналитика (iOS/Android) | MVP |
+| **ClickHouse** | Хранилище сырых событий для data team (кастомные запросы, ML) | V2 |
+| **Amplitude / Mixpanel** | Продуктовая аналитика (retention, cohorts, A/B) | V2 |
+
+**Enforcement:**
+
+| Этап | Что проверяем | Инструмент |
+|------|--------------|------------|
+| PR (backend) | Новые события зарегистрированы в каталоге | Code review + JSON Schema validation |
+| PR (frontend/mobile) | Событие отправляется с правильными полями | Code review + TypeScript types |
+| Staging | Валидность JSON-схемы события | Integration test (event emitted → schema valid) |
+| Prod monitoring | Дельта событий (не упала ли какая-то воронка) | Grafana dashboard + alert
 
 #### 2.7.1 API Versioning
 
@@ -1291,9 +1436,261 @@ func IdempotencyMiddleware(rdb *redis.Client) func(http.Handler) http.Handler {
 
 ---
 
-## 3. Data Model (Модель данных)
+### 2.14 Data Migration Strategy
 
-### 3.1 Entity Relationship Diagram (ERD)
+Стратегия миграции данных с монолита на микросервисную архитектуру (Strangler-Fig). Это самый рисковый этап плана (см. ПЛАН_ОПТИМИЗАЦИИ, §5–§7: модульная миграция, canary-release, демонтаж монолита). Согласовано с §2.1 Architecture Style (Strangler-Fig) и §5.7 Backup & DR (бэкапы перед каждым шагом cut-over).
+
+#### 2.14.1 Порядок миграции сервисов
+
+Миграция выполняется от наименее рискованного к наиболее рискованному. Каждый сервис проходит этапы: Double Write → Validation → Cut-over → Monolith decommission.
+
+```mermaid
+graph LR
+    P1[1. Catalog] --> P2[2. User & Auth]
+    P2 --> P3[3. Inventory]
+    P3 --> P4[4. Order + Payment]
+    P4 --> P5[5. Delivery + Dispatcher]
+    P5 --> P6[6. Notification + Analytics]
+```
+
+| Приоритет | Сервис | Риск | Обоснование |
+|-----------|--------|------|-------------|
+| 1 | Catalog | Низкий | Read-only данные, нет мутаций от клиентов. Ошибка не приведёт к financial loss |
+| 2 | User & Auth | Низкий | Независимый домен, минимум связей с другими таблицами |
+| 3 | Inventory | Средний | Связан с Catalog, но SKU стабильны. Риск: расхождение остатков |
+| 4 | Order + Payment | Высокий | Финансовые данные, Event Sourcing, самая сложная миграция. Любая ошибка = потеря денег |
+| 5 | Delivery + Dispatcher | Средний | Зависит от Order. Активные доставки нельзя потерять |
+| 6 | Notification, Analytics | Низкий | Не критично для бизнеса. Можно мигрировать последними |
+
+#### 2.14.2 Стратегия двойной записи (Double Write)
+
+На этапе Double Write каждый сервис пишет одновременно в старую (монолит) и новую (микросервис) БД. Консистентность обеспечивается через Transactional Outbox:
+
+```mermaid
+sequenceDiagram
+    participant App as New Microservice
+    participant DB as New DB
+    participant Outbox as Outbox Table
+    participant Relay as Relay Process
+    participant Monolith as Old Monolith DB
+
+    App->>DB: write to business table
+    App->>Outbox: insert outbox record {table, operation, data, status:pending}
+    App-->>App: return success to client
+    Note over App: Async relay
+    Relay->>Outbox: poll pending records
+    Relay->>Monolith: replay operation
+    alt success
+        Relay->>Outbox: mark status:synced
+    else conflict
+        Relay->>Outbox: mark status:failed, increment retry_count
+        Note over Relay: retry up to 5x, then alert
+    end
+```
+
+**Reconciliation job:**
+- Запускается каждые 15 минут
+- Сравнивает count, checksum, сумму ключевых полей между новой и старой БД
+- При расхождении > 0.1% — автоматический алерт в PagerDuty/Slack
+- При расхождении > 1% — автоматическая блокировка cut-over
+
+```sql
+-- Пример reconciliation-запроса:
+SELECT COUNT(*), SUM(amount) FROM new_orders.orders WHERE created_at > now() - interval '15 minutes'
+UNION ALL
+SELECT COUNT(*), SUM(amount) FROM old_monolith.orders WHERE created_at > now() - interval '15 minutes';
+```
+
+#### 2.14.3 Cut-over критерии
+
+Cut-over (переключение трафика на новый сервис) выполняется только при выполнении всех условий:
+
+| Критерий | Метрика | Как проверяем |
+|----------|---------|---------------|
+| Расхождение данных | 0 расхождений за 7 дней | Reconciliation job |
+| Нагрузочное тестирование | p95 < 500ms при 2x RPS | Load test в staging |
+| Contract-тесты | 100% green | Pact / Spring Cloud Contract в CI |
+| Rollback-план | Протестирован | Dry-run в staging |
+| Graceful degradation | Старый сервис живёт в read-only | Feature flag `use_new_{service}` в LaunchDarkly |
+
+**Процедура cut-over:**
+
+1. **Полный бэкап** старой и новой БД перед каждым шагом (см. §5.7 Backup & DR)
+2. Включить feature flag `use_new_{service}` для 1% пользователей → 24h мониторинга
+3. Расширить до 10% → 48h мониторинга
+4. Расширить до 50% → 72h мониторинга
+5. 100% — старый сервис в read-only на 7 дней (откат возможен без потери данных)
+6. Демонтаж старого сервиса после 7 дней без расхождений
+
+> **Согласование с ПЛАН_ОПТИМИЗАЦИИ:** порядок миграции соответствует §5 (Модульная миграция бизнес-логики), процедура canary-rollout — §6 (Canary-Release), полный переход и демонтаж — §7 (Полный переход и демонтаж старого монолита).
+
+#### 2.14.4 Rollback-план
+
+Для каждого сервиса определён порядок отката:
+
+| Сервис | Действие при откате | Что делаем с новыми данными |
+|--------|---------------------|----------------------------|
+| Catalog | Выключить `use_new_catalog` → трафик на монолит | Новые данные копируются в монолит через reverse sync |
+| User & Auth | Выключить `use_new_user` → трафик на монолит | Новые сессии инвалидируются, пользователи переносятся reverse sync |
+| Inventory | Выключить `use_new_inventory` → монолит | Reverse sync + ручная сверка остатков |
+| Order + Payment | Выключить `use_new_order` → новые заказы на монолит. **Активные заказы** в новом сервисе доводятся до завершения | Event Sourcing позволяет восстановить все события |
+| Delivery | Выключить `use_new_delivery` → новые назначения на монолит. Активные доставки остаются в новом сервисе | Reverse sync для завершённых доставок |
+
+**Reverse replication:**
+
+```mermaid
+sequenceDiagram
+    participant New as New DB
+    participant Reverse as Reverse Sync
+    participant Old as Old Monolith DB
+
+    Note over Reverse: Запускается при откате
+    Reverse->>New: read records since last sync
+    Reverse->>Old: upsert into legacy tables
+    alt conflict
+        Reverse->>Reverse: log conflict, manual resolution
+    end
+```
+
+#### 2.14.5 Миграция исторических данных
+
+**Backfill:**
+- Исторические данные переносятся batch-скриптами до начала Double Write
+- Каждый batch: 10 000 записей, пауза 1 секунда между batch
+- Ограничение по времени: не более 4 часов downtime (ночное окно)
+
+**Валидация после миграции:**
+
+| Проверка | Что проверяем | Допуск |
+|----------|---------------|--------|
+| Row count | Количество записей совпадает | 100% |
+| Control sum | SUM ключевых числовых полей | 100% |
+| Checksum | CRC32/MD5 конкатенации всех полей | 100% |
+| Referential integrity | FK не нарушены | 0 нарушений |
+| Sample check | Выборочная сверка 1% записей вручную | 0 ошибок |
+
+**Downtime окно:**
+- Catalog, User & Auth: zero-downtime (Double Write с первой записи)
+- Inventory: zero-downtime
+- Order + Payment: zero-downtime (Event Sourcing гарантирует консистентность)
+- Исторические данные: downtime до 4 часов в ночное окно (02:00–06:00 MSK)
+
+#### 2.14.6 Таблица рисков и митигаций
+
+| Риск | Вероятность | Влияние | Митигация |
+|------|-------------|---------|-----------|
+| Расхождение данных при Double Write | Medium | High | Reconciliation каждые 15 мин, автоматический алерт |
+| Потеря заказа при cut-over | Low | Critical | Event Sourcing + feature flag rollout |
+| Отказ нового сервиса под нагрузкой | Medium | High | Load test до 2x RPS перед cut-over |
+| Reverse sync не успевает за новыми данными | Low | Medium | Batch-режим + priority queue |
+| Человеческая ошибка при переключении | Medium | Medium | Runbook + автоматизация через CI/CD |
+| Блокировка старой БД при backfill | Medium | Medium | Batch с паузами, мониторинг lock-ов |
+
+---
+
+### 2.15 Rate Limits & Quotas
+
+Политика rate limiting для защиты от злоупотреблений и равномерного распределения ресурсов. Согласовано с §1.3 NFR (RPS 50→500→5000), §1.5 Error Handling (матрица таймаутов) и §6.2 Data Protection.
+
+#### 2.15.1 Таблица лимитов по эндпоинтам
+
+| Endpoint | Limit | Window | Burst | Почему |
+|----------|-------|--------|-------|--------|
+| `GET /catalog/*` | 300 | per user / min | 50 | Read-heavy — каталог грузится часто |
+| `POST /orders` | 5 | per user / min | 2 | Защита от дублей заказов |
+| `POST /auth/sms` | 3 | per phone / hour | 1 | Защита от SMS-спама |
+| `POST /payments/*` | 10 | per user / min | 2 | Финтех-защита |
+| `GET /orders/history` | 60 | per user / min | 10 | История заказов — частый просмотр |
+| `POST /notifications/*` | 20 | per user / min | 5 | Защита от спам-рассылок |
+| `POST /auth/register` | 5 | per IP / hour | 2 | Защита от накрутки аккаунтов |
+| `PATCH /orders/{id}/cancel` | 3 | per order / min | 1 | Предотвращение race condition |
+| `POST /refunds` | 3 | per user / day | 1 | Финансовая операция |
+| `POST /deliveries/sync` | 60 | per courier / min | 10 | Offline sync — может быть burst |
+
+#### 2.15.2 Лимиты по ролям
+
+| Роль | Множитель | Базовый лимит (пример) |
+|------|-----------|-----------------------|
+| B2C (обычный пользователь) | ×1 | 5 POST/orders/min |
+| B2B (корпоративные клиенты) | ×5 | 25 POST/orders/min |
+| Admin (менеджеры) | ×10 | 50 POST/orders/min |
+| Service-to-service | Отдельные лимиты | По согласованию, whitelist IP |
+| Courier App | ×3 | 180 POST/deliveries/sync/min |
+
+#### 2.15.3 HTTP-ответ при превышении лимита
+
+```http
+HTTP/1.1 429 Too Many Requests
+Retry-After: 30
+X-RateLimit-Limit: 5
+X-RateLimit-Remaining: 0
+X-RateLimit-Reset: 1718640000
+Content-Type: application/json
+
+{
+  "error": {
+    "code": "RATE_LIMIT_EXCEEDED",
+    "message": "Превышен лимит запросов. Попробуйте через 30 секунд",
+    "details": {
+      "limit": 5,
+      "window": "1 minute",
+      "retry_after_seconds": 30
+    },
+    "request_id": "req_def456"
+  }
+}
+```
+
+Заголовки соответствуют RFC 6585 / draft-ietf-httpapi-ratelimit-headers.
+
+#### 2.15.4 Реализация
+
+| Компонент | Технология | Алгоритм |
+|-----------|-----------|----------|
+| API Gateway | Nginx `limit_req` zone | Token bucket (на уровне gateway — первая линия защиты) |
+| Service-level | Redis + middleware | Sliding window log (на уровне сервиса — точные лимиты по user_id) |
+| Распределённый счётчик | Redis INCR + EXPIRE | Atomic операции, TTL = размер окна |
+
+**Схема работы:**
+
+```mermaid
+sequenceDiagram
+    participant Client as Client
+    participant Gateway as API Gateway (Nginx)
+    participant Redis as Redis Cluster
+    participant Service as Microservice
+
+    Client->>Gateway: POST /orders
+    Gateway->>Gateway: check limit_req zone
+    alt burst exceeded
+        Gateway-->>Client: 429 Too Many Requests
+    else within limit
+        Gateway->>Service: forward request
+        Service->>Redis: INCR rate_limit:{user_id}:orders
+        Redis-->>Service: current count
+        alt soft limit exceeded
+            Service-->>Client: 429 + Retry-After
+        else within limit
+            Service->>Service: process request
+            Service-->>Client: 200 OK + RateLimit headers
+        end
+    end
+```
+
+**Whitelist:**
+- Внутренние сервисы (service-to-service) — обходят rate limiting через header `X-Internal-Service: <secret>`
+- Мониторинг (Prometheus, Sentry) — whitelist по IP
+
+#### 2.15.5 Burst-политика
+
+| Сценарий | Механизм | Параметры |
+|----------|----------|-----------|
+| Распродажа (Black Friday) | Заранее увеличить burst-лимиты в 2× через админку | Feature flag `burst_mode_bf` |
+| DDoS-атака | Включить строгий режим (лимиты ÷10) | Feature flag `strict_rate_limit` |
+| Расширение пользовательской базы | Пересчёт лимитов при росте MAU > 20% | Ежеквартальный review |
+| Ошибка мониторинга | Отдельный лимит для `/health` и `/metrics`: 60/min | Не блокировать внутренние проверки |
+
+---
 **Источник:** Раздел 5.4 + пункт 5 общего списка.
 
 *Визуальная ER-диаграмма и ссылки на SQL-схемы.*
@@ -2501,7 +2898,108 @@ And no discount is applied
 
 ---
 
-#### BP-11: Админ-панель (CRM / Бэк-офис) (40 чел.-дней)
+#### BP-15: Dispute & Chargeback Workflow (18 чел.-дней)
+
+**User Story:**
+As a customer,
+I want to dispute an issue with my order when something goes wrong,
+So that I can get a refund or replacement without hassle.
+
+As a support manager,
+I want to review and resolve disputes efficiently,
+So that we minimise financial losses from chargebacks.
+
+**Acceptance Criteria:**
+
+Given a customer has received a wrong/damaged item or no delivery
+When they create a dispute through the app or support chat
+Then the system creates a dispute record with status `pending`
+And an automatic check begins immediately
+
+Given the dispute passes auto-resolution (clear evidence)
+When the system finds the courier photo-confirms delivery
+Then the dispute is auto-rejected with explanation to the customer
+
+Given a customer files 3 disputes within 30 days
+When the 3rd dispute is created
+Then the customer account is temporarily blocked
+And all active disputes are escalated to manual review
+
+**Workflow:**
+
+```mermaid
+stateDiagram-v2
+    [*] --> pending : customer files dispute
+    pending --> auto_review : system starts check
+    auto_review --> auto_accepted : clear evidence (no delivery, no POD photo)
+    auto_review --> auto_rejected : clear evidence (POD photo, tracking OK)
+    auto_review --> manual_review : ambiguous case
+    manual_review --> approved : manager confirms refund
+    manual_review --> rejected : manager rejects
+    auto_accepted --> refund_initiated : process refund
+    approved --> refund_initiated : process refund
+    refund_initiated --> refunded : payment processed
+    rejected --> [*] : closed
+    refunded --> [*] : closed
+    refunded --> chargeback : bank initiates chargeback
+    chargeback --> bank_review : respond to bank
+    bank_review --> lost : bank sides with customer
+    bank_review --> won : bank sides with aggregator
+    lost --> [*] : financial loss booked
+    won --> [*] : chargeback reversed
+```
+
+**Типы споров:**
+
+| Тип | Пример | Авто-решение? | SLA |
+|-----|--------|---------------|-----|
+| Товар не доставлен | Курьер отметил доставку, но клиент не получил | ✅ Да (проверка POD-фото + GPS трек) | < 1 час |
+| Товар повреждён | Битая упаковка, испорченный продукт | ❌ Нет (нужно фото от клиента) | < 24 часа |
+| Товар не соответствует описанию | Не тот вес, срок годности истёк | ❌ Нет (ручная проверка) | < 24 часа |
+| Несанкционированная транзакция | Клиент утверждает, что не платил | ⚠️ Частично (проверка device fingerprint) | < 72 часа |
+| Двойное списание | Два списания за один заказ | ✅ Да (проверка payment_id) | < 1 час |
+
+**Таблица ответственности:**
+
+| Ситуация | Кто несёт ответственность | Финансовые последствия |
+|----------|--------------------------|----------------------|
+| Товар не собран / не найден в магазине | Пикер / Магазин | Агрегатор взыскивает с магазина |
+| Товар повреждён при сборке | Пикер | Стоимость товара списывается с пикера (после 3 инцидентов) |
+| Товар повреждён при доставке | Курьер | Стоимость товара + штраф курьеру |
+| Товар не доставлен (потерян) | Агрегатор | Полный refund клиенту за счёт агрегатора |
+| Фрод со стороны клиента | Клиент | Блокировка аккаунта, chargeback оспаривается в банке |
+| Ошибка платежного шлюза | Банк / Платёжный провайдер | Агрегатор оспаривает chargeback |
+
+**Блокировка клиентов (anti-fraud):**
+
+| Порог | Действие | Автоматически? |
+|-------|----------|---------------|
+| 3 disputes за 30 дней | Временная блокировка (7 дней) | ✅ Да |
+| 5 disputes за 90 дней | Перманентная блокировка | ✅ Да + ручной review |
+| Повторные chargeback > 2 | Блокировка новой регистрации с тем же phone/IP | ✅ Да |
+| Pattern: множество мелких заказов с dispute | Блокировка + передача в security | ⚠️ Требуется подтверждение |
+
+**SLA:**
+
+| Этап | SLA | Ответственный |
+|------|-----|---------------|
+| Авто-решение (достаточно данных) | Мгновенно | Система |
+| Ручной разбор (стандартный) | < 24 часа | Support-менеджер |
+| Ручной разбор (финансовый спор) | < 4 часа | Финансовый менеджер |
+| Ответ на chargeback от банка | < 72 часа | Финансовый + Legal |
+| Refund после решения | < 2 часа | Payment Service |
+
+**Финансовые последствия:**
+
+- Chargeback fee от банка: 500–1500 руб за один chargeback
+- Fee распределяется по таблице ответственности:
+  - Если вина агрегатора — fee за счёт агрегатора
+  - Если вина магазина — fee выставляется магазину
+  - Если фрод клиента — fee за счёт клиента (блокировка + взыскание через коллектор при сумме > 5000 руб)
+
+> **Согласование:** BP-15 связан с BP-07 (возврат и отмена), §6.3 Legal Requirements (ЗоЗПП, 152-ФЗ), и §4.9 Customer Support Workflow. Процесс chargeback требует интеграции с банковским API (см. §2.5 Store API Integration Details).
+
+---
 
 **User Story:**
 As an admin/manager,
@@ -3074,21 +3572,43 @@ flowchart LR
 | **Секреты** | `.env` Vault / GitHub Secrets (не в репозитории); ротация ключей каждые 90 дней |
 | **Мониторинг безопасности** | Sentry (error tracking) + Aikido (SAST, dependency scan, secret leaks) на каждый PR |
 
-### 6.3 Legal Requirements (Юридические требования)
-**Источник:** Раздел 5.12 исходного документа.
+### 6.3 Compliance Matrix (Юридические требования)
 
-| Требование | Закон | Что нужно реализовать |
-|---|---|---|
-| **Персональные данные** | 152-ФЗ «О персональных данных» | Согласие на обработку ПДн при регистрации; шифрование ПДн в БД (столбцы phone, email — AES-256); уведомление Роскомнадзора; возможность удалить данные по запросу |
-| **Электронные чеки** | 54-ФЗ «О применении ККТ» | Фискальный чек на каждую операцию (продажа, возврат); отправка чека в ОФД; передача клиенту (SMS/Email/QR); ФФД 1.2 (текущий стандарт) |
-| **Маркировка товаров** | «Честный знак» (ЦРПТ) | Табак (с 2020), обувь (2020), одежда (2021), молочная продукция (2023), вода (2023), пиво (2024); API «Честного знака» — вывод из оборота при продаже; сканер DataMatrix кодов в приложении пикера |
-| **Алкоголь** | 171-ФЗ, ЕГАИС | **Платформа не доставляет алкоголь** — в спецификации достаточно указать, что алкогольные товары исключены. **Если решение изменится:** интеграция с ЕГАИС, лицензия, ограничение времени продажи |
-| **Закон о защите прав потребителей** | ЗоЗПП | Возврат товара надлежащего качества в течение 7–14 дней; возврат товара ненадлежащего качества — полный возврат средств; информация о товаре (состав, вес, срок годности) |
+Матрица соответствия законодательству РФ. Согласовано с BP-07 (возврат), BP-15 (dispute), §6.2 Data Protection, §1.1.3 География (РФ → российские законы), §8.3 Roadmap (MVP/V2/V3).
 
-**Практические рекомендации:**
-- На старте (MVP) достаточно 54-ФЗ (чеки) и базового 152-ФЗ
-- Маркировка «Честный знак» — только если в ассортименте есть табак/молочка/вода (на старте исключить)
-- Алкоголь — не доставляем, снять галочку в админке сети
+| Требование | Закон | MVP? | Что реализуем | Ответственный | Ссылка в SRS | Статус |
+|------------|-------|------|---------------|---------------|--------------|--------|
+| Согласие на обработку ПДн | 152-ФЗ | ✅ Да | Чекбокс при регистрации + политика конфиденциальности | Backend + Frontend + Legal | BP-01 | To Do |
+| Шифрование ПДн (phone, email) | 152-ФЗ | ✅ Да | AES-256 для столбцов phone, email | Backend | §3.4 | To Do |
+| Уведомление Роскомнадзора | 152-ФЗ | ✅ Да | Подача уведомления до запуска | Legal | — | To Do |
+| Право на удаление данных | 152-ФЗ | ✅ Да | Кнопка «Удалить аккаунт» в ЛК + background job | Backend + Frontend | BP-10 | To Do |
+| Локализация ПДн на территории РФ | 152-ФЗ ст.18 | ✅ Да | БД на Selectel (Москва/СПБ), резервный регион | DevOps | §5.7 | To Do |
+| Фискальный чек (продажа/возврат) | 54-ФЗ | ✅ Да | ОФД-интеграция, ФФД 1.2, отправка чека (SMS/Email/QR) | Backend | §2.5 | To Do |
+| Информация о товаре (состав, вес, срок) | ЗоЗПП | ✅ Да | Карточка товара с обязательными полями | Backend + Catalog | BP-02 | To Do |
+| Возврат 14 дней (надлежащего качества) | ЗоЗПП | ✅ Да | UI возврата в ЛК + процесс в BP-07 | Backend + Frontend | BP-07 | To Do |
+| Возврат брака (ненадлежащее качество) | ЗоЗПП | ✅ Да | Полный refund + процесс в BP-15 | Backend + Frontend | BP-15 | To Do |
+| Маркировка «Честный знак» | ЦРПТ (173-ФЗ) | ❌ Нет | Не включаем маркированные товары в MVP | — | — | N/A |
+| Алкоголь (ЕГАИС) | 171-ФЗ | ❌ Нет | Алкоголь не доставляем | — | — | N/A |
+| Онлайн-кассы для агента | 54-ФЗ (агентская схема) | ❌ V2 | Если агрегатор работает как агент (перепоручает приём денег) | Backend + Legal | — | V2 |
+| СУБД из реестра отечественного ПО |  import substitution | ❌ V3 | Переход на PostgreSQL (уже) или Postgres Pro | DevOps | — | V3 |
+
+**Риски несоответствия:**
+
+| Требование | Штраф / Последствие | Вероятность | Митигация |
+|------------|---------------------|-------------|-----------|
+| Утечка ПДн без уведомления РКН | До 500 000 руб (КоАП 13.11) + блокировка сайта | Low (при соблюдении §6.2) | Шифрование, audit log, DPA с провайдерами |
+| Отсутствие онлайн-чека | До 30 000 руб за чек (54-ФЗ ст.14.5) — на каждую операцию | Medium | ОФД-интеграция с первым релизом |
+| Несоблюдение ЗоЗПП (невозврат) | Штраф до 50 000 руб + судебные иски от клиентов | Low | BP-07 + BP-15 покрывают все сценарии |
+| Дискриминация пользователей без аккаунта (заказ без регистрации) | Штраф до 500 000 руб (ФЗ-250, антимонопольное) | Low | Гостевой заказ — опционально, V2 |
+| Блокировка за обработку ПДн вне РФ | Блокировка сайта Роскомнадзором на территории РФ | Low (БД в Selectel) | Подтвердить локализацию БД |
+
+**Roadmap соответствия:**
+
+| Этап | Срок | Что включаем |
+|------|------|-------------|
+| **MVP** | Запуск | 152-ФЗ (согласие, шифрование, уведомление), 54-ФЗ (чеки), ЗоЗПП (возврат, информация о товаре) |
+| **V2** | +6 мес | Честный знак (если ассортимент расширится), агентская схема (54-ФЗ), интеграция с ЭДО |
+| **V3** | +12 мес | Импортозамещение ПО, сертификация ФСТЭК (при госзакупках), B2B ЭДО |
 
 ### 6.4 Accessibility (Доступность)
 
@@ -3106,7 +3626,126 @@ flowchart LR
 
 ---
 
-## 7. Testing Strategy (Стратегия тестирования)
+### 6.5 Fraud Detection Requirements
+
+Базовая система фрод-мониторинга для защиты от мошеннических транзакций с первого дня. Фрод в e-commerce составляет 1–3% оборота. Согласовано с BP-15 (Dispute & Chargeback) и §6.1 (Authentication & Authorization).
+
+#### 6.5.1 Сигналы (правила)
+
+**Velocity checks:**
+
+| Правило | Порог | Окно | Действие |
+|---------|-------|------|----------|
+| Max заказов с одного аккаунта | 5 | 1 час | Флаг → manual review |
+| Max заказов с одной карты | 3 | 24 часа | Флаг → manual review |
+| Max регистраций с одного IP | 10 | 1 час | Флаг → блокировка IP |
+| Max попыток ввода SMS-кода | 5 | 15 минут | Флаг → временная блокировка телефона |
+
+**Geo-anomaly:**
+
+| Сигнал | Описание | Действие |
+|--------|----------|----------|
+| Адрес доставки в регионе A, IP из региона B | Несоответствие геолокации | Флаг (score +10) |
+| Карта выпущена в регионе C, заказ из региона D | Cross-region payment | Флаг (score +15) |
+| IP через VPN/Tor | Высокорисковый прокси | Флаг (score +25) |
+
+**Device fingerprinting:**
+
+| Сигнал | Описание | Действие |
+|--------|----------|----------|
+| Один device ID → более 3 аккаунтов за 24ч | Множественные регистрации | Флаг (score +30) |
+| Эмулятор / VM (Android i386, browser headless) | Подозрительное окружение | Флаг (score +20) |
+| Сброшенный fingerprint (новый каждый запрос) | Попытка обхода | Флаг (score +15) |
+
+**Behavioral signals:**
+
+| Сигнал | Порог | Действие |
+|--------|-------|----------|
+| Время от регистрации до оплаты | < 10 секунд | Флаг (score +20) |
+| Сумма заказа — круглое число | Кратно 1000, 5000, 10000 | Флаг (score +5) |
+| Повторные отказы в оплате (3+) → другая карта | Смена карты после decline | Флаг (score +30) |
+| Количество позиций в заказе | > 20 разных SKU | Флаг (score +10, проверка на перепродажу) |
+
+#### 6.5.2 Scoring-модель
+
+Каждый сигнал добавляет score. Итоговый score = сумма баллов.
+
+| Score | Действие | Пример |
+|-------|----------|--------|
+| 0–30 | **Пропустить** | Обычный заказ, небольшое отклонение |
+| 31–60 | **Manual review** | Заказ помещается в очередь на проверку менеджером; клиенту — "заказ на проверке" |
+| 61–80 | **Дополнительная верификация** | Запрос SMS-кода подтверждения; при оплате — принудительный 3DS |
+| 81–100 | **Auto-decline + блокировка** | Заказ отклоняется, аккаунт временно блокируется, уведомление службы безопасности |
+
+**Пример расчёта:**
+- Новый аккаунт (device fingerprint: 3+ аккаунтов) → +30
+- Заказ на 10 000 руб (круглая сумма) → +5
+- IP из Турции, адрес в Москве → +25 (geo-anomaly)
+- **Итого: 60** → Manual review
+
+#### 6.5.3 Workflow проверки
+
+```mermaid
+sequenceDiagram
+    participant Client as Client App
+    participant Gateway as API Gateway
+    participant Fraud as Fraud Detector
+    participant Queue as Review Queue
+    participant Manager as Support Manager
+
+    Client->>Gateway: POST /orders (Idempotency-Key)
+    Gateway->>Fraud: check order {user, device, geo, cart}
+    Fraud->>Fraud: calculate score
+    alt score 0–30
+        Fraud-->>Gateway: allow
+        Gateway->>Gateway: process order normally
+    else score 31–60
+        Fraud-->>Gateway: hold for review
+        Gateway->>Queue: enqueue order_id for manual review
+        Gateway-->>Client: 202 Accepted {status: review}
+        Queue->>Manager: notification: new review
+        Manager-->>Gateway: approve / reject
+        Gateway-->>Client: status update
+    else score 61–80
+        Fraud-->>Gateway: require verification
+        Gateway-->>Client: 428 Precondition Required {verify: sms/3ds}
+        Client->>Gateway: POST verify {code}
+        Fraud-->>Gateway: verified? allow / decline
+    else score 81–100
+        Fraud-->>Gateway: block
+        Gateway-->>Client: 403 Forbidden {code: FRAUD_DETECTED}
+    end
+```
+
+#### 6.5.4 Интеграции
+
+| Источник | Данные | Статус | Примечание |
+|----------|--------|--------|-----------|
+| Внутренние (наши сервисы) | История заказов, device fingerprint, геолокация | MVP | Основной источник |
+| Платежный шлюз (Т-Банк) | 3DS результат, BIN-проверка | MVP | Стандартная проверка карты |
+| Dadata / ФНС | Валидация адреса доставки | MVP | Блокировка несуществующих адресов |
+| Внешние фрод-сервисы (V2) | Score от Kaspersky / Group-IB | V2 | Дополнительный слой |
+| Кредитные истории (V3) | Проверка через БКИ | V3 | Для B2B с отсрочкой платежа |
+
+#### 6.5.5 Feedback loop
+
+| Действие | Периодичность | Описание |
+|----------|--------------|----------|
+| Разметка confirmed fraud | Ежедневно | Менеджер размечает отклонённые заказы: `confirmed_fraud` / `false_positive` |
+| Пересчёт порогов | Раз в месяц | Анализ ROC-кривой: корректировка порогов score для минимизации false positive |
+| Обновление device fingerprint DB | Непрерывно | Блокировка новых эмуляторов / VM по сигнатурам |
+| Отчёт для бизнеса | Раз в неделю | Сколько фрода отловлено, сколько пропущено, сумма предотвращённых потерь |
+
+#### 6.5.6 Метрики эффективности
+
+| Метрика | Цель | Формула |
+|---------|------|---------|
+| Detection rate (DR) | > 80% | confirmed_fraud / total_fraud × 100% |
+| False positive rate (FPR) | < 5% | false_positive / total_alerts × 100% |
+| Manual review time | < 30 мин | Среднее время проверки одного заказа |
+| Chargeback ratio | < 0.5% | chargebacks / total_orders × 100% |
+
+---
 
 **Источник:** Раздел 5.9 исходного документа.
 
