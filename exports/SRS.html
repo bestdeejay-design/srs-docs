@@ -5,147 +5,84 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SRS — Агрегатор доставки продуктов</title>
 <style>
-  :root {
-    --bg: #fff;
-    --bg2: #f5f7fa;
-    --text: #1a1a2e;
-    --text2: #555;
-    --border: #e0e0e0;
-    --accent: #3f51b5;
-    --accent2: #303f9f;
-    --code-bg: #f0f0f0;
-    --shadow: rgba(0,0,0,0.08);
-  }
-  @media (prefers-color-scheme:dark) {
-    :root {
-      --bg: #1a1a2e;
-      --bg2: #16213e;
-      --text: #e0e0e0;
-      --text2: #aaa;
-      --border: #333;
-      --accent: #5c6bc0;
-      --accent2: #7986cb;
-      --code-bg: #2a2a3e;
-      --shadow: rgba(0,0,0,0.3);
-    }
-  }
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    font-size: 15px; line-height: 1.6; color: var(--text); background: var(--bg);
-    display: flex;
-  }
-  /* Layout */
-  #sidebar {
-    position: fixed; top: 0; left: 0; bottom: 0; width: 280px;
-    background: var(--bg2); border-right: 1px solid var(--border);
-    display: flex; flex-direction: column; z-index: 100;
-    transition: transform .3s;
-  }
-  #sidebar-header {
-    padding: 16px 20px; border-bottom: 1px solid var(--border);
-    font-size: 14px; font-weight: 700; color: var(--accent);
-  }
-  #toc-container { flex: 1; overflow-y: auto; padding: 10px 0; }
-  #toc-container ul { list-style: none; padding-left: 16px; }
-  #toc-container > ul { padding-left: 0; }
-  #toc-container li { margin: 2px 0; }
-  #toc-container a {
-    display: block; padding: 4px 20px 4px 8px; font-size: 13px;
-    color: var(--text2); text-decoration: none; border-radius: 4px;
-    transition: color .15s, background .15s;
-  }
-  #toc-container a:hover { color: var(--accent); background: rgba(63,81,181,0.06); }
-  /* Search */
-  #search-wrap { padding: 8px 12px; border-bottom: 1px solid var(--border); position: relative; }
-  #search { width: 100%; padding: 8px 36px 8px 12px; font-size: 13px;
-    border: 1px solid var(--border); border-radius: 6px;
-    background: var(--bg); color: var(--text); outline: none; }
-  #search:focus { border-color: var(--accent); }
-  #search-clear {
-    position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
-    width: 24px; height: 24px; border: none; border-radius: 50%;
-    background: var(--text2); color: var(--bg); font-size: 14px; line-height: 24px;
-    text-align: center; cursor: pointer; display: none; padding: 0;
-  }
-  #search-clear:hover { background: var(--accent); }
-  #search-results {
-    display: none; position: absolute; top: 100%; left: 0; right: 0;
-    max-height: 50vh; overflow-y: auto;
-    background: var(--bg); border: 1px solid var(--border); z-index: 200;
-    box-shadow: 0 4px 12px var(--shadow);
-  }
-  #search-results.show { display: block; }
-  #search-results a {
-    display: block; padding: 10px 16px; font-size: 13px; text-decoration: none;
-    color: var(--text); border-bottom: 1px solid var(--border);
-  }
-  #search-results a:hover { background: var(--bg2); }
-  #search-results .sr-title { font-weight: 600; }
-  #search-results .sr-context { font-size: 12px; color: var(--text2); margin-top: 2px; }
-  /* Content */
-  #content {
-    margin-left: 280px; flex: 1; max-width: 900px; padding: 40px 48px 80px;
-  }
-  #content h1 { font-size: 26px; margin-top: 0; margin-bottom: 12px; color: var(--accent); }
-  #content h2 {
-    font-size: 20px; margin-top: 32px; margin-bottom: 10px;
-    padding-bottom: 6px; border-bottom: 1px solid var(--border);
-  }
-  #content h3 { font-size: 17px; margin-top: 24px; margin-bottom: 8px; }
-  #content h4 { font-size: 15px; margin-top: 18px; margin-bottom: 6px; }
-  #content p { margin-bottom: 12px; }
-  #content ul, #content ol { margin: 8px 0 12px 20px; }
-  #content li { margin-bottom: 4px; }
-  #content blockquote {
-    border-left: 4px solid var(--accent); padding: 8px 16px; margin: 12px 0;
-    background: var(--bg2); color: var(--text2); border-radius: 0 6px 6px 0;
-  }
-  #content pre {
-    background: var(--code-bg); padding: 12px 16px; border-radius: 6px;
-    overflow-x: auto; font-size: 13px; margin: 12px 0;
-    font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
-  }
-  #content code {
-    font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
-    font-size: 13px; background: var(--code-bg); padding: 2px 5px; border-radius: 3px;
-  }
-  #content pre code { background: none; padding: 0; }
-  #content table {
-    width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px;
-  }
-  #content th, #content td {
-    border: 1px solid var(--border); padding: 8px 10px; text-align: left;
-  }
-  #content th { background: var(--bg2); font-weight: 600; }
-  #content img { max-width: 100%; height: auto; margin: 12px 0; border-radius: 4px; }
-  #content hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
-  /* Mobile toggle */
-  #menu-toggle {
-    display: none; position: fixed; top: 12px; left: 12px; z-index: 200;
-    width: 40px; height: 40px; border: none; border-radius: 8px;
-    background: var(--accent); color: #fff; font-size: 20px; cursor: pointer;
-  }
-  @media (max-width: 768px) {
-    #sidebar { transform: translateX(-100%); }
-    #sidebar.open { transform: translateX(0); }
-    #content { margin-left: 0; padding: 60px 16px 40px; }
-    #menu-toggle { display: block; }
-  }
+:root {
+  --apple-bg: #fff; --apple-bg2: #f5f5f7; --apple-text: #1d1d1f; --apple-text2: #86868b;
+  --apple-border: #d2d2d7; --apple-accent: #0071e3; --apple-code: #f5f5f7;
+  --google-bg: #fff; --google-bg2: #f8f9fa; --google-text: #202124; --google-text2: #5f6368;
+  --google-border: #dadce0; --google-accent: #1a73e8; --google-code: #f1f3f4;
+  --dark-bg: #1a1a2e; --dark-bg2: #16213e; --dark-text: #e0e0e0; --dark-text2: #a0a0b0;
+  --dark-border: #2a2a3e; --dark-accent: #5c6bc0; --dark-accent2: #7986cb; --dark-code: #2a2a3e;
+}
+body.theme-apple, .theme-apple { --bg: var(--apple-bg); --bg2: var(--apple-bg2); --text: var(--apple-text); --text2: var(--apple-text2); --border: var(--apple-border); --accent: var(--apple-accent); --code-bg: var(--apple-code); }
+body.theme-google, .theme-google { --bg: var(--google-bg); --bg2: var(--google-bg2); --text: var(--google-text); --text2: var(--google-text2); --border: var(--google-border); --accent: var(--google-accent); --code-bg: var(--google-code); }
+body.theme-dark, .theme-dark { --bg: var(--dark-bg); --bg2: var(--dark-bg2); --text: var(--dark-text); --text2: var(--dark-text2); --border: var(--dark-border); --accent: var(--dark-accent); --accent2: var(--dark-accent2); --code-bg: var(--dark-code); }
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+html { scroll-behavior:smooth; }
+body { font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,sans-serif; font-size:15px; line-height:1.6; color:var(--text); background:var(--bg); display:flex; }
+#sidebar { position:fixed; top:0; left:0; bottom:0; width:280px; background:var(--bg2); border-right:1px solid var(--border); display:flex; flex-direction:column; z-index:100; transition:transform .3s; }
+#sidebar-header { padding:14px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+#sidebar-header span { font-size:12px; font-weight:600; color:var(--accent); }
+.theme-btn { width:24px; height:24px; border-radius:50%; border:2px solid var(--border); cursor:pointer; padding:0; transition:transform .2s; margin-left:4px; }
+.theme-btn:hover { transform:scale(1.2); }
+.theme-btn.apple { background:#0071e3; }
+.theme-btn.google { background:#1a73e8; }
+.theme-btn.dark { background:#5c6bc0; }
+.theme-btn.active { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent); }
+#toc-container { flex:1; overflow-y:auto; padding:6px 0; }
+#toc-container ul { list-style:none; padding-left:14px; }
+#toc-container>ul { padding-left:0; }
+#toc-container a { display:block; padding:3px 16px 3px 10px; font-size:12.5px; color:var(--text2); text-decoration:none; border-radius:3px; line-height:1.4; }
+#toc-container a:hover { color:var(--accent); background:rgba(0,0,0,0.03); }
+#search-wrap { padding:8px 12px; border-bottom:1px solid var(--border); position:relative; }
+#search { width:100%; padding:7px 32px 7px 10px; font-size:13px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text); outline:none; transition:border-color .2s; }
+#search:focus { border-color:var(--accent); }
+#search-clear { position:absolute; right:14px; top:50%; transform:translateY(-50%); width:18px; height:18px; border:none; border-radius:50%; background:var(--text2); color:var(--bg); font-size:11px; line-height:18px; text-align:center; cursor:pointer; display:none; padding:0; opacity:.5; }
+#search-clear:hover { opacity:1; }
+#search-results { display:none; position:absolute; top:100%; left:0; right:0; max-height:50vh; overflow-y:auto; background:var(--bg); border:1px solid var(--border); border-radius:0 0 8px 8px; z-index:200; box-shadow:0 8px 24px rgba(0,0,0,.12); }
+#search-results.show { display:block; }
+#search-results a { display:block; padding:8px 14px; font-size:13px; text-decoration:none; color:var(--text); border-bottom:1px solid var(--border); }
+#search-results a:last-child { border:none; }
+#search-results a:hover { background:var(--bg2); }
+#search-results .sr-title { font-weight:500; }
+#search-results .sr-context { font-size:11.5px; color:var(--text2); margin-top:2px; }
+#content { margin-left:280px; flex:1; max-width:900px; padding:40px 48px 80px; }
+#content h1 { font-size:28px; font-weight:700; margin:0 0 8px; letter-spacing:-.02em; color:var(--accent); }
+#content h2 { font-size:21px; font-weight:600; margin:36px 0 10px; padding-bottom:8px; border-bottom:1px solid var(--border); letter-spacing:-.01em; }
+#content h3 { font-size:17px; font-weight:600; margin:24px 0 8px; }
+#content h4 { font-size:15px; font-weight:600; margin:18px 0 6px; }
+#content p { margin-bottom:12px; }
+#content ul,#content ol { margin:8px 0 12px 20px; }
+#content li { margin-bottom:4px; }
+#content blockquote { border-left:4px solid var(--accent); padding:10px 18px; margin:14px 0; background:var(--bg2); color:var(--text2); border-radius:0 8px 8px 0; font-size:14px; }
+#content pre { background:var(--code-bg); padding:14px 18px; border-radius:8px; overflow-x:auto; font-size:13px; margin:14px 0; font-family:'SF Mono','Menlo','Consolas',monospace; }
+#content code { font-family:'SF Mono','Menlo','Consolas',monospace; font-size:13px; background:var(--code-bg); padding:2px 6px; border-radius:4px; }
+#content pre code { background:none; padding:0; }
+#content table { width:100%; border-collapse:collapse; margin:14px 0; font-size:12.5px; }
+#content th,#content td { border:1px solid var(--border); padding:7px 10px; text-align:left; }
+#content th { background:var(--bg2); font-weight:600; }
+#content img { max-width:100%; height:auto; margin:12px 0; border-radius:8px; }
+#content hr { border:none; border-top:1px solid var(--border); margin:24px 0; }
+#menu-toggle { display:none; position:fixed; top:10px; left:10px; z-index:200; width:36px; height:36px; border:none; border-radius:10px; background:var(--accent); color:#fff; font-size:18px; cursor:pointer; opacity:.9; }
+@media (max-width:768px) { #sidebar { transform:translateX(-100%); } #sidebar.open { transform:translateX(0); } #content { margin-left:0; padding:56px 16px 40px; } #menu-toggle { display:block; } }
 </style>
 </head>
-<body>
+<body class="theme-apple">
 <button id="menu-toggle" onclick="toggleSidebar()">☰</button>
 <div id="sidebar">
-  <div id="sidebar-header">SRS — Агрегатор доставки</div>
+  <div id="sidebar-header">
+    <span>SRS — Агрегатор доставки</span>
+    <span>
+      <button class="theme-btn apple active" onclick="setTheme('apple')" title="Apple"></button>
+      <button class="theme-btn google" onclick="setTheme('google')" title="Google"></button>
+      <button class="theme-btn dark" onclick="setTheme('dark')" title="Тёмная"></button>
+    </span>
+  </div>
   <div id="search-wrap">
     <input type="text" id="search" placeholder="Поиск…">
     <button id="search-clear" onclick="clearSearch()">×</button>
     <div id="search-results"></div>
   </div>
   <div id="toc-container">
-    
 <ul>
   <li><a href="#как-читать-этот-документ">Как читать этот документ</a></li>
   <li><a href="#product-overview-общие-сведения">1. Product Overview (Общие
@@ -161,7 +98,7 @@
       <li><a href="#user-personas-пользовательские-роли">1.1.4 User Personas
 (Пользовательские роли)</a></li>
 
-  </ul>
+    </ul>
     <li><a href="#glossary-глоссарий">1.2 Glossary (Глоссарий)</a></li>
     <li><a href="#non-functional-requirements-nfr">1.3 Non-Functional Requirements
 (NFR)</a></li>
@@ -170,7 +107,7 @@
       <li><a href="#frontend-performance-budget">1.3.1 Frontend Performance
 Budget</a></li>
 
-  </ul>
+    </ul>
     <li><a href="#external-integrations-внешние-интеграции">1.4 External
 Integrations (Внешние интеграции)</a></li>
     <li><a href="#error-handling-resilience-обработка-исключений">1.5 Error
@@ -187,7 +124,7 @@ Handling &amp;amp; Resilience (Обработка исключений)</a></li>
       <li><a href="#ключевые-метрики-для-дашборда">1.6.5 Ключевые метрики для
 дашборда</a></li>
 
-</ul>
+  </ul>
 </ul>
   <li><a href="#system-architecture-архитектура-системы">2. System Architecture
 (Архитектура системы)</a></li>
@@ -206,13 +143,13 @@ Records (ADRs)</a></li>
       <li><a href="#store-api-integration-details">2.5.1 Store API Integration
 Details</a></li>
 
-  </ul>
+    </ul>
     <li><a href="#observability">2.6 Observability</a></li>
 
     <ul>
       <li><a href="#analytics-events-schema">2.6.1 Analytics Events Schema</a></li>
 
-  </ul>
+    </ul>
     <li><a href="#api-versioning-deprecation-policy-error-code-standard">2.7 API
 Versioning, Deprecation Policy &amp;amp; Error Code Standard</a></li>
 
@@ -224,7 +161,7 @@ Versioning, Deprecation Policy &amp;amp; Error Code Standard</a></li>
       <li><a href="#feature-flags-для-api">2.7.4 Feature Flags для API</a></li>
       <li><a href="#error-code-standard">2.7.5 Error Code Standard</a></li>
 
-  </ul>
+    </ul>
     <li><a href="#event-catalog">2.9 Event Catalog</a></li>
     <li><a href="#state-machine-diagrams">2.10 State Machine Diagrams</a></li>
 
@@ -235,7 +172,7 @@ Versioning, Deprecation Policy &amp;amp; Error Code Standard</a></li>
       <li><a href="#courier">2.10.4 Courier</a></li>
       <li><a href="#picker-task">2.10.5 Picker Task</a></li>
 
-  </ul>
+    </ul>
     <li><a href="#sequence-diagrams">2.11 Sequence Diagrams</a></li>
 
     <ul>
@@ -246,7 +183,7 @@ Versioning, Deprecation Policy &amp;amp; Error Code Standard</a></li>
       <li><a href="#refund">2.11.4 Refund</a></li>
       <li><a href="#offline-sync-курьера">2.11.5 Offline-sync курьера</a></li>
 
-  </ul>
+    </ul>
     <li><a href="#event-json-schemas">2.12 Event JSON Schemas</a></li>
 
     <ul>
@@ -254,7 +191,7 @@ Versioning, Deprecation Policy &amp;amp; Error Code Standard</a></li>
       <li><a href="#схемы-событий">2.12.2 Схемы событий</a></li>
       <li><a href="#матрица-соответствия">2.12.3 Матрица соответствия</a></li>
 
-  </ul>
+    </ul>
     <li><a href="#idempotency-policy">2.13 Idempotency Policy</a></li>
 
     <ul>
@@ -267,7 +204,7 @@ Versioning, Deprecation Policy &amp;amp; Error Code Standard</a></li>
       <li><a href="#пример-реализации-go-middleware">2.13.5 Пример реализации (Go
 middleware)</a></li>
 
-  </ul>
+    </ul>
     <li><a href="#data-migration-strategy">2.14 Data Migration Strategy</a></li>
 
     <ul>
@@ -281,7 +218,7 @@ middleware)</a></li>
       <li><a href="#таблица-рисков-и-митигаций">2.14.6 Таблица рисков и
 митигаций</a></li>
 
-  </ul>
+    </ul>
     <li><a href="#rate-limits-quotas">2.15 Rate Limits &amp;amp; Quotas</a></li>
 
     <ul>
@@ -293,7 +230,7 @@ middleware)</a></li>
       <li><a href="#реализация">2.15.4 Реализация</a></li>
       <li><a href="#burst-политика">2.15.5 Burst-политика</a></li>
 
-  </ul>
+    </ul>
     <li><a href="#catalog-schema-архитектура-хранения-каталога">3.2 Catalog Schema
 (Архитектура хранения каталога)</a></li>
     <li><a href="#orders-payments-schema">3.3 Orders &amp;amp; Payments Schema</a></li>
@@ -303,7 +240,7 @@ Schema</a></li>
     <li><a href="#notifications-promotions-schema">3.6 Notifications &amp;amp;
 Promotions Schema</a></li>
 
-</ul>
+  </ul>
   <li><a href="#functional-requirements-функциональные-требования">4. Functional
 Requirements (Функциональные требования)</a></li>
 
@@ -322,21 +259,21 @@ Requirements (Функциональные требования)</a></li>
       <li><a href="#bp-10-личный-кабинет-и-история-заказов-13-чел.-дней">BP-10:
 Личный кабинет и история заказов (13 чел.-дней)</a></li>
 
-  </ul>
+    </ul>
     <li><a href="#picker-domain-пикер">4.2 Picker Domain (Пикер)</a></li>
 
     <ul>
       <li><a href="#bp-05-сборка-и-упаковка-заказа-21-чел.-дней">BP-05: Сборка и
 упаковка заказа (21 чел.-дней)</a></li>
 
-  </ul>
+    </ul>
     <li><a href="#courier-domain-курьер">4.3 Courier Domain (Курьер)</a></li>
 
     <ul>
       <li><a href="#bp-06-доставка-заказа-29-чел.-дней">BP-06: Доставка заказа (29
 чел.-дней)</a></li>
 
-  </ul>
+    </ul>
     <li><a href="#admin-domain-администратор">4.4 Admin Domain
 (Администратор)</a></li>
 
@@ -350,7 +287,7 @@ Requirements (Функциональные требования)</a></li>
       <li><a href="#bp-12-аналитика-и-дашборды-15-чел.-дней">BP-12: Аналитика и
 дашборды (15 чел.-дней)</a></li>
 
-  </ul>
+    </ul>
     <li><a href="#b2b-domain-корпоративные-заказы">4.5 B2B Domain (Корпоративные
 заказы)</a></li>
 
@@ -358,7 +295,7 @@ Requirements (Функциональные требования)</a></li>
       <li><a href="#bp-13-b2b-корпоративные-заказы-27-чел.-дней">BP-13: B2B —
 Корпоративные заказы (27 чел.-дней)</a></li>
 
-  </ul>
+    </ul>
     <li><a href="#cross-cutting-domains-сквозные">4.6 Cross-Cutting Domains
 (Сквозные)</a></li>
 
@@ -368,14 +305,14 @@ Requirements (Функциональные требования)</a></li>
       <li><a href="#bp-14-dynamic-pricing-динамическое-ценообразование-15-чел.-дней">BP-14:
 Dynamic Pricing (динамическое ценообразование) (15 чел.-дней)</a></li>
 
-  </ul>
+    </ul>
     <li><a href="#feature-map-карта-функциональных-требований">4.7 Feature Map
 (Карта функциональных требований)</a></li>
     <li><a href="#cross-cutting-offline-strategy">4.8 Cross-Cutting: Offline
 Strategy</a></li>
     <li><a href="#customer-support-workflow">4.9 Customer Support Workflow</a></li>
 
-</ul>
+  </ul>
   <li><a href="#infrastructure-devops-инфраструктура">5. Infrastructure &amp;amp;
 DevOps (Инфраструктура)</a></li>
 
@@ -414,14 +351,14 @@ Requirements</a></li>
       <li><a href="#feedback-loop">6.5.5 Feedback loop</a></li>
       <li><a href="#метрики-эффективности">6.5.6 Метрики эффективности</a></li>
 
-  </ul>
+    </ul>
     <li><a href="#test-levels">7.1 Test Levels</a></li>
     <li><a href="#инфраструктура-тестирования">7.2 Инфраструктура
 тестирования</a></li>
     <li><a href="#critical-e2e-scenarios">7.3 Critical E2E Scenarios</a></li>
     <li><a href="#load-testing-targets">7.4 Load Testing Targets</a></li>
 
-</ul>
+  </ul>
   <li><a href="#project-estimation-roadmap-оценка-и-план">8. Project Estimation
 &amp;amp; Roadmap (Оценка и план)</a></li>
 
@@ -435,7 +372,7 @@ Requirements</a></li>
 внутри MVP</a></li>
       <li><a href="#дорожная-карта-по-этапам">8.3.2 Дорожная карта по этапам</a></li>
 
-</ul>
+  </ul>
 </ul>
   <li><a href="#appendices-приложения">9. Appendices (Приложения)</a></li>
 
@@ -444,12 +381,10 @@ Requirements</a></li>
     <li><a href="#references-open-source">9.2 References &amp;amp; Open-Source</a></li>
     <li><a href="#completeness-checklist">9.3 Completeness Checklist</a></li>
     <li><a href="#developer-quick-start">9.4 Developer Quick-Start</a></li>
-  </ul>
-
-  </div>
+</ul>
+</div>
 </div>
 <div id="content">
-
 <header id="title-block-header">
 <h1 class="title">SRS — Агрегатор доставки продуктов</h1>
 </header>
@@ -1823,7 +1758,7 @@ search</strong></td>
 </table>
 <h3 id="integration-context-map-context-map">2.5 Integration Context Map
 (Context Map)</h3>
-<p><img src="assets/diagram-01.png"
+<p><img src="exports/diagrams/diagram-01.png"
 alt="Рис. 1: Контекстная диаграмма интеграций — API Gateway, сервисы, БД, внешние системы" /></p>
 <h4 id="store-api-integration-details">2.5.1 Store API Integration
 Details</h4>
@@ -2395,7 +2330,7 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb2-1"><a href="
 переход включает триггер, preconditions, postconditions, инициатора и
 публикуемое событие.</p>
 <h4 id="order">2.10.1 Order</h4>
-<p><img src="assets/diagram-02.png"
+<p><img src="exports/diagrams/diagram-02.png"
 alt="Рис. 2: Order — State Machine (создан → оплачен → сборка → доставка → завершён)" /></p>
 <table>
 <colgroup>
@@ -2500,7 +2435,7 @@ alt="Рис. 2: Order — State Machine (создан → оплачен → с�
 </tbody>
 </table>
 <h4 id="payment">2.10.2 Payment</h4>
-<p><img src="assets/diagram-03.png"
+<p><img src="exports/diagrams/diagram-03.png"
 alt="Рис. 3: Payment — State Machine (ожидание → обработан → refund)" /></p>
 <table>
 <colgroup>
@@ -2565,7 +2500,7 @@ alt="Рис. 3: Payment — State Machine (ожидание → обработа
 </tbody>
 </table>
 <h4 id="delivery">2.10.3 Delivery</h4>
-<p><img src="assets/diagram-04.png"
+<p><img src="exports/diagrams/diagram-04.png"
 alt="Рис. 4: Delivery — State Machine (ожидание → в пути → доставлен → возврат)" /></p>
 <table>
 <colgroup>
@@ -2638,7 +2573,7 @@ alt="Рис. 4: Delivery — State Machine (ожидание → в пути →
 </tbody>
 </table>
 <h4 id="courier">2.10.4 Courier</h4>
-<p><img src="assets/diagram-05.png"
+<p><img src="exports/diagrams/diagram-05.png"
 alt="Рис. 5: Courier — State Machine (свободен → назначен → занят → офлайн)" /></p>
 <table>
 <colgroup>
@@ -2728,7 +2663,7 @@ remaining</td>
 </tbody>
 </table>
 <h4 id="picker-task">2.10.5 Picker Task</h4>
-<p><img src="assets/diagram-06.png"
+<p><img src="exports/diagrams/diagram-06.png"
 alt="Рис. 6: Picker Task — State Machine (назначена → сборка → замены → завершена)" /></p>
 <table>
 <colgroup>
@@ -2800,28 +2735,28 @@ alt="Рис. 6: Picker Task — State Machine (назначена → сборк
 <h4 id="оформление-заказа">2.11.1 Оформление заказа</h4>
 <p><strong>Сценарий:</strong> Клиент выбирает товары, оформляет заказ,
 оплачивает онлайн через Т-Банк.</p>
-<p><img src="assets/diagram-07.png"
+<p><img src="exports/diagrams/diagram-07.png"
 alt="Рис. 7: Sequence — Оформление заказа (клиент → корзина → оплата → подтверждение)" /></p>
 <h4 id="сборка-с-заменой-товара">2.11.2 Сборка с заменой товара</h4>
 <p><strong>Сценарий:</strong> Пикер собирает заказ, обнаруживает
 отсутствующий товар, звонит клиенту, предлагает замену.</p>
-<p><img src="assets/diagram-08.png"
+<p><img src="exports/diagrams/diagram-08.png"
 alt="Рис. 8: Sequence — Сборка с заменой товара (пикер → система → звонок клиенту)" /></p>
 <h4 id="назначение-курьера-dispatch">2.11.3 Назначение курьера
 (Dispatch)</h4>
 <p><strong>Сценарий:</strong> Заказ собран — диспетчер назначает
 ближайшего курьера, рассчитывает ETA, уведомляет клиента.</p>
-<p><img src="assets/diagram-09.png"
+<p><img src="exports/diagrams/diagram-09.png"
 alt="Рис. 9: Sequence — Назначение курьера (диспетчер → OSRM → ETA → уведомление)" /></p>
 <h4 id="refund">2.11.4 Refund</h4>
 <p><strong>Сценарий:</strong> Клиент запрашивает возврат, система
 инициирует refund через платёжный шлюз.</p>
-<p><img src="assets/diagram-10.png"
+<p><img src="exports/diagrams/diagram-10.png"
 alt="Рис. 10: Sequence — Refund (клиент → запрос → платежный шлюз → подтверждение)" /></p>
 <h4 id="offline-sync-курьера">2.11.5 Offline-sync курьера</h4>
 <p><strong>Сценарий:</strong> Курьер теряет интернет во время доставки,
 отмечает доставку офлайн, данные синхронизируются позже.</p>
-<p><img src="assets/diagram-11.png"
+<p><img src="exports/diagrams/diagram-11.png"
 alt="Рис. 11: Sequence — Offline-sync курьера (офлайн hold → batch sync → сервер)" /></p>
 <h3 id="event-json-schemas">2.12 Event JSON Schemas</h3>
 <p>Стандартный envelope для всех событий и полные JSON Schema (draft-07)
@@ -3561,7 +3496,7 @@ class="sourceCode go"><code class="sourceCode go"><span id="cb18-1"><a href="#cb
 <p>Миграция выполняется от наименее рискованного к наиболее
 рискованному. Каждый сервис проходит этапы: Double Write → Validation →
 Cut-over → Monolith decommission.</p>
-<p><img src="assets/diagram-12.png"
+<p><img src="exports/diagrams/diagram-12.png"
 alt="Рис. 12: Порядок миграции сервисов — Auth → Notifications → Catalog → Orders → Payments → Delivery → Dispatch" /></p>
 <table>
 <colgroup>
@@ -3624,7 +3559,7 @@ financial loss</td>
 <p>На этапе Double Write каждый сервис пишет одновременно в старую
 (монолит) и новую (микросервис) БД. Консистентность обеспечивается через
 Transactional Outbox:</p>
-<p><img src="assets/diagram-13.png"
+<p><img src="exports/diagrams/diagram-13.png"
 alt="Рис. 13: Double Write — синхронная запись в старую и новую БД + Transactional Outbox" /></p>
 <p><strong>Reconciliation job:</strong></p>
 <ul>
@@ -3750,7 +3685,7 @@ sync</td>
 </tbody>
 </table>
 <p><strong>Reverse replication:</strong></p>
-<p><img src="assets/diagram-14.png"
+<p><img src="exports/diagrams/diagram-14.png"
 alt="Рис. 14: Reverse replication — синхронизация данных из новой БД обратно в старую" /></p>
 <h4 id="миграция-исторических-данных">2.14.5 Миграция исторических
 данных</h4>
@@ -4059,7 +3994,7 @@ user_id)</td>
 </tbody>
 </table>
 <p><strong>Схема работы:</strong></p>
-<p><img src="assets/diagram-15.png"
+<p><img src="exports/diagrams/diagram-15.png"
 alt="Рис. 15: Rate Limits — схема работы Nginx + Redis (sliding window, burst, лимиты по ролям)" /></p>
 <p><strong>Whitelist:</strong></p>
 <ul>
@@ -5756,7 +5691,7 @@ value, max_uses, used_count, min_order_amount, expires_at</li>
 спор Тогда: Учётная запись клиента временно блокируется И Все активные
 споры передаются на ручную проверку</p>
 <p><strong>Workflow:</strong></p>
-<p><img src="assets/diagram-16.png"
+<p><img src="exports/diagrams/diagram-16.png"
 alt="Рис. 16: Dispute &amp; Chargeback — Workflow (спор создан → расследование → решение → refund)" /></p>
 <p><strong>Типы споров:</strong></p>
 <table style="width:100%;">
@@ -6542,7 +6477,7 @@ final_fee = base_delivery_fee * product(multipliers)</code></pre>
 </table>
 <h3 id="feature-map-карта-функциональных-требований">4.7 Feature Map
 (Карта функциональных требований)</h3>
-<p><img src="assets/feature-map.png" alt="Feature Map" /></p>
+<p><img src="exports/diagrams/feature-map.png" alt="Feature Map" /></p>
 <ul>
 <li><strong>Регистрация и безопасность</strong>
 <ul>
@@ -6811,7 +6746,7 @@ DevOps (Инфраструктура)</h2>
 </tbody>
 </table>
 <h3 id="cicd-pipeline">5.2 CI/CD Pipeline</h3>
-<p><img src="assets/diagram-17.png"
+<p><img src="exports/diagrams/diagram-17.png"
 alt="Рис. 17: CI/CD Pipeline — PR → проверки → сборка → registry → staging → E2E → approval → prod" /></p>
 <p><strong>Ключевые правила:</strong></p>
 <ul>
@@ -8117,7 +8052,7 @@ Requirements</h3>
 <li><strong>Итого: 60</strong> → Manual review</li>
 </ul>
 <h4 id="workflow-проверки">6.5.3 Workflow проверки</h4>
-<p><img src="assets/diagram-18.png"
+<p><img src="exports/diagrams/diagram-18.png"
 alt="Рис. 18: Fraud Detection — Workflow проверки (правила → скоринг → блокировка / ручная проверка)" /></p>
 <h4 id="интеграции">6.5.4 Интеграции</h4>
 <table>
@@ -8687,69 +8622,18 @@ CI)</td>
 </tr>
 </tbody>
 </table>
-
 </div>
 <script>
-function toggleSidebar() {
-  document.getElementById('sidebar').classList.toggle('open');
-}
-// Build search index
-const searchIndex = [];
-document.querySelectorAll('#content h2, #content h3, #content h4').forEach(h => {
-  const id = h.id || '';
-  const text = h.textContent.trim();
-  // Get context (next paragraph or list)
-  let el = h.nextElementSibling;
-  let context = '';
-  while (el && !/^h[234]$/i.test(el.tagName)) {
-    context += ' ' + (el.textContent || '').trim();
-    el = el.nextElementSibling;
-    if (context.length > 200) break;
-  }
-  searchIndex.push({ id, text, context: context.trim().slice(0, 300) });
-});
-function searchDocs(query) {
-  const results = document.getElementById('search-results');
-  if (!query || query.length < 2) {
-    results.classList.remove('show');
-    return;
-  }
-  query = query.toLowerCase();
-  const matches = searchIndex
-    .filter(e => e.text.toLowerCase().includes(query) || e.context.toLowerCase().includes(query))
-    .slice(0, 20);
-  if (matches.length === 0) {
-    results.classList.remove('show');
-    return;
-  }
-  results.innerHTML = matches.map(m => 
-    '<a href="#' + m.id + '" onclick="toggleSidebar()"><div class="sr-title">' +
-    escapeHtml(m.text) + '</div><div class="sr-context">' +
-    escapeHtml(m.context.slice(0, 120)) + '</div></a>'
-  ).join('');
-  results.classList.add('show');
-}
-function escapeHtml(s) {
-  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-// Close search on click outside
-document.addEventListener('click', function(e) {
-  if (!e.target.closest('#search-wrap')) {
-    document.getElementById('search-results').classList.remove('show');
-  }
-});
-// Search on input
-document.getElementById('search').addEventListener('input', function() {
-  searchDocs(this.value);
-  document.getElementById('search-clear').style.display = this.value ? 'block' : 'none';
-});
-function clearSearch() {
-  const input = document.getElementById('search');
-  input.value = '';
-  input.focus();
-  searchDocs('');
-  document.getElementById('search-clear').style.display = 'none';
-}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open')}
+const searchIndex=[];
+document.querySelectorAll('#content h2,#content h3,#content h4').forEach(h=>{const id=h.id||'',text=h.textContent.trim();let el=h.nextElementSibling,ctx='';while(el&&!/^h[234]$/i.test(el.tagName)){ctx+=' '+(el.textContent||'').trim();el=el.nextElementSibling;if(ctx.length>200)break}searchIndex.push({id,text,context:ctx.trim().slice(0,300)})});
+function searchDocs(q){const r=document.getElementById('search-results');if(!q||q.length<2){r.classList.remove('show');return}q=q.toLowerCase();const m=searchIndex.filter(e=>e.text.toLowerCase().includes(q)||e.context.toLowerCase().includes(q)).slice(0,20);if(!m.length){r.classList.remove('show');return}r.innerHTML=m.map(x=>'<a href="#'+x.id+'" onclick="toggleSidebar()"><div class="sr-title">'+esc(x.text)+'</div><div class="sr-context">'+esc(x.context.slice(0,120))+'</div></a>').join('');r.classList.add('show')}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+document.addEventListener('click',function(e){if(!e.target.closest('#search-wrap'))document.getElementById('search-results').classList.remove('show')});
+document.getElementById('search').addEventListener('input',function(){searchDocs(this.value);document.getElementById('search-clear').style.display=this.value?'block':'none'});
+function clearSearch(){const i=document.getElementById('search');i.value='';i.focus();searchDocs('');document.getElementById('search-clear').style.display='none'}
+function setTheme(n){document.body.className='theme-'+n;document.querySelectorAll('.theme-btn').forEach(b=>b.classList.toggle('active',b.classList.contains(n)));try{localStorage.setItem('srs-theme',n)}catch(e){}}
+try{const t=localStorage.getItem('srs-theme');if(t&&['apple','google','dark'].includes(t))setTheme(t)}catch(e){}
 </script>
 </body>
 </html>
