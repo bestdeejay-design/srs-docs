@@ -145,27 +145,407 @@ Mermaid C4-диаграмма: Client Layer → API Gateway → Services → Inf
 ### 3.2 Catalog Schema (Архитектура хранения каталога)
 **Источник:** Раздел 5.4 исходного документа.
 
-SQL-схема: `chains`, `stores`, `delivery_zones`, `chain_products`, `store_prices`, `categories`, `product_category_mappings`, `category_filters`, `filter_values`.
+```sql
+-- Сеть (Лента, Metro, Вкусвилл...)
+CREATE TABLE chains (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    slug TEXT UNIQUE,
+    logo_url TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Конкретный магазин сети
+CREATE TABLE stores (
+    id SERIAL PRIMARY KEY,
+    chain_id INTEGER REFERENCES chains(id),
+    name TEXT NOT NULL,
+    address TEXT,
+    location GEOGRAPHY(POINT),
+    working_hours JSONB,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+-- Зона доставки магазина (полигон на карте)
+CREATE TABLE delivery_zones (
+    id SERIAL PRIMARY KEY,
+    store_id INTEGER REFERENCES stores(id),
+    polygon GEOGRAPHY(POLYGON),
+    min_order_amount NUMERIC,
+    delivery_fee NUMERIC
+);
+
+-- Товар (единица ассортимента сети)
+CREATE TABLE chain_products (
+    id SERIAL PRIMARY KEY,
+    chain_id INTEGER REFERENCES chains(id),
+    sku TEXT,
+    barcode TEXT,
+    name TEXT NOT NULL,
+    brand TEXT,
+    category_path TEXT[],
+    unit TEXT,
+    price NUMERIC,
+    old_price NUMERIC,
+    image_url TEXT,
+    attributes JSONB,
+    is_alcohol BOOLEAN DEFAULT FALSE,
+    is_active BOOLEAN DEFAULT TRUE,
+    UNIQUE(chain_id, sku)
+);
+
+-- Цена товара в конкретном магазине
+CREATE TABLE store_prices (
+    id SERIAL PRIMARY KEY,
+    store_id INTEGER REFERENCES stores(id),
+    chain_product_id INTEGER REFERENCES chain_products(id),
+    price NUMERIC NOT NULL,
+    old_price NUMERIC,
+    quantity INTEGER,
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(store_id, chain_product_id)
+);
+
+-- Категория в каталоге iGooods (наши, не сети)
+CREATE TABLE categories (
+    id SERIAL PRIMARY KEY,
+    parent_id INTEGER REFERENCES categories(id),
+    name TEXT NOT NULL,
+    icon_url TEXT,
+    sort_order INTEGER DEFAULT 0
+);
+
+-- Привязка товара сети к категории iGooods
+CREATE TABLE product_category_mappings (
+    id SERIAL PRIMARY KEY,
+    chain_product_id INTEGER REFERENCES chain_products(id),
+    category_id INTEGER REFERENCES categories(id),
+    UNIQUE(chain_product_id, category_id)
+);
+
+-- Фильтры категории (динамические)
+CREATE TABLE category_filters (
+    id SERIAL PRIMARY KEY,
+    category_id INTEGER REFERENCES categories(id),
+    filter_name TEXT NOT NULL,
+    sort_order INTEGER DEFAULT 0
+);
+
+CREATE TABLE filter_values (
+    id SERIAL PRIMARY KEY,
+    filter_id INTEGER REFERENCES category_filters(id),
+    value_name TEXT NOT NULL,
+    sort_order INTEGER DEFAULT 0
+);
+```
 
 ### 3.3 Orders & Payments Schema
-**Источник:** Пункт 5 общего списка.
+**Источник:** BP-03, BP-04, BP-07 исходного документа.
 
-*SQL-схема: `orders`, `order_items`, `payments`, `refunds`, `carts`.*
+```sql
+-- Корзина (временное хранение, Redis или PG)
+CREATE TABLE carts (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    store_id INTEGER REFERENCES stores(id),
+    items JSONB NOT NULL DEFAULT '[]',
+    promo_code TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Заказ
+CREATE TABLE orders (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    store_id INTEGER REFERENCES stores(id),
+    status TEXT NOT NULL DEFAULT 'pending',
+    -- Статусы: pending → paid → picking → packed → delivering → delivered
+    --           cancelled, refunded
+    total NUMERIC NOT NULL,
+    delivery_fee NUMERIC NOT NULL DEFAULT 0,
+    service_fee NUMERIC NOT NULL DEFAULT 0,
+    weight_kg NUMERIC,
+    delivery_address TEXT NOT NULL,
+    delivery_lat NUMERIC,
+    delivery_lng NUMERIC,
+    payment_method TEXT NOT NULL,
+    delivery_slot_date DATE,
+    delivery_slot_start TIME,
+    delivery_slot_end TIME,
+    comment TEXT,
+    substituted BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_orders_user_id ON orders(user_id);
+CREATE INDEX idx_orders_status ON orders(status);
+CREATE INDEX idx_orders_store_id ON orders(store_id);
+
+-- Позиции заказа
+CREATE TABLE order_items (
+    id SERIAL PRIMARY KEY,
+    order_id INTEGER REFERENCES orders(id) ON DELETE CASCADE,
+    product_id INTEGER REFERENCES chain_products(id),
+    quantity NUMERIC NOT NULL,
+    price NUMERIC NOT NULL,
+    substituted BOOLEAN DEFAULT FALSE,
+    substituted_from_id INTEGER REFERENCES order_items(id),
+    picked BOOLEAN DEFAULT FALSE,
+    UNIQUE(order_id, product_id)
+);
+
+-- Платежи
+CREATE TABLE payments (
+    id SERIAL PRIMARY KEY,
+    order_id INTEGER REFERENCES orders(id),
+    amount NUMERIC NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    -- Статусы: pending → succeeded → failed → refunded
+    provider TEXT NOT NULL,
+    provider_payment_id TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Возвраты
+CREATE TABLE refunds (
+    id SERIAL PRIMARY KEY,
+    payment_id INTEGER REFERENCES payments(id),
+    amount NUMERIC NOT NULL,
+    reason TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Event store (аудит заказа, Event Sourcing)
+CREATE TABLE order_events (
+    id SERIAL PRIMARY KEY,
+    order_id INTEGER REFERENCES orders(id),
+    event_type TEXT NOT NULL,
+    -- 'order.created', 'payment.received', 'picker.assigned',
+    -- 'picking.started', 'picking.completed', 'courier.assigned',
+    -- 'delivery.started', 'delivery.completed', 'order.cancelled'
+    payload JSONB NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_order_events_order_id ON order_events(order_id);
+```
 
 ### 3.4 Users & Auth Schema
-**Источник:** Пункт 5 общего списка.
+**Источник:** BP-01, Раздел 5.13 исходного документа.
 
-*SQL-схема: `users`, `sessions`, `roles`, `audit_log`.*
+```sql
+CREATE TYPE user_role AS ENUM ('customer', 'picker', 'courier', 'manager', 'super_admin');
+
+-- Пользователи
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    phone TEXT UNIQUE NOT NULL,
+    phone_verified BOOLEAN DEFAULT FALSE,
+    email TEXT,
+    name TEXT,
+    role user_role NOT NULL DEFAULT 'customer',
+    -- ПДн шифруются (AES-256) на уровне приложения
+    encrypted_phone TEXT,
+    encrypted_email TEXT,
+    is_blocked BOOLEAN DEFAULT FALSE,
+    blocked_until TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_users_phone ON users(phone);
+CREATE INDEX idx_users_role ON users(role);
+
+-- Сессии (refresh token rotation)
+CREATE TABLE sessions (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    refresh_token TEXT UNIQUE NOT NULL,
+    device_info TEXT,
+    ip_address INET,
+    expires_at TIMESTAMPTZ NOT NULL,
+    revoked BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_sessions_user_id ON sessions(user_id);
+
+-- Audit log (критические действия)
+CREATE TABLE audit_log (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    action TEXT NOT NULL,
+    -- 'user.login', 'order.cancel', 'order.status_change',
+    -- 'user.role_change', 'payment.refund', 'admin.action'
+    entity_type TEXT,
+    entity_id INTEGER,
+    details JSONB,
+    ip_address INET,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_audit_log_user_id ON audit_log(user_id);
+CREATE INDEX idx_audit_log_action ON audit_log(action);
+CREATE INDEX idx_audit_log_created_at ON audit_log(created_at);
+```
 
 ### 3.5 Delivery & Dispatch Schema
-**Источник:** Пункт 5 общего списка.
+**Источник:** BP-06, BP-13 исходного документа.
 
-*SQL-схема: `deliveries`, `couriers`, `delivery_zones`, `b2b_companies`, `b2b_orders`, `b2b_prices`.*
+```sql
+-- Курьер
+CREATE TABLE couriers (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER UNIQUE REFERENCES users(id),
+    status TEXT NOT NULL DEFAULT 'offline',
+    -- Статусы: offline, free, busy, on_break
+    current_location GEOGRAPHY(POINT),
+    last_location_update TIMESTAMPTZ,
+    vehicle_type TEXT DEFAULT 'car',
+    zone_id INTEGER REFERENCES delivery_zones(id),
+    max_weight_kg NUMERIC DEFAULT 80,
+    shift_start TIME,
+    shift_end TIME,
+    rating NUMERIC DEFAULT 5.0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_couriers_status ON couriers(status);
+CREATE INDEX idx_couriers_location ON couriers USING GIST(current_location);
+
+-- Доставка
+CREATE TABLE deliveries (
+    id SERIAL PRIMARY KEY,
+    order_id INTEGER UNIQUE REFERENCES orders(id),
+    courier_id INTEGER REFERENCES couriers(id),
+    status TEXT NOT NULL DEFAULT 'pending',
+    -- Статусы: pending → assigned → picking_up → in_transit → delivered
+    --           failed, returned
+    assigned_at TIMESTAMPTZ,
+    picked_up_at TIMESTAMPTZ,
+    delivered_at TIMESTAMPTZ,
+    eta_seconds INTEGER,
+    eta_updated_at TIMESTAMPTZ,
+    distance_meters INTEGER,
+    courier_note TEXT,
+    client_signature TEXT,
+    photo_pod_url TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_deliveries_courier_id ON deliveries(courier_id);
+CREATE INDEX idx_deliveries_status ON deliveries(status);
+
+-- B2B компании
+CREATE TABLE b2b_companies (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    inn TEXT UNIQUE NOT NULL,
+    kpp TEXT,
+    legal_address TEXT,
+    actual_address TEXT,
+    credit_limit NUMERIC,
+    payment_deferral_days INTEGER DEFAULT 0,
+    contract_number TEXT,
+    contract_date DATE,
+    edo_provider TEXT, -- 'diadoc' / 'sbis'
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Индивидуальные цены для B2B
+CREATE TABLE b2b_prices (
+    id SERIAL PRIMARY KEY,
+    company_id INTEGER REFERENCES b2b_companies(id),
+    product_id INTEGER REFERENCES chain_products(id),
+    price NUMERIC NOT NULL,
+    valid_from DATE NOT NULL,
+    valid_until DATE,
+    UNIQUE(company_id, product_id, valid_from)
+);
+
+-- B2B заказы
+CREATE TABLE b2b_orders (
+    id SERIAL PRIMARY KEY,
+    order_id INTEGER UNIQUE REFERENCES orders(id),
+    company_id INTEGER REFERENCES b2b_companies(id),
+    po_number TEXT,
+    delivery_note TEXT,
+    invoice_url TEXT,
+    upd_url TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
 
 ### 3.6 Notifications & Promotions Schema
-**Источник:** Пункт 5 общего списка.
+**Источник:** BP-08, BP-09 исходного документа.
 
-*SQL-схема: `notifications`, `promo_codes`, `loyalty_points`.*
+```sql
+-- Уведомления
+CREATE TABLE notifications (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    channel TEXT NOT NULL, -- 'push', 'sms', 'email', 'telegram'
+    event_type TEXT NOT NULL,
+    -- 'order.created', 'payment.succeeded', 'delivery.assigned',
+    -- 'delivery.delivered', 'promo.received', 'order.reminder'
+    title TEXT,
+    body TEXT NOT NULL,
+    payload JSONB,
+    status TEXT NOT NULL DEFAULT 'pending',
+    -- Статусы: pending → sent → delivered → failed
+    sent_at TIMESTAMPTZ,
+    read_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX idx_notifications_status ON notifications(status);
+
+-- Промокоды
+CREATE TABLE promo_codes (
+    id SERIAL PRIMARY KEY,
+    code TEXT UNIQUE NOT NULL,
+    type TEXT NOT NULL, -- 'percent', 'fixed', 'free_delivery'
+    value NUMERIC NOT NULL,
+    max_uses INTEGER,
+    used_count INTEGER DEFAULT 0,
+    min_order_amount NUMERIC,
+    max_discount NUMERIC,
+    category_ids INTEGER[],
+    first_order_only BOOLEAN DEFAULT FALSE,
+    expires_at TIMESTAMPTZ,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Использование промокодов
+CREATE TABLE promo_code_uses (
+    id SERIAL PRIMARY KEY,
+    promo_code_id INTEGER REFERENCES promo_codes(id),
+    order_id INTEGER REFERENCES orders(id),
+    user_id INTEGER REFERENCES users(id),
+    discount_amount NUMERIC NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Баллы лояльности
+CREATE TABLE loyalty_points (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER UNIQUE REFERENCES users(id),
+    balance NUMERIC NOT NULL DEFAULT 0,
+    lifetime_earned NUMERIC DEFAULT 0,
+    lifetime_spent NUMERIC DEFAULT 0,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Транзакции баллов
+CREATE TABLE loyalty_transactions (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    type TEXT NOT NULL, -- 'earn', 'spend', 'expire', 'refund'
+    amount NUMERIC NOT NULL,
+    order_id INTEGER REFERENCES orders(id),
+    description TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
 
 ---
 
