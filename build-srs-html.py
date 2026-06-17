@@ -122,7 +122,7 @@ def build_html(input_md):
   }}
   #toc-container a:hover {{ color: var(--accent); background: rgba(63,81,181,0.06); }}
   /* Search */
-  #search-wrap {{ padding: 8px 12px; border-bottom: 1px solid var(--border); }}
+  #search-wrap {{ padding: 8px 12px; border-bottom: 1px solid var(--border); position: relative; }}
   #search {{
     width: 100%; padding: 8px 12px; font-size: 13px;
     border: 1px solid var(--border); border-radius: 6px;
