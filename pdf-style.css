@@ -57,7 +57,13 @@ img {
   page-break-before: avoid;
   margin: 0.5em auto;
 }
+/* Hide pandoc-generated title block (we use our own h1) */
+#title-block-header { display: none; }
+
 h1 { font-size: 20pt; margin-top: 1.5em; page-break-before: avoid; }
+/* Том 1 и Том 2 начинаются с новой страницы */
+#том-1-business-requirements { page-break-before: always; }
+#том-2-technical-specification { page-break-before: always; }
 h2 { font-size: 16pt; margin-top: 1.3em; border-bottom: 1px solid #ccc; padding-bottom: 4px; page-break-after: avoid; }
 h3 { font-size: 13pt; margin-top: 1em; page-break-after: avoid; }
 h4 { font-size: 11pt; margin-top: 0.8em; page-break-after: avoid; }
