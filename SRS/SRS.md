@@ -521,8 +521,6 @@ SRS разделён на два тома. В зависимости от ваш
 | Staging | Валидность JSON-схемы события | Integration test (event emitted → schema valid) |
 | Prod monitoring | Дельта событий (не упала ли какая-то воронка) | Grafana dashboard + alert
 
-### 2.7 API Versioning, Deprecation Policy & Error Code Standard
-
 #### 2.7.1 API Versioning
 
 - Формат URL: `/api/v1/`, `/api/v2/`
