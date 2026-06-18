@@ -34,12 +34,12 @@
 - **Функции:** multi-stop route, live GPS, off-route detection, digital signature, photo POD, biometric login
 - **Что даёт:** Архитектуру offline-first приложения курьера — Hive для локального хранения + sync queue
 
-### gpietro/heymigrolino-picking-app (Flutter, iGooods-adjacent)
+### gpietro/heymigrolino-picking-app (Flutter, сервис-аналог-adjacent)
 - https://github.com/gpietro/heymigrolino-picking-app
 - **Стек:** Flutter/Dart, Firebase Auth + Firestore, Scandit (barcode scanning)
-- **Прямое отношение:** Build flavors `dev_gooods` и `prod_gooods` — приложение для Migrolino × iGooods
+- **Прямое отношение:** Build flavors `dev_gooods` и `prod_gooods` — приложение для Migrolino × сервис-аналог
 - **CI/CD:** GitHub Actions с tag-based деплоем
-- **Что даёт:** Реальный код приложения пикера для iGooods-like сервиса
+- **Что даёт:** Реальный код приложения пикера для сервис-аналог-like сервиса
 
 ### hightower-systems/sentry-wms (React Native, Warehouse Picking)
 - https://github.com/hightower-systems/sentry-wms
@@ -142,7 +142,7 @@
 ### spree/spree ⭐13k
 - https://github.com/spree/spree
 - **Стек:** Ruby on Rails, PostgreSQL, Redis, Sidekiq
-- **Совместимость:** Тот же стек, что у текущего iGooods (Rails 5.1–7)
+- **Совместимость:** Тот же стек, что у текущего сервис-аналог (Rails 5.1–7)
 - **Что даёт:** Зрелый Rails ecommerce — референт для админки, промокодов, корзины. Можно переиспользовать готовые модули
 
 ---

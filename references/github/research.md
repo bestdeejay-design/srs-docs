@@ -1,15 +1,15 @@
-# Research: iGooods на GitHub
+# Research: сервис-аналог (доставка продуктов)
 
 **Дата:** 2026-06-17
-**Источник:** https://github.com/igooods, публичные репозитории и артефакты
+**Источник:** публичные репозитории и артефакты
 
 ---
 
 ## 1. Официальный GitHub организации
 
-Профиль: https://github.com/igooods
+Профиль организации
 - Локация: Saint-Petersburg
-- Сайт: http://igooods.ru
+- Сайт: (закрыт)
 - Подписчиков: 3
 - Публичных репозиториев: 3 (основной код приватный)
 
@@ -25,10 +25,10 @@
 
 ---
 
-## 2. Сторонние репозитории (найденные по "igooods")
+## 2. Сторонние репозитории (найденные по "сервис-аналог")
 
-### 2.1 dr-yand/iGooods
-- **Ссылка:** https://github.com/dr-yand/iGooods
+### 2.1 dr-yand/Агрегатор
+- **Ссылка:** https://github.com/dr-yand/Агрегатор
 - **Описание:** "Приложения для доставщика продуктов"
 - **Язык:** Java (Android)
 - **Анализ:** Android-приложение курьера. Скриншоты показывают экраны:
@@ -38,8 +38,8 @@
   - История доставок
 - **Полезно:** Референс мобильного приложения курьера (хотя и устаревший — 2015)
 
-### 2.2 ChebotarevKonstantin/igooods
-- **Ссылка:** https://github.com/ChebotarevKonstantin/igooods
+### 2.2 ChebotarevKonstantin/сервис-аналог
+- **Ссылка:** https://github.com/ChebotarevKonstantin/сервис-аналог
 - **Язык:** JavaScript (96.7%), CSS (3.3%)
 - **Фреймворк:** Next.js
 - **Лицензия:** MIT
@@ -47,19 +47,19 @@
 
 ### 2.3 tilvin/hotels
 - **Ссылка:** https://github.com/tilvin/hotels
-- **Описание:** "test task for igooods"
+- **Описание:** "test task for сервис-аналог"
 - **Язык:** Ruby (75.1%), HTML, JavaScript, CSS, CoffeeScript
 - **Фреймворк:** Ruby on Rails
-- **Полезно:** Подтверждает Ruby on Rails на бэкенде
+- **Полезно:** Ruby on Rails на бэкенде
 
-### 2.4 RLT-G/igooodsLanding
-- **Ссылка:** https://github.com/RLT-G/igooodsLanding
+### 2.4 RLT-G/сервис-аналогLanding
+- **Ссылка:** https://github.com/RLT-G/сервис-аналогLanding
 - **Язык:** HTML 100%
 - **Описание:** Лендинг (обычная HTML страница)
 - **Обновлён:** Июнь 2025
 
-### 2.5 RLT-G/igooodsLandingChina
-- **Ссылка:** https://github.com/RLT-G/igooodsLandingChina
+### 2.5 RLT-G/сервис-аналогLandingChina
+- **Ссылка:** https://github.com/RLT-G/сервис-аналогLandingChina
 - **Язык:** HTML
 - **Описание:** Лендинг для китайского рынка
 
@@ -68,9 +68,9 @@
 ## 3. Ключевой артефакт: DATA.js
 
 **Файл:** `test-task-1/DATA.js`
-**Источник:** https://github.com/igooods/test-task-1/blob/master/DATA.js
+**Источник:** https://github.com/сервис-аналог/test-task-1/blob/master/DATA.js
 
-Содержит полную структуру каталога товаров iGooods.
+Содержит полную структуру каталога товаров Агрегатор.
 
 ### Структура данных
 
@@ -114,14 +114,14 @@
 
 ---
 
-## 4. Восстановленный технологический стек iGooods
+## 4. Восстановленный технологический стек Агрегатор
 
 | Компонент | Технология | Источник |
 |---|---|---|
 | **Backend** | Ruby on Rails | test-task-1, ruby-style-guide, tilvin/hotels |
-| **Frontend Web** | React + Next.js | ChebotarevKonstantin/igooods |
+| **Frontend Web** | React + Next.js | ChebotarevKonstantin/сервис-аналог |
 | **State management** | MobX | test-task-1 |
-| **Mobile (Android)** | Java | dr-yand/iGooods |
+| **Mobile (Android)** | Java | dr-yand/Агрегатор |
 | **Mobile (iOS)** | Неизвестно (вероятно Swift) | Нет публичных данных |
 | **Сборка** | Webpack + Babel | test-task-1 |
 | **Стили** | PostCSS + CSS modules | test-task-1 |

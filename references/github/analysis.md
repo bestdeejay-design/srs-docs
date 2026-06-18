@@ -1,7 +1,7 @@
-# Анализ сервиса iGooods
+# Анализ сервиса-аналога (доставка продуктов)
 
 **Дата:** 2026-06-17
-**Цель:** Собрать всё, что известно об iGooods, для создания продукта-аналога
+**Цель:** Собрать всё, что известно о сервисе-аналоге, для создания продукта
 
 ---
 
@@ -9,13 +9,13 @@
 
 | Параметр | Значение | Источник |
 |---|---|---|
-| **Основан** | 2015 | igooods.ru |
-| **Модель** | Доставка продуктов ИЗ супермаркетов (не свой склад) | igooods.ru |
-| **Города** | СПб, Москва, Владимир, Калуга, Ростов-на-Дону, Рязань, Тверь, Ярославль | igooods.ru |
-| **Разработчик** | H&H (handh) — package name `ru.handh.igooods` | Google Play |
-| **Франшиза** | Есть (franchise.igooods.ru) | igooods.ru |
-| **B2B** | Доставка в офисы (корпоративная) | igooods.ru/business |
-| **Сайт** | https://igooods.ru | |
+| **Основан** | ~2015 | открытые данные |
+| **Модель** | Доставка продуктов ИЗ супермаркетов (не свой склад) | анализ |
+| **Города** | Мск, СПб и др. | анализ |
+| **Разработчик** | Подрядчик | Google Play |
+| **Франшиза** | Есть | анализ |
+| **B2B** | Доставка в офисы (корпоративная) | анализ |
+| **Сайт** | (закрыт) | |
 
 ---
 
@@ -23,7 +23,7 @@
 
 ```mermaid
 flowchart LR
-    A[Клиент] -->|Заказ через сайт/приложение| B[iGooods]
+    A[Клиент] -->|Заказ через сайт/приложение| B[Агрегатор]
     B -->|Пикер идёт в магазин| C[Супермаркет]
     C -->|Собирает товары| D[Пикер]
     D -->|Передаёт курьеру| E[Курьер]
@@ -46,7 +46,7 @@ flowchart LR
 
 | Компонент | Технология | Подтверждение |
 |---|---|---|
-| **Язык/Фреймворк** | Ruby on Rails ~5.1 | `tilvin/hotels` (test task), `ruby-style-guide` форк |
+| **Язык/Фреймворк** | Ruby on Rails ~5.1 | `developer/example-backend` (test task), `ruby-style-guide` форк |
 | **База данных** | PostgreSQL (предположительно) | SQLite3 в dev, PostgreSQL типичен для Rails в prod |
 | **Аутентификация** | Sorcery | Gemfile: `gem 'sorcery'` |
 | **Авторизация** | access-granted | Gemfile: `gem 'access-granted'` |
@@ -59,9 +59,9 @@ flowchart LR
 
 | Компонент | Технология | Подтверждение |
 |---|---|---|
-| **Фреймворк** | Next.js 10.0.3 | `ChebotarevKonstantin/igooods` — `package.json` |
+| **Фреймворк** | Next.js 10.0.3 | `ChebotarevKonstantin/сервис-аналог` — `package.json` |
 | **UI-библиотека** | React 17.0.1 | package.json |
-| **State management** | MobX | `igooods/test-task-1` — требование к тестовому |
+| **State management** | MobX | `сервис-аналог/test-task-1` — требование к тестовому |
 | **Сборка** | Webpack + Babel 7 | test-task-1 |
 | **Стили** | PostCSS + CSS modules | test-task-1 |
 
@@ -69,10 +69,10 @@ flowchart LR
 
 | Платформа | Технология | App Store ID / Пакет |
 |---|---|---|
-| **Android** | Java (исторически) | `ru.handh.igooods` |
+| **Android** | Java (исторически) | `ru.handh.сервис-аналог` |
 | **iOS** | Неизвестно (Swift/Kotlin Multiplatform?) | App Store: id1176196585 |
 | **AppGallery (Huawei)** | Портировано | C107188291 |
-| **RuStore** | Портировано | `ru.handh.igooods` |
+| **RuStore** | Портировано | `ru.handh.сервис-аналог` |
 
 ### 3.4 Инфраструктура
 
@@ -81,7 +81,7 @@ flowchart LR
 | **CDN/Хостинг изображений** | Selectel (selcdn.net) |
 | **Аналитика** | Яндекс.Метрика, Mail.Ru Top |
 | **Платёжный шлюз** | Т-Банк (Тинькофф) |
-| **Поддержка** | Telegram bot (@igooodssupportbot) |
+| **Поддержка** | Telegram bot (@сервис-аналогsupportbot) |
 
 ---
 

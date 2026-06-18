@@ -3129,7 +3129,7 @@ curl -X PATCH "https://api.cloudflare.com/client/v4/zones/$ZONE/dns_records/$REC
 gh workflow run deploy.yml -f region=standby -f db_host=localhost
 
 # 5. Проверить healthcheck
-curl -f https://api.igoods.ru/health && echo "OK"
+curl -f https://api.example.com/health && echo "OK"
 ```
 
 ### 6.1 Authentication & Authorization
