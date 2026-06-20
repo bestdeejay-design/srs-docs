@@ -392,13 +392,48 @@ a:hover { color: var(--blue-hover); text-decoration: underline }
 }
 #content .mermaid-wrapper {
   margin: 24px 0;
-  padding: 20px;
+  padding: 0;
   background: var(--bg2);
   border-radius: var(--r-md);
   border: 1px solid var(--border);
-  overflow-x: auto;
+  overflow: auto;
+  position: relative;
+  cursor: grab;
+  max-height: 80vh;
 }
-#content .mermaid-wrapper svg { max-width: 100%; height: auto }
+#content .mermaid-wrapper:active { cursor: grabbing }
+#content .mermaid-wrapper svg { display: block; margin: 0 auto }
+#content .mermaid-wrapper.zoomed svg { max-width: none; height: auto; transform-origin: 0 0 }
+
+/* Zoom controls */
+.mermaid-zoom {
+  position: sticky; top: 8px; left: 8px; z-index: 10;
+  display: inline-flex; gap: 2px;
+  float: left; margin: 8px;
+  opacity: .35; transition: opacity .2s;
+}
+.mermaid-wrapper:hover .mermaid-zoom { opacity: 1 }
+.mermaid-zoom button {
+  width: 30px; height: 26px;
+  border: 1px solid var(--border2);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px; line-height: 24px; text-align: center;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: all .15s;
+}
+.mermaid-zoom button:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+  background: var(--blue-light);
+}
+.mermaid-zoom .zoom-level {
+  font-size: 11px; color: var(--text2);
+  padding: 0 6px; line-height: 26px;
+  min-width: 36px; text-align: center;
+}
 
 #content hr {
   border: none; border-top: 1px solid var(--border);

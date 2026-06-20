@@ -161,6 +161,85 @@
   });
 
   /* ===== Mermaid ===== */
+  function makeZoomable(wrapper) {
+    var svg = wrapper.querySelector('svg');
+    if (!svg) return;
+
+    var scale = 1;
+    var panX = 0, panY = 0;
+    var dragging = false, startX, startY, startPanX, startPanY;
+
+    var controls = document.createElement('div');
+    controls.className = 'mermaid-zoom';
+    controls.innerHTML =
+      '<button class="z-in" title="\u0423\u0432\u0435\u043B\u0438\u0447\u0438\u0442\u044C">+</button>' +
+      '<span class="zoom-level">100%</span>' +
+      '<button class="z-out" title="\u0423\u043C\u0435\u043D\u044C\u0448\u0438\u0442\u044C">\u2212</button>' +
+      '<button class="z-reset" title="\u0421\u0431\u0440\u043E\u0441\u0438\u0442\u044C">\u27F3</button>';
+    wrapper.insertBefore(controls, wrapper.firstChild);
+
+    function applyTransform() {
+      svg.style.transform = 'translate(' + panX + 'px,' + panY + 'px) scale(' + scale + ')';
+      controls.querySelector('.zoom-level').textContent = Math.round(scale * 100) + '%';
+      wrapper.classList.toggle('zoomed', scale !== 1);
+    }
+
+    controls.querySelector('.z-in').addEventListener('click', function () {
+      scale = Math.min(scale * 1.4, 10);
+      applyTransform();
+    });
+    controls.querySelector('.z-out').addEventListener('click', function () {
+      scale = Math.max(scale / 1.4, 0.2);
+      panX = Math.min(0, panX);
+      panY = Math.min(0, panY);
+      applyTransform();
+    });
+    controls.querySelector('.z-reset').addEventListener('click', function () {
+      scale = 1; panX = 0; panY = 0;
+      applyTransform();
+      wrapper.scrollLeft = 0;
+      wrapper.scrollTop = 0;
+    });
+
+    wrapper.addEventListener('wheel', function (e) {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      var rect = wrapper.getBoundingClientRect();
+      var mx = e.clientX - rect.left;
+      var my = e.clientY - rect.top;
+      var ox = (mx - panX) / scale;
+      var oy = (my - panY) / scale;
+      scale = e.deltaY < 0 ? Math.min(scale * 1.15, 10) : Math.max(scale / 1.15, 0.2);
+      panX = mx - ox * scale;
+      panY = my - oy * scale;
+      applyTransform();
+    });
+
+    wrapper.addEventListener('mousedown', function (e) {
+      if (e.button !== 0 || e.target.closest('.mermaid-zoom')) return;
+      dragging = true;
+      startX = e.clientX; startY = e.clientY;
+      startPanX = panX; startPanY = panY;
+      wrapper.style.cursor = 'grabbing';
+    });
+    document.addEventListener('mousemove', function (e) {
+      if (!dragging) return;
+      panX = startPanX + (e.clientX - startX);
+      panY = startPanY + (e.clientY - startY);
+      applyTransform();
+    });
+    document.addEventListener('mouseup', function () {
+      if (dragging) { dragging = false; wrapper.style.cursor = ''; }
+    });
+
+    svg.addEventListener('dblclick', function () {
+      scale = 1; panX = 0; panY = 0;
+      applyTransform();
+      wrapper.scrollLeft = 0;
+      wrapper.scrollTop = 0;
+    });
+  }
+
   function loadMermaid() {
     var blocks = document.querySelectorAll('pre.mermaid');
     if (!blocks.length) return;
@@ -212,6 +291,7 @@
             if (block._placeholder) {
               block._placeholder.parentElement.replaceChild(wrapper, block._placeholder);
             }
+            makeZoomable(wrapper);
           })
           .catch(function (err) {
             console.error('Mermaid error:', err);
