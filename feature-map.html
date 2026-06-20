@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Feature Map — Карта функциональных требований</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0 }
+  html, body { width: 100%; height: 100%; overflow: hidden }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, Roboto, sans-serif;
+    background: #f5f5f7;
+  }
+  #mm-container {
+    width: 100%;
+    height: 100vh;
+    position: relative;
+  }
+  .markmap {
+    width: 100%;
+    height: 100%;
+  }
+  .markmap svg { width: 100%; height: 100% }
+  .markmap-foreign {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, Roboto, sans-serif;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .markmap-foreign strong { font-weight: 700 }
+  .markmap-foreign em { font-style: italic }
+</style>
+</head>
+<body>
+<div id="mm-container">
+  <div class="markmap">
+- **Продукт**
+  - Регистрация и безопасность
+    - Вход по телефону
+    - SMS-подтверждение
+    - Роли: клиент/пикер/курьер/админ/суперадмин
+    - JWT access + refresh токены
+    - Rate limiting
+    - Audit log
+  - Каталог
+    - Выбор магазина по адресу
+    - Категории (3 уровня)
+    - Поиск (Elasticsearch)
+    - Динамические фильтры
+    - Карточка товара
+    - Нормализация данных сетей
+    - Маппинг категорий сети → платформа
+    - Адаптеры сетей (Лента, METRO, Вкусвилл и др.)
+    - Синхронизация цен/остатков (шедулер)
+  - Корзина
+    - Добавление товаров
+    - Промокоды и баллы
+    - Dynamic Pricing
+    - Пересчёт стоимости
+    - Оформление
+  - Заказы
+    - Создание
+    - Статусы (оплачен → сборка → доставка → завершён)
+    - Добавление товаров после оформления
+    - История
+    - Замена товара (пикер → звонок → альтернатива)
+    - Возврат и отмена (до/после сборки, комиссия)
+    - Event Sourcing (цепочка событий)
+  - Доставка
+    - Временные слоты (3 дня вперёд)
+    - Dispatch (multi-objective optimization)
+    - ETA (OSRM + ML гибрид)
+    - Трекинг для клиента
+    - Опция «Можно раньше»
+  - Платежи
+    - Т-Банк (онлайн, 3DSecure)
+    - СБП (QR от курьера)
+    - Карта курьеру (POS-терминал)
+    - Наличные
+    - Refund (полный/частичный)
+    - Чек (54-ФЗ, ОФД)
+  - Уведомления
+    - Push (FCM)
+    - SMS
+    - Email
+    - Telegram
+    - События: создан / сборка / курьер / доставлен
+  - Админка
+    - Управление заказами (CRUD, статусы)
+    - Управление товарами (CRUD, импорт CSV)
+    - Пользователи (блокировка, роли)
+    - Промокоды (создание, статистика)
+    - Курьеры и пикеры (зоны, рейтинг)
+    - Магазины и зоны доставки (полигоны)
+    - Управление сетями-адаптерами (вкл/выкл)
+    - Audit log (кто, когда, что сделал)
+  - B2B
+    - Корпоративные заказы в офис
+    - Регулярные поставки (ежедневно/еженедельно)
+    - Индивидуальные цены по договору
+    - Отсрочка платежа (3–30 дней)
+    - ЭДО (Диадок / СБИС, УПД)
+    - Счета и закрывающие документы
+  - Dynamic Pricing
+    - Факторы: загрузка, время, погода, расстояние, вес
+    - Формула: base_fee × product(multipliers)
+    - Max надбавка: 2×
+    - Отображение в корзине
+  - Приложение пикера
+    - Список заказов (FIFO)
+    - Сканер штрихкодов (Scandit)
+    - Замены товаров (поиск альтернатив)
+    - Звонок клиенту (скрытый номер)
+    - Offline-режим (Firestore cache)
+    - Smart Sync Queue (batch upload)
+    - Подтверждение упаковки
+  - Приложение курьера
+    - Навигация с multi-stop маршрутом
+    - Offline-режим (Hive + Smart Sync)
+    - Off-route detection
+    - Приём оплаты (офлайн hold → sync)
+    - Digital Signature (POD)
+    - Photo POD
+    - Сканер
+    - Статусы доставки
+  - Инфраструктура
+    - CI/CD (GitHub Actions, testcontainers)
+    - Docker Compose → Kubernetes
+    - Мониторинг (Prometheus + Grafana + Loki + Jaeger)
+    - Sentry (error tracking)
+    - Feature flags (Flipper / LaunchDarkly)
+    - Rollback (git revert + rolling update)
+  - Тестирование
+    - Unit (mockery + testify)
+    - Integration (testcontainers)
+    - Contract (Pact CDC)
+    - E2E (Cypress + K6)
+    - Load (K6: stress, soak, spike)
+    - Security (SonarCloud + Trivy + Aikido)
+  - Аналитика
+    - Дашборды (Grafana)
+    - Отчёты (выручка, заказы, конверсия)
+    - Метрики (DAU/MAU, время сборки, ETA, топ товаров)
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.15.4/dist/browser/index.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/markmap-view@0.15.4/dist/browser/index.js"></script>
+<script>
+(function () {
+  var el = document.querySelector('.markmap');
+  if (!el) return;
+  var md = el.textContent;
+  try {
+    var t = new markmap.Transformer();
+    var root = t.transform(md);
+    markmap.Markmap.create(el, {
+      colorFreezeLevel: 2,
+      zoom: true,
+      pan: true,
+      duration: 300,
+      nodeMinHeight: 20,
+      spacingVertical: 6,
+      spacingHorizontal: 100,
+      paddingX: 10,
+      paddingY: 6,
+      maxWidth: 300,
+      fitRatio: 0.95,
+    }, root);
+    el._ready = true;
+  } catch (e) {
+    el.textContent = '\u041E\u0448\u0438\u0431\u043A\u0430: ' + e.message;
+    el.style.color = '#ff3b30';
+    el.style.padding = '40px';
+    el.style.fontSize = '18px';
+  }
+})();
+</script>
+</body>
+</html>

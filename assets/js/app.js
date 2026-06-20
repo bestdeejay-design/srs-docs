@@ -224,52 +224,19 @@
       }
     });
 
-    /* Markmap (feature map only) — via autoloader */
+    /* Markmap — ссылка на отдельную страницу */
     if (mindmapBlocks.length) {
       mindmapBlocks.forEach(function (item) {
-        var md = mindmapToMarkdown(item.code);
-
-        var container = document.createElement('div');
-        container.className = 'markmap-wrap';
-
-        var toolbar = document.createElement('div');
-        toolbar.className = 'markmap-toolbar';
-        var btn = document.createElement('button');
-        btn.className = 'markmap-fullscreen-btn';
-        btn.textContent = '\u26F6 \u041A\u0430\u0440\u0442\u0430 \u043F\u043E\u043B\u043D\u043E\u0441\u0442\u044C\u044E';
-        toolbar.appendChild(btn);
-
-        var svgEl = document.createElement('div');
-        svgEl.className = 'markmap';
-        svgEl.textContent = md;
-
-        container.appendChild(toolbar);
-        container.appendChild(svgEl);
-
+        var card = document.createElement('div');
+        card.className = 'markmap-link-card';
+        card.innerHTML = '<div class="markmap-link-icon">\u{1F5FA}</div>'
+          + '<div class="markmap-link-text"><strong>\u041A\u0430\u0440\u0442\u0430 \u0444\u0443\u043D\u043A\u0446\u0438\u043E\u043D\u0430\u043B\u044C\u043D\u044B\u0445 \u0442\u0440\u0435\u0431\u043E\u0432\u0430\u043D\u0438\u0439</strong>'
+          + '<br>\u0418\u043D\u0442\u0435\u0440\u0430\u043A\u0442\u0438\u0432\u043D\u0430\u044F \u0434\u0440\u0435\u0432\u043E\u0432\u0438\u0434\u043D\u0430\u044F \u043A\u0430\u0440\u0442\u0430 \u0441\u043E \u0432\u0441\u0435\u043C\u0438 \u0440\u0430\u0437\u0434\u0435\u043B\u0430\u043C\u0438</div>'
+          + '<a class="markmap-link-btn" href="feature-map.html" target="_blank">\u041E\u0442\u043A\u0440\u044B\u0442\u044C \u0432 \u043D\u043E\u0432\u043E\u0439 \u0432\u043A\u043B\u0430\u0434\u043A\u0435 \u2197</a>';
         if (item.block._placeholder) {
-          item.block._placeholder.parentElement.replaceChild(container, item.block._placeholder);
+          item.block._placeholder.parentElement.replaceChild(card, item.block._placeholder);
         }
-
-        /* Fullscreen via native API */
-        btn.addEventListener('click', function () {
-          if (document.fullscreenElement === container) {
-            document.exitFullscreen();
-          } else if (container.requestFullscreen) {
-            container.requestFullscreen();
-          }
-        });
-
-        /* Update button text on fullscreen change */
-        document.addEventListener('fullscreenchange', function () {
-          var fs = document.fullscreenElement === container;
-          btn.textContent = fs ? '\u2716 \u0417\u0430\u043A\u0440\u044B\u0442\u044C' : '\u26F6 \u041A\u0430\u0440\u0442\u0430 \u043F\u043E\u043B\u043D\u043E\u0441\u0442\u044C\u044E';
-        });
       });
-
-      /* Load autoloader (handles d3 + markmap-lib + markmap-view) */
-      var aScript = document.createElement('script');
-      aScript.src = 'https://cdn.jsdelivr.net/npm/markmap-autoloader@0.15';
-      document.head.appendChild(aScript);
     }
 
     /* Mermaid (all other diagrams) */
