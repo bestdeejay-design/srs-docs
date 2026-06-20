@@ -140,14 +140,14 @@ var nodes = [{id:'root',n:'Агрегатор доставки\nпродукто
 var links = [];
 M.forEach(function(m) {
   nodes.push({id:m.id, n:m.n, grp:m.id, r:14, desc:m.f.length+' функций', mod:true});
-  links.push({s:'root', t:m.id});
+  links.push({source:'root', target:m.id});
   m.f.forEach(function(f) {
     var fid = m.id+'-'+f.replace(/[^a-zа-яё]/gi,'_');
     nodes.push({id:fid, n:f, grp:m.id, r:5, desc:''});
-    links.push({s:m.id, t:fid});
+    links.push({source:m.id, target:fid});
   });
 });
-DEP.forEach(function(d) { links.push({s:d[0], t:d[1]}); });
+DEP.forEach(function(d) { links.push({source:d[0], target:d[1]}); });
 
 // Build shared feature connections (features with same name across modules)
 var featByName = {};
@@ -163,7 +163,7 @@ Object.keys(featByName).forEach(function(k) {
   if (ids.length > 1) {
     for (var i=0; i<ids.length; i++) {
       for (var j=i+1; j<ids.length; j++) {
-        links.push({s:ids[i], t:ids[j]});
+        links.push({source:ids[i], target:ids[j]});
       }
     }
   }
@@ -199,7 +199,7 @@ M.forEach(function(m) {
 });
 
 // SVG setup
-var svg = d3.select('#c');
+var svg = d3.select('#c').attr('viewBox', [0, 0, W, H]);
 var mainG = svg.append('g');
 
 // Zoom
@@ -210,12 +210,12 @@ svg.call(zoom);
 var sim = d3.forceSimulation(nodes)
   .force('link', d3.forceLink(links).id(function(d){return d.id;})
     .distance(function(l) {
-      if (l.s.id==='root'||l.t.id==='root') return 130;
-      if (nodes.find(function(n){return n.id===l.s.id})?.mod || nodes.find(function(n){return n.id===l.t.id})?.mod) return 70;
+      if (l.source.id==='root'||l.target.id==='root') return 130;
+      if (nodes.find(function(n){return n.id===l.source.id})?.mod || nodes.find(function(n){return n.id===l.target.id})?.mod) return 70;
       return 40;
     })
     .strength(function(l) {
-      if (l.s.id==='root'||l.t.id==='root') return 0.6;
+      if (l.source.id==='root'||l.target.id==='root') return 0.6;
       return 0.15;
     }))
   .force('charge', d3.forceManyBody().strength(function(d){
@@ -228,9 +228,9 @@ var sim = d3.forceSimulation(nodes)
 // Draw links
 var link = mainG.append('g').selectAll('line').data(links).join('line')
   .style('stroke','#22223a').style('stroke-width',function(l){
-    return (l.s.id==='root'||l.t.id==='root')?1.5:0.4;
+    return (l.source.id==='root'||l.target.id==='root')?1.5:0.4;
   }).style('opacity',function(l){
-    return (l.s.id==='root'||l.t.id==='root')?0.3:0.08;
+    return (l.source.id==='root'||l.target.id==='root')?0.3:0.08;
   });
 
 // Draw nodes
@@ -280,20 +280,20 @@ node.on('mouseenter', function(e,d) {
   if (d.id === 'root') return;
   var connected = new Set();
   links.forEach(function(l) {
-    if (l.s.id === d.id) connected.add(l.t.id);
-    if (l.t.id === d.id) connected.add(l.s.id);
+    if (l.source.id === d.id) connected.add(l.target.id);
+    if (l.target.id === d.id) connected.add(l.source.id);
   });
   connected.add(d.id);
   mainG.selectAll('g.node').each(function(n) {
     d3.select(this).style('opacity', connected.has(n.id) ? 1 : 0.08);
   });
   link.style('opacity', function(l) {
-    if (l.s.id===d.id||l.t.id===d.id) return 0.5;
-    if (l.s.id==='root'||l.t.id==='root') return 0.06;
+    if (l.source.id===d.id||l.target.id===d.id) return 0.5;
+    if (l.source.id==='root'||l.target.id==='root') return 0.06;
     return 0.015;
   }).style('stroke-width', function(l) {
-    return (l.s.id===d.id||l.t.id===d.id) ? 2.5 : 
-      (l.s.id==='root'||l.t.id==='root') ? 1.5 : 0.4;
+    return (l.source.id===d.id||l.target.id===d.id) ? 2.5 : 
+      (l.source.id==='root'||l.target.id==='root') ? 1.5 : 0.4;
   });
   tip.innerHTML = '<div class="tn">'+d.n+'</div>'
     + (d.desc ? '<div class="td">'+d.desc+'</div>' : '')
@@ -323,8 +323,8 @@ node.on('click', function(e,d) {
   // Highlight connected
   var connected = new Set();
   links.forEach(function(l) {
-    if (l.s.id === d.id) connected.add(l.t.id);
-    if (l.t.id === d.id) connected.add(l.s.id);
+    if (l.source.id === d.id) connected.add(l.target.id);
+    if (l.target.id === d.id) connected.add(l.source.id);
   });
   connected.add(d.id);
 
@@ -361,11 +361,11 @@ function updateVisibility() {
   });
 
   link.style('opacity', function(l) {
-    var sShow = l.s.id === 'root' || catState[l.s.grp || ''] !== false;
-    var tShow = l.t.id === 'root' || catState[l.t.grp || ''] !== false;
+    var sShow = l.source.id === 'root' || catState[l.source.grp || ''] !== false;
+    var tShow = l.target.id === 'root' || catState[l.target.grp || ''] !== false;
     if (!sShow || !tShow) return 0.01;
     if (!showLinks) return 0.01;
-    if (l.s.id === 'root' || l.t.id === 'root') return 0.3;
+    if (l.source.id === 'root' || l.target.id === 'root') return 0.3;
     return 0.08;
   });
 
@@ -374,8 +374,8 @@ function updateVisibility() {
   // Stats
   var visNodes = nodes.filter(function(d) { return d.id === 'root' || catState[d.grp]; }).length;
   var visLinks = links.filter(function(l) {
-    return (l.s.id === 'root' || catState[l.s.grp || '']) && 
-           (l.t.id === 'root' || catState[l.t.grp || '']);
+    return (l.source.id === 'root' || catState[l.source.grp || '']) && 
+           (l.target.id === 'root' || catState[l.target.grp || '']);
   }).length;
   if (hasSearch) {
     var found = nodes.filter(function(d) { return d.n.toLowerCase().indexOf(q) !== -1; }).length;
@@ -420,21 +420,22 @@ document.getElementById('speed').addEventListener('input', function() {
 
 // Reset view
 function resetView() {
-  mainG.selectAll('g.node').style('opacity', null);
-  link.style('opacity', null).style('stroke-width', null);
-  searchEl.value = '';
-  updateVisibility();
-  var bounds = mainG.node().getBBox();
-  if (bounds.width && bounds.height) {
-    var p = 60;
-    var s = Math.min((W-p*2)/bounds.width, (H-p*2)/bounds.height, 1.2);
-    s = Math.max(s, 0.05);
-    var tx = (W-bounds.width*s)/2 - bounds.x*s;
-    var ty = (H-bounds.height*s)/2 - bounds.y*s;
-    svg.transition().duration(400).call(zoom.transform, d3.zoomIdentity.translate(tx,ty).scale(s));
-  }
-  statusEl.textContent = 'Вид сброшен';
-  setTimeout(function() { updateVisibility(); }, 100);
+  try {
+    mainG.selectAll('g.node').style('opacity', null);
+    link.style('opacity', null).style('stroke-width', null);
+    searchEl.value = '';
+    updateVisibility();
+    var bounds = mainG.node().getBBox();
+    if (bounds.width > 10 && bounds.height > 10) {
+      var p = 60;
+      var s = Math.min((W-p*2)/bounds.width, (H-p*2)/bounds.height, 1.2);
+      s = Math.max(s, 0.05);
+      var tx = (W-bounds.width*s)/2 - bounds.x*s;
+      var ty = (H-bounds.height*s)/2 - bounds.y*s;
+      svg.transition().duration(400).call(zoom.transform, d3.zoomIdentity.translate(tx,ty).scale(s));
+    }
+    statusEl.textContent = 'Вид сброшен';
+  } catch(e) {}
   sim.alpha(0.05).restart();
 }
 
@@ -486,9 +487,19 @@ sim.on('tick', function() {
   node.attr('transform',function(d){return 'translate('+d.x+','+d.y+')';});
 });
 
-// Auto-fit after settle
-setTimeout(function() { resetView(); }, 500);
-setTimeout(function() { updateVisibility(); }, 600);
+// Auto-fit after simulation stabilizes
+var fitTries = 0;
+sim.on('end', function() {
+  if (fitTries++ < 2) {
+    try { resetView(); } catch(e) {}
+  }
+});
+setTimeout(function() {
+  try { resetView(); } catch(e) {
+    statusEl.textContent = 'Нажмите ⟲ для центрирования';
+  }
+  updateVisibility();
+}, 1500);
 
 // Resize
 window.addEventListener('resize', function() {
