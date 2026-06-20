@@ -6,3 +6,12 @@
 !/assets/js/
 !/assets/js/app.js
 !/README.md
+!/visualizations/
+!/visualizations/index.html
+!/visualizations/01-sunburst.html
+!/visualizations/02-treemap.html
+!/visualizations/03-mindmap.html
+!/visualizations/04-table.html
+!/visualizations/05-roadmap.html
+!/visualizations/06-kanban.html
+!/visualizations/07-force-graph.html

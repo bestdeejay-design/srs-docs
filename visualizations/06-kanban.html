@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Kanban — Карта функций</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box }
+body { background: #0a0a0f; color: #e8e8ed; font-family: -apple-system, BlinkMacSystemFont, Inter, sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden }
+h1 { text-align: center; padding: 12px; font-size: 14px; font-weight: 600; color: #6b6b83; letter-spacing: 0.5px; flex-shrink: 0 }
+.board { display: flex; gap: 12px; padding: 12px; flex: 1; overflow-x: auto; overflow-y: hidden; min-height: 0 }
+.column { background: #12121a; border: 1px solid #262636; border-radius: 12px; min-width: 280px; max-width: 320px; flex: 1; display: flex; flex-direction: column; max-height: 100% }
+.column-header { padding: 12px 14px; border-bottom: 1px solid #262636; font-weight: 700; font-size: 12px; display: flex; align-items: center; gap: 8px; flex-shrink: 0 }
+.column-header .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0 }
+.column-header .count { font-size: 10px; color: #6b6b83; font-weight: 400; margin-left: auto; background: #1c1c2a; padding: 0 8px; border-radius: 8px }
+.column-body { padding: 8px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; min-height: 0 }
+.card { background: #1c1c2a; border: 1px solid #262636; border-radius: 8px; padding: 10px 12px; cursor: grab; transition: border-color .15s, transform .1s, box-shadow .15s }
+.card:active { cursor: grabbing; transform: scale(0.97) }
+.card:hover { border-color: rgba(255,255,255,0.15); box-shadow: 0 2px 12px rgba(0,0,0,0.3) }
+.card.dragging { opacity: 0.5; transform: rotate(2deg) }
+.card.drag-over { border-color: #6366f1; box-shadow: 0 0 0 1px #6366f1 }
+.card .c-title { font-weight: 600; font-size: 12px; margin-bottom: 2px }
+.card .c-desc { font-size: 10px; color: #6b6b83; margin-bottom: 6px }
+.card .c-tags { display: flex; flex-wrap: wrap; gap: 3px }
+.card .c-tags span { font-size: 8px; padding: 1px 5px; border-radius: 3px; background: rgba(255,255,255,0.06); color: #6b6b83 }
+.card .c-priority { font-size: 9px; padding: 1px 6px; border-radius: 4px; display: inline-block; margin-top: 4px }
+.tooltip { position: fixed; display: none; background: #12121a; border: 1px solid #262636; border-radius: 8px; padding: 8px 12px; font-size: 12px; max-width: 240px; pointer-events: none; z-index: 1000 }
+.tooltip.show { display: block }
+.tooltip .tt-name { font-weight: 700; font-size: 13px; margin-bottom: 2px }
+.tooltip .tt-desc { color: #6b6b83; font-size: 11px }
+</style>
+</head>
+<body>
+<h1>📋 Kanban — Карта функциональных требований</h1>
+<div class="board" id="board"></div>
+<div id="tooltip" class="tooltip"></div>
+
+<script>
+var CARDS = [
+  { id: 's1', name: 'Вход по телефону', cat: 'security', color: '#6366f1', desc: 'Аутентификация по SMS', priority: 'Высокий', column: 'backlog' },
+  { id: 's2', name: 'SMS-подтверждение', cat: 'security', color: '#6366f1', desc: 'OTP через SMS', priority: 'Высокий', column: 'backlog' },
+  { id: 's3', name: 'Роли (RBAC)', cat: 'security', color: '#6366f1', desc: '5 ролей', priority: 'Высокий', column: 'backlog' },
+  { id: 's4', name: 'JWT токены', cat: 'security', color: '#6366f1', desc: 'access + refresh', priority: 'Высокий', column: 'in-progress' },
+  { id: 's5', name: 'Rate limiting', cat: 'security', color: '#6366f1', desc: 'Защита от DDoS', priority: 'Средний', column: 'todo' },
+  { id: 's6', name: 'Audit log', cat: 'security', color: '#6366f1', desc: 'Лог действий', priority: 'Средний', column: 'todo' },
+  { id: 'c1', name: 'Выбор магазина', cat: 'catalog', color: '#22c55e', desc: 'По адресу', priority: 'Высокий', column: 'done' },
+  { id: 'c2', name: 'Категории (3 ур.)', cat: 'catalog', color: '#22c55e', desc: 'Иерархия', priority: 'Высокий', column: 'done' },
+  { id: 'c3', name: 'Поиск (ES)', cat: 'catalog', color: '#22c55e', desc: 'Полнотекстовый', priority: 'Высокий', column: 'done' },
+  { id: 'c4', name: 'Динамические фильтры', cat: 'catalog', color: '#22c55e', desc: 'Цена, бренд, вес', priority: 'Высокий', column: 'in-progress' },
+  { id: 'c5', name: 'Карточка товара', cat: 'catalog', color: '#22c55e', desc: 'Фото, цена, БЖУ', priority: 'Высокий', column: 'in-progress' },
+  { id: 'c6', name: 'Нормализация данных', cat: 'catalog', color: '#22c55e', desc: 'Единый формат', priority: 'Высокий', column: 'todo' },
+  { id: 'c7', name: 'Маппинг категорий', cat: 'catalog', color: '#22c55e', desc: 'Сеть → платформа', priority: 'Высокий', column: 'todo' },
+  { id: 'c8', name: 'Адаптеры сетей', cat: 'catalog', color: '#22c55e', desc: 'Лента, METRO и др.', priority: 'Высокий', column: 'backlog' },
+  { id: 'c9', name: 'Синхронизация цен', cat: 'catalog', color: '#22c55e', desc: 'По шедулеру', priority: 'Высокий', column: 'backlog' },
+  { id: 'k1', name: 'Корзина', cat: 'cart', color: '#f59e0b', desc: 'Добавление/удаление', priority: 'Высокий', column: 'in-progress' },
+  { id: 'k2', name: 'Промокоды', cat: 'cart', color: '#f59e0b', desc: 'Баллы и промокоды', priority: 'Средний', column: 'todo' },
+  { id: 'k3', name: 'Dynamic Pricing', cat: 'cart', color: '#f59e0b', desc: 'Наценка', priority: 'Средний', column: 'backlog' },
+  { id: 'k4', name: 'Пересчёт стоимости', cat: 'cart', color: '#f59e0b', desc: 'Авто-пересчёт', priority: 'Высокий', column: 'todo' },
+  { id: 'k5', name: 'Оформление', cat: 'cart', color: '#f59e0b', desc: 'Переход к заказу', priority: 'Высокий', column: 'todo' },
+  { id: 'o1', name: 'Создание заказа', cat: 'orders', color: '#ef4444', desc: 'Фиксация состава', priority: 'Высокий', column: 'todo' },
+  { id: 'o2', name: 'Статусы заказа', cat: 'orders', color: '#ef4444', desc: 'оплачен→сборка→доставка', priority: 'Высокий', column: 'todo' },
+  { id: 'o3', name: 'Добавление после', cat: 'orders', color: '#ef4444', desc: 'Товары после заказа', priority: 'Средний', column: 'backlog' },
+  { id: 'o4', name: 'История заказов', cat: 'orders', color: '#ef4444', desc: 'Полная история', priority: 'Средний', column: 'todo' },
+  { id: 'o5', name: 'Замена товара', cat: 'orders', color: '#ef4444', desc: 'Звонок клиенту', priority: 'Высокий', column: 'backlog' },
+  { id: 'o6', name: 'Возврат и отмена', cat: 'orders', color: '#ef4444', desc: 'С комиссией', priority: 'Высокий', column: 'backlog' },
+  { id: 'd1', name: 'Временные слоты', cat: 'delivery', color: '#3b82f6', desc: 'На 3 дня', priority: 'Высокий', column: 'todo' },
+  { id: 'd2', name: 'Dispatch', cat: 'delivery', color: '#3b82f6', desc: 'Оптимизация', priority: 'Высокий', column: 'backlog' },
+  { id: 'd3', name: 'ETA', cat: 'delivery', color: '#3b82f6', desc: 'XGBoost коррекция', priority: 'Высокий', column: 'backlog' },
+  { id: 'd4', name: 'Трекинг', cat: 'delivery', color: '#3b82f6', desc: 'Курьер на карте', priority: 'Средний', column: 'backlog' },
+  { id: 'p1', name: 'Т-Банк (онлайн)', cat: 'payments', color: '#8b5cf6', desc: '3DSecure', priority: 'Высокий', column: 'todo' },
+  { id: 'p2', name: 'СБП (QR)', cat: 'payments', color: '#8b5cf6', desc: 'QR от курьера', priority: 'Высокий', column: 'todo' },
+  { id: 'p3', name: 'Карта курьеру', cat: 'payments', color: '#8b5cf6', desc: 'POS-терминал', priority: 'Высокий', column: 'backlog' },
+  { id: 'p4', name: 'Наличные', cat: 'payments', color: '#8b5cf6', desc: 'При получении', priority: 'Высокий', column: 'backlog' },
+  { id: 'p5', name: 'Refund', cat: 'payments', color: '#8b5cf6', desc: 'Возврат средств', priority: 'Высокий', column: 'backlog' },
+  { id: 'p6', name: 'Чек (54-ФЗ)', cat: 'payments', color: '#8b5cf6', desc: 'ОФД', priority: 'Высокий', column: 'backlog' }
+];
+
+var COLUMNS = [
+  { id: 'backlog', name: '📥 Backlog', color: '#6b6b83' },
+  { id: 'todo', name: '📝 To Do', color: '#f59e0b' },
+  { id: 'in-progress', name: '🔄 In Progress', color: '#6366f1' },
+  { id: 'done', name: '✅ Done', color: '#22c55e' }
+];
+
+var PRIORITY_COLORS = { 'Высокий': '#22c55e', 'Средний': '#f59e0b', 'Низкий': '#6b6b83' };
+var tooltip = document.getElementById('tooltip');
+var board = document.getElementById('board');
+var dragData = null;
+
+COLUMNS.forEach(function(col) {
+  var cards = CARDS.filter(function(c) { return c.column === col.id; });
+  var columnEl = document.createElement('div');
+  columnEl.className = 'column';
+  columnEl.dataset.column = col.id;
+  columnEl.innerHTML = '<div class="column-header"><span class="dot" style="background:' + col.color + '"></span>' + col.name + '<span class="count">' + cards.length + '</span></div>';
+  var body = document.createElement('div');
+  body.className = 'column-body';
+
+  cards.forEach(function(card) {
+    var cardEl = document.createElement('div');
+    cardEl.className = 'card';
+    cardEl.draggable = true;
+    cardEl.dataset.id = card.id;
+    cardEl.style.borderLeft = '3px solid ' + card.color;
+    cardEl.innerHTML = '<div class="c-title">' + card.name + '</div>'
+      + '<div class="c-desc">' + card.desc + '</div>'
+      + '<div class="c-priority" style="color:' + (PRIORITY_COLORS[card.priority] || '#6b6b83') + ';background:' + (PRIORITY_COLORS[card.priority] || '#6b6b83') + '20">● ' + card.priority + '</div>';
+    cardEl.addEventListener('dragstart', function(e) {
+      dragData = { id: card.id, from: col.id };
+      this.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    cardEl.addEventListener('dragend', function() {
+      this.classList.remove('dragging');
+      document.querySelectorAll('.card.drag-over').forEach(function(el) { el.classList.remove('drag-over'); });
+    });
+    cardEl.addEventListener('mouseenter', function(e) {
+      tooltip.innerHTML = '<div class="tt-name">' + card.name + '</div><div class="tt-desc">' + card.desc + '</div>';
+      tooltip.classList.add('show');
+    });
+    cardEl.addEventListener('mousemove', function(e) {
+      tooltip.style.left = (e.clientX + 12) + 'px';
+      tooltip.style.top = (e.clientY - 8) + 'px';
+    });
+    cardEl.addEventListener('mouseleave', function() { tooltip.classList.remove('show'); });
+    body.appendChild(cardEl);
+  });
+
+  body.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  });
+  body.addEventListener('drop', function(e) {
+    e.preventDefault();
+    if (!dragData) return;
+    var card = CARDS.find(function(c) { return c.id === dragData.id; });
+    if (card) {
+      card.column = col.id;
+      render();
+    }
+    dragData = null;
+  });
+
+  columnEl.appendChild(body);
+  board.appendChild(columnEl);
+});
+
+function render() {
+  board.innerHTML = '';
+  COLUMNS.forEach(function(col) {
+    var cards = CARDS.filter(function(c) { return c.column === col.id; });
+    var columnEl = document.createElement('div');
+    columnEl.className = 'column';
+    columnEl.dataset.column = col.id;
+    columnEl.innerHTML = '<div class="column-header"><span class="dot" style="background:' + col.color + '"></span>' + col.name + '<span class="count">' + cards.length + '</span></div>';
+    var body = document.createElement('div');
+    body.className = 'column-body';
+    cards.forEach(function(card) {
+      var cardEl = document.createElement('div');
+      cardEl.className = 'card';
+      cardEl.draggable = true;
+      cardEl.dataset.id = card.id;
+      cardEl.style.borderLeft = '3px solid ' + card.color;
+      cardEl.innerHTML = '<div class="c-title">' + card.name + '</div><div class="c-desc">' + card.desc + '</div>'
+        + '<div class="c-priority" style="color:' + (PRIORITY_COLORS[card.priority] || '#6b6b83') + ';background:' + (PRIORITY_COLORS[card.priority] || '#6b6b83') + '20">● ' + card.priority + '</div>';
+      cardEl.addEventListener('dragstart', function(e) {
+        dragData = { id: card.id, from: col.id };
+        this.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      cardEl.addEventListener('dragend', function() {
+        this.classList.remove('dragging');
+      });
+      cardEl.addEventListener('mouseenter', function(e) {
+        tooltip.innerHTML = '<div class="tt-name">' + card.name + '</div><div class="tt-desc">' + card.desc + '</div>';
+        tooltip.classList.add('show');
+      });
+      cardEl.addEventListener('mousemove', function(e) {
+        tooltip.style.left = (e.clientX + 12) + 'px';
+        tooltip.style.top = (e.clientY - 8) + 'px';
+      });
+      cardEl.addEventListener('mouseleave', function() { tooltip.classList.remove('show'); });
+      body.appendChild(cardEl);
+    });
+    body.addEventListener('dragover', function(e) { e.preventDefault(); });
+    body.addEventListener('drop', function(e) {
+      e.preventDefault();
+      if (!dragData) return;
+      var c = CARDS.find(function(c) { return c.id === dragData.id; });
+      if (c) { c.column = col.id; render(); }
+      dragData = null;
+    });
+    columnEl.appendChild(body);
+    board.appendChild(columnEl);
+  });
+}
+</script>
+</body>
+</html>

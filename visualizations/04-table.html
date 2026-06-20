@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Таблица — Карта функций</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box }
+body { background: #0a0a0f; color: #e8e8ed; font-family: -apple-system, BlinkMacSystemFont, Inter, sans-serif; min-height: 100vh }
+h1 { text-align: center; padding: 16px; font-size: 14px; font-weight: 600; color: #6b6b83; letter-spacing: 0.5px }
+table { width: 100%; border-collapse: collapse; font-size: 13px }
+th { position: sticky; top: 0; background: #12121a; color: #6b6b83; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 16px; text-align: left; border-bottom: 1px solid #262636; z-index: 10 }
+td { padding: 6px 16px; border-bottom: 1px solid #1a1a28; vertical-align: top }
+tr:hover td { background: rgba(255,255,255,0.03) }
+tr.category td { background: #12121a; font-weight: 700; font-size: 14px; cursor: pointer; border-bottom: 1px solid #262636 }
+tr.category:hover td { background: #1c1c2a }
+tr.category .toggle { display: inline-block; width: 20px; color: #6b6b83; transition: transform .15s }
+tr.category.collapsed .toggle { transform: rotate(-90deg) }
+tr.feature { transition: background .15s }
+tr.feature.hidden { display: none }
+.badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; color: #fff }
+.count-badge { font-size: 10px; color: #6b6b83; margin-left: 8px }
+.search-wrap { position: sticky; top: 0; z-index: 20; background: #0a0a0f; padding: 12px 16px; border-bottom: 1px solid #262636 }
+.search-wrap input { width: 100%; max-width: 400px; padding: 8px 14px; border: 1px solid #262636; border-radius: 8px; background: #12121a; color: #e8e8ed; font-size: 13px; outline: none }
+.search-wrap input:focus { border-color: #6366f1 }
+.search-wrap input::placeholder { color: #6b6b83 }
+.summary { padding: 8px 16px; font-size: 11px; color: #6b6b83; border-bottom: 1px solid #262636 }
+</style>
+</head>
+<body>
+<h1>📋 Таблица — Карта функциональных требований</h1>
+<div class="search-wrap">
+  <input type="text" id="search" placeholder="🔍 Поиск по названию или описанию..." autocomplete="off">
+</div>
+<div class="summary" id="summary"></div>
+<table>
+  <thead>
+    <tr>
+      <th style="width:30px"></th>
+      <th style="width:280px">Модуль / Функция</th>
+      <th>Описание</th>
+      <th style="width:100px">Приоритет</th>
+    </tr>
+  </thead>
+  <tbody id="tbody"></tbody>
+</table>
+
+<script>
+var CATEGORIES = [
+  { id: 'security',  name: '🔐 Регистрация и безопасность', color: '#6366f1' },
+  { id: 'catalog',   name: '🛒 Каталог',                    color: '#22c55e' },
+  { id: 'cart',      name: '🧺 Корзина',                    color: '#f59e0b' },
+  { id: 'orders',    name: '📋 Заказы',                     color: '#ef4444' },
+  { id: 'delivery',  name: '🚚 Доставка',                   color: '#3b82f6' },
+  { id: 'payments',  name: '💳 Платежи',                    color: '#8b5cf6' },
+  { id: 'notify',    name: '🔔 Уведомления',                color: '#06b6d4' },
+  { id: 'admin',     name: '⚙️ Админка',                    color: '#f97316' },
+  { id: 'b2b',       name: '🏢 B2B',                        color: '#14b8a6' },
+  { id: 'pricing',   name: '💰 Dynamic Pricing',            color: '#ec4899' },
+  { id: 'picker',    name: '📱 Приложение пикера',          color: '#84cc16' },
+  { id: 'courier',   name: '🚀 Приложение курьера',         color: '#0ea5e9' },
+  { id: 'infra',     name: '🏗️ Инфраструктура',             color: '#64748b' },
+  { id: 'testing',   name: '🧪 Тестирование',               color: '#a855f7' },
+  { id: 'analytics', name: '📊 Аналитика',                  color: '#10b981' }
+];
+
+var DATA = [
+  { cat: 'security',  items: [
+    { name: 'Вход по телефону', desc: 'Аутентификация по номеру телефона через SMS-код', priority: 'Высокий' },
+    { name: 'SMS-подтверждение', desc: 'OTP-код подтверждения через SMS-провайдера', priority: 'Высокий' },
+    { name: 'Роли: клиент/пикер/курьер/админ/суперадмин', desc: 'RBAC: 5 ролей с разграничением доступа', priority: 'Высокий' },
+    { name: 'JWT access + refresh токены', desc: 'Двухтокенная аутентификация с ротацией', priority: 'Высокий' },
+    { name: 'Rate limiting', desc: 'Защита от брутфорса и DDoS-атак', priority: 'Средний' },
+    { name: 'Audit log', desc: 'Логирование всех действий пользователей', priority: 'Средний' }
+  ]},
+  { cat: 'catalog', items: [
+    { name: 'Выбор магазина по адресу', desc: 'Поиск ближайших доступных магазинов', priority: 'Высокий' },
+    { name: 'Категории (3 уровня)', desc: 'Иерархия: категория → подкатегория → подподкатегория', priority: 'Высокий' },
+    { name: 'Поиск (Elasticsearch)', desc: 'Полнотекстовый поиск с учётом морфологии и опечаток', priority: 'Высокий' },
+    { name: 'Динамические фильтры', desc: 'Фильтрация по цене, бренду, весу, характеристикам', priority: 'Высокий' },
+    { name: 'Карточка товара', desc: 'Фото, описание, цена за единицу, БЖУ, рейтинг', priority: 'Высокий' },
+    { name: 'Нормализация данных сетей', desc: 'Приведение данных от разных сетей к единому формату', priority: 'Высокий' },
+    { name: 'Маппинг категорий сети → платформа', desc: 'Сопоставление категорий каждой сети с категориями платформы', priority: 'Высокий' },
+    { name: 'Адаптеры сетей', desc: 'Лента, METRO, Вкусвилл и другие — интеграция через адаптеры', priority: 'Высокий' },
+    { name: 'Синхронизация цен/остатков', desc: 'Периодическая синхронизация по шедулеру', priority: 'Высокий' }
+  ]},
+  { cat: 'cart', items: [
+    { name: 'Добавление товаров', desc: 'Добавление/удаление/изменение количества', priority: 'Высокий' },
+    { name: 'Промокоды и баллы', desc: 'Применение промокодов и списание бонусных баллов', priority: 'Средний' },
+    { name: 'Dynamic Pricing', desc: 'Динамическая наценка в зависимости от условий', priority: 'Средний' },
+    { name: 'Пересчёт стоимости', desc: 'Автоматический пересчёт при изменении состава корзины', priority: 'Высокий' },
+    { name: 'Оформление', desc: 'Переход к оформлению заказа', priority: 'Высокий' }
+  ]},
+  { cat: 'orders', items: [
+    { name: 'Создание', desc: 'Формирование заказа из корзины с фиксацией состава', priority: 'Высокий' },
+    { name: 'Статусы заказа', desc: 'оплачен → сборка → доставка → завершён', priority: 'Высокий' },
+    { name: 'Добавление после оформления', desc: 'Возможность добавить товары после создания заказа', priority: 'Средний' },
+    { name: 'История заказов', desc: 'Полная история всех заказов пользователя', priority: 'Средний' },
+    { name: 'Замена товара', desc: 'Пикер звонит клиенту и предлагает альтернативу', priority: 'Высокий' },
+    { name: 'Возврат и отмена', desc: 'Отмена до/после сборки с комиссией — возврат средств', priority: 'Высокий' },
+    { name: 'Event Sourcing', desc: 'Цепочка событий заказа для аудита', priority: 'Низкий' }
+  ]},
+  { cat: 'delivery', items: [
+    { name: 'Временные слоты', desc: 'Доступные окна доставки на 3 дня вперёд', priority: 'Высокий' },
+    { name: 'Dispatch', desc: 'Multi-objective оптимизация маршрутов', priority: 'Высокий' },
+    { name: 'ETA', desc: 'OSRM + XGBoost коррекция по 13 признакам', priority: 'Высокий' },
+    { name: 'Трекинг для клиента', desc: 'Отслеживание курьера на карте', priority: 'Средний' },
+    { name: 'Опция "Можно раньше"', desc: 'Возможность получить заказ раньше слота', priority: 'Низкий' }
+  ]},
+  { cat: 'payments', items: [
+    { name: 'Т-Банк (онлайн)', desc: 'Оплата картой онлайн с 3DSecure', priority: 'Высокий' },
+    { name: 'СБП (QR от курьера)', desc: 'Оплата через СБП по QR-коду', priority: 'Высокий' },
+    { name: 'Карта курьеру (POS)', desc: 'Оплата картой через POS-терминал', priority: 'Высокий' },
+    { name: 'Наличные', desc: 'Оплата наличными курьеру', priority: 'Высокий' },
+    { name: 'Refund', desc: 'Полный или частичный возврат', priority: 'Высокий' },
+    { name: 'Чек (54-ФЗ, ОФД)', desc: 'Формирование чека по 54-ФЗ', priority: 'Высокий' }
+  ]},
+  { cat: 'notify', items: [
+    { name: 'Push (FCM)', desc: 'Push-уведомления через Firebase', priority: 'Средний' },
+    { name: 'SMS', desc: 'SMS-уведомления', priority: 'Средний' },
+    { name: 'Email', desc: 'Email-уведомления', priority: 'Низкий' },
+    { name: 'Telegram', desc: 'Уведомления через Telegram-бота', priority: 'Низкий' },
+    { name: 'События', desc: 'Создан → сборка → выехал → доставлен', priority: 'Средний' }
+  ]},
+  { cat: 'admin', items: [
+    { name: 'Управление заказами', desc: 'CRUD, смена статусов, комментарии', priority: 'Высокий' },
+    { name: 'Управление товарами', desc: 'CRUD, импорт/экспорт CSV', priority: 'Высокий' },
+    { name: 'Пользователи', desc: 'Блокировка, роли, активность', priority: 'Высокий' },
+    { name: 'Промокоды', desc: 'Создание, статистика, срок действия', priority: 'Средний' },
+    { name: 'Курьеры и пикеры', desc: 'Назначение зон, рейтинг, график', priority: 'Средний' },
+    { name: 'Магазины и зоны', desc: 'Управление магазинами и полигонами', priority: 'Средний' },
+    { name: 'Управление сетями', desc: 'Включение/отключение адаптеров', priority: 'Средний' },
+    { name: 'Audit log', desc: 'Полный лог действий', priority: 'Низкий' }
+  ]},
+  { cat: 'b2b', items: [
+    { name: 'Корпоративные заказы', desc: 'Заказы для офиса', priority: 'Средний' },
+    { name: 'Регулярные поставки', desc: 'Авто-поставки по расписанию', priority: 'Средний' },
+    { name: 'Индивидуальные цены', desc: 'Персональные цены по договору', priority: 'Низкий' },
+    { name: 'Отсрочка платежа', desc: 'Отсрочка от 3 до 30 дней', priority: 'Низкий' },
+    { name: 'ЭДО', desc: 'Интеграция с Диадок / СБИС', priority: 'Низкий' },
+    { name: 'Счета и документы', desc: 'Формирование счетов', priority: 'Низкий' }
+  ]},
+  { cat: 'pricing', items: [
+    { name: 'Факторы', desc: 'Загрузка, время, погода, расстояние', priority: 'Высокий' },
+    { name: 'Формула', desc: 'base_fee × product(multipliers)', priority: 'Высокий' },
+    { name: 'Max надбавка: 2×', desc: 'Максимальный коэффициент наценки', priority: 'Средний' },
+    { name: 'Отображение в корзине', desc: 'Показ итоговой стоимости', priority: 'Высокий' }
+  ]},
+  { cat: 'picker', items: [
+    { name: 'Список заказов (FIFO)', desc: 'Очередь заказов для сборки', priority: 'Высокий' },
+    { name: 'Сканер штрихкодов', desc: 'Scandit SDK', priority: 'Высокий' },
+    { name: 'Замены товаров', desc: 'Поиск альтернатив', priority: 'Высокий' },
+    { name: 'Звонок клиенту', desc: 'Через скрытый номер', priority: 'Средний' },
+    { name: 'Offline-режим', desc: 'Firestore cache', priority: 'Высокий' },
+    { name: 'Smart Sync Queue', desc: 'Пакетная синхронизация', priority: 'Средний' },
+    { name: 'Подтверждение упаковки', desc: 'Фиксация завершения сборки', priority: 'Средний' }
+  ]},
+  { cat: 'courier', items: [
+    { name: 'Multi-stop навигация', desc: 'Маршрут с несколькими точками', priority: 'Высокий' },
+    { name: 'Offline-режим', desc: 'Hive + Smart Sync', priority: 'Высокий' },
+    { name: 'Off-route detection', desc: 'Обнаружение отклонения от маршрута', priority: 'Средний' },
+    { name: 'Приём оплаты', desc: 'Офлайн hold с синхронизацией', priority: 'Высокий' },
+    { name: 'Digital Signature', desc: 'Подпись клиента (POD)', priority: 'Средний' },
+    { name: 'Photo POD', desc: 'Фото подтверждения доставки', priority: 'Средний' },
+    { name: 'Сканер', desc: 'Сканирование штрихкода заказа', priority: 'Высокий' },
+    { name: 'Статусы доставки', desc: 'Выехал → на месте → вручено', priority: 'Высокий' }
+  ]},
+  { cat: 'infra', items: [
+    { name: 'CI/CD', desc: 'GitHub Actions + testcontainers', priority: 'Высокий' },
+    { name: 'Docker → Kubernetes', desc: 'Docker Compose → K8s', priority: 'Высокий' },
+    { name: 'Мониторинг', desc: 'Prometheus + Grafana + Loki', priority: 'Средний' },
+    { name: 'Sentry', desc: 'Отслеживание ошибок', priority: 'Средний' },
+    { name: 'Feature flags', desc: 'Flipper / LaunchDarkly', priority: 'Низкий' },
+    { name: 'Rollback', desc: 'Git revert + rolling update', priority: 'Средний' }
+  ]},
+  { cat: 'testing', items: [
+    { name: 'Unit', desc: 'Mockery + testify', priority: 'Высокий' },
+    { name: 'Integration', desc: 'Testcontainers', priority: 'Высокий' },
+    { name: 'Contract', desc: 'Pact CDC', priority: 'Средний' },
+    { name: 'E2E', desc: 'Cypress + K6', priority: 'Средний' },
+    { name: 'Load', desc: 'K6: stress, soak, spike', priority: 'Средний' },
+    { name: 'Security', desc: 'SonarCloud + Trivy', priority: 'Средний' }
+  ]},
+  { cat: 'analytics', items: [
+    { name: 'Дашборды (Grafana)', desc: 'Визуализация метрик real-time', priority: 'Средний' },
+    { name: 'Отчёты', desc: 'Выручка, заказы, конверсия', priority: 'Средний' },
+    { name: 'Метрики', desc: 'DAU/MAU, время сборки, ETA accuracy', priority: 'Средний' }
+  ]}
+];
+
+var catLookup = {};
+CATEGORIES.forEach(function(c) { catLookup[c.id] = c; });
+
+var tbody = document.getElementById('tbody');
+var PRIORITY_COLORS = { 'Высокий': '#22c55e', 'Средний': '#f59e0b', 'Низкий': '#6b6b83' };
+
+function render(searchQuery) {
+  var q = (searchQuery || '').toLowerCase().trim();
+  var html = '';
+  var totalFeatures = 0;
+  var visibleCategories = 0;
+
+  DATA.forEach(function(group) {
+    var cat = catLookup[group.cat];
+    var filtered = group.items;
+    if (q.length >= 2) {
+      filtered = group.items.filter(function(f) {
+        return f.name.toLowerCase().indexOf(q) !== -1 || f.desc.toLowerCase().indexOf(q) !== -1;
+      });
+    }
+    if (filtered.length === 0) return;
+    visibleCategories++;
+    totalFeatures += filtered.length;
+
+    html += '<tr class="category" data-cat="' + group.cat + '">'
+      + '<td><span class="toggle">▼</span></td>'
+      + '<td><span class="badge" style="background:' + cat.color + '">' + cat.name + '</span>'
+      + '<span class="count-badge">' + filtered.length + ' фич</span></td>'
+      + '<td colspan="2"></td></tr>';
+
+    filtered.forEach(function(f) {
+      html += '<tr class="feature" data-cat="' + group.cat + '">'
+        + '<td></td>'
+        + '<td style="padding-left:32px">' + f.name + '</td>'
+        + '<td style="color:#6b6b83;font-size:12px">' + f.desc + '</td>'
+        + '<td><span style="color:' + (PRIORITY_COLORS[f.priority] || '#6b6b83') + ';font-size:11px">● ' + f.priority + '</span></td>'
+        + '</tr>';
+    });
+  });
+
+  tbody.innerHTML = html;
+  document.getElementById('summary').textContent = totalFeatures + ' функций · ' + visibleCategories + ' модулей';
+
+  // Collapse toggle
+  tbody.querySelectorAll('.category').forEach(function(row) {
+    row.addEventListener('click', function() {
+      var cat = this.getAttribute('data-cat');
+      this.classList.toggle('collapsed');
+      tbody.querySelectorAll('.feature[data-cat="' + cat + '"]').forEach(function(f) {
+        f.classList.toggle('hidden');
+      });
+    });
+  });
+}
+
+render('');
+document.getElementById('search').addEventListener('input', function() {
+  render(this.value);
+});
+</script>
+</body>
+</html>

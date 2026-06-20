@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Force Graph — Карта функций</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box }
+body { background: #0a0a0f; color: #e8e8ed; font-family: -apple-system, BlinkMacSystemFont, Inter, sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column }
+h1 { text-align: center; padding: 12px; font-size: 14px; font-weight: 600; color: #6b6b83; letter-spacing: 0.5px }
+svg { flex: 1; display: block }
+.tooltip { position: fixed; display: none; background: #12121a; border: 1px solid #262636; border-radius: 8px; padding: 8px 12px; font-size: 12px; max-width: 260px; pointer-events: none; z-index: 1000; backdrop-filter: blur(12px) }
+.tooltip.show { display: block }
+.tooltip .tt-name { font-weight: 700; font-size: 13px; margin-bottom: 2px }
+.tooltip .tt-desc { color: #6b6b83; font-size: 11px }
+.node { cursor: pointer; transition: opacity .15s }
+.node:hover { opacity: 0.8 }
+.node text { pointer-events: none; text-shadow: 0 1px 4px rgba(0,0,0,0.8) }
+.link { stroke: #22223a; stroke-opacity: 0.3 }
+#legend { position: fixed; bottom: 16px; left: 16px; display: flex; flex-wrap: wrap; gap: 6px; z-index: 100; max-width: 400px }
+#legend .lg-item { font-size: 10px; padding: 2px 8px; border-radius: 10px; color: #fff; font-weight: 500; opacity: 0.8 }
+</style>
+</head>
+<body>
+<h1>🕸 Force Graph — Карта функциональных требований</h1>
+<svg id="chart"></svg>
+<div id="legend"></div>
+<div id="tooltip" class="tooltip"></div>
+
+<script>
+var CATEGORIES = [
+  { id: 'security',  name: 'Регистрация и безопасность', color: '#6366f1' },
+  { id: 'catalog',   name: 'Каталог',                    color: '#22c55e' },
+  { id: 'cart',      name: 'Корзина',                    color: '#f59e0b' },
+  { id: 'orders',    name: 'Заказы',                     color: '#ef4444' },
+  { id: 'delivery',  name: 'Доставка',                   color: '#3b82f6' },
+  { id: 'payments',  name: 'Платежи',                    color: '#8b5cf6' },
+  { id: 'notify',    name: 'Уведомления',                color: '#06b6d4' },
+  { id: 'admin',     name: 'Админка',                    color: '#f97316' },
+  { id: 'b2b',       name: 'B2B',                        color: '#14b8a6' },
+  { id: 'pricing',   name: 'Dynamic Pricing',            color: '#ec4899' },
+  { id: 'picker',    name: 'Приложение пикера',          color: '#84cc16' },
+  { id: 'courier',   name: 'Приложение курьера',         color: '#0ea5e9' },
+  { id: 'infra',     name: 'Инфраструктура',             color: '#64748b' },
+  { id: 'testing',   name: 'Тестирование',               color: '#a855f7' },
+  { id: 'analytics', name: 'Аналитика',                  color: '#10b981' }
+];
+var catById = {};
+CATEGORIES.forEach(function(c) { catById[c.id] = c; });
+
+var MODULES = [
+  { id: 'security',  name: 'Регистрация и безопасность', cat: 'security',  features: ['Вход по телефону', 'SMS-подтверждение', 'Роли (RBAC)', 'JWT токены', 'Rate limiting', 'Audit log'] },
+  { id: 'catalog',   name: 'Каталог',                    cat: 'catalog',   features: ['Выбор магазина', 'Категории', 'Поиск (ES)', 'Фильтры', 'Карточка товара', 'Нормализация', 'Маппинг', 'Адаптеры', 'Синхронизация'] },
+  { id: 'cart',      name: 'Корзина',                    cat: 'cart',      features: ['Добавление', 'Промокоды', 'Dynamic Pricing', 'Пересчёт', 'Оформление'] },
+  { id: 'orders',    name: 'Заказы',                     cat: 'orders',    features: ['Создание', 'Статусы', 'Добавление после', 'История', 'Замена товара', 'Возврат', 'Event Sourcing'] },
+  { id: 'delivery',  name: 'Доставка',                   cat: 'delivery',  features: ['Слоты', 'Dispatch', 'ETA', 'Трекинг', 'Можно раньше'] },
+  { id: 'payments',  name: 'Платежи',                    cat: 'payments',  features: ['Т-Банк', 'СБП', 'Карта курьеру', 'Наличные', 'Refund', 'Чек (54-ФЗ)'] },
+  { id: 'notify',    name: 'Уведомления',                cat: 'notify',    features: ['Push (FCM)', 'SMS', 'Email', 'Telegram', 'События'] },
+  { id: 'admin',     name: 'Админка',                    cat: 'admin',     features: ['Упр. заказами', 'Упр. товарами', 'Пользователи', 'Промокоды', 'Курьеры', 'Магазины', 'Сети', 'Audit log'] },
+  { id: 'b2b',       name: 'B2B',                        cat: 'b2b',       features: ['Корп. заказы', 'Регулярные', 'Индивид. цены', 'Отсрочка', 'ЭДО', 'Счета'] },
+  { id: 'pricing',   name: 'Dynamic Pricing',            cat: 'pricing',   features: ['Факторы', 'Формула', 'Max 2×', 'Отображение'] },
+  { id: 'picker',    name: 'Приложение пикера',          cat: 'picker',    features: ['FIFO', 'Сканер', 'Замены', 'Звонок', 'Offline', 'Smart Sync', 'Упаковка'] },
+  { id: 'courier',   name: 'Приложение курьера',         cat: 'courier',   features: ['Multi-stop', 'Offline', 'Off-route', 'Оплата', 'Digital Sign.', 'Photo POD', 'Сканер', 'Статусы'] },
+  { id: 'infra',     name: 'Инфраструктура',             cat: 'infra',     features: ['CI/CD', 'Docker/K8s', 'Мониторинг', 'Sentry', 'Feature flags', 'Rollback'] },
+  { id: 'testing',   name: 'Тестирование',               cat: 'testing',   features: ['Unit', 'Integration', 'Contract', 'E2E', 'Load', 'Security'] },
+  { id: 'analytics', name: 'Аналитика',                  cat: 'analytics', features: ['Дашборды', 'Отчёты', 'Метрики'] }
+];
+
+// Build nodes & links
+var nodes = [{ id: 'root', name: 'Агрегатор доставки продуктов', group: 'root', radius: 24 }];
+var links = [];
+var featIndex = {};
+
+MODULES.forEach(function(m) {
+  var mNode = { id: m.id, name: m.name, group: m.cat, radius: 14, desc: m.features.length + ' функций' };
+  nodes.push(mNode);
+  links.push({ source: 'root', target: m.id });
+  m.features.forEach(function(f) {
+    var fid = m.id + '-' + f.replace(/\s+/g, '_');
+    nodes.push({ id: fid, name: f, group: m.cat, radius: 6 });
+    links.push({ source: m.id, target: fid });
+  });
+});
+
+// Inter-module links (shared features)
+var shared = [
+  ['admin', 'security'], ['admin', 'orders'], ['admin', 'catalog'],
+  ['orders', 'delivery'], ['orders', 'payments'], ['payments', 'admin'],
+  ['picker', 'orders'], ['courier', 'delivery'], ['courier', 'payments'],
+  ['notify', 'orders'], ['notify', 'delivery'], ['infra', 'testing'],
+  ['admin', 'b2b'], ['cart', 'pricing'], ['cart', 'orders'],
+  ['catalog', 'cart'], ['analytics', 'admin'], ['picker', 'catalog'],
+  ['analytics', 'orders'], ['infra', 'all']
+];
+shared.forEach(function(s) {
+  if (s[1] === 'all') {
+    MODULES.forEach(function(m) {
+      if (m.id !== s[0]) { links.push({ source: s[0], target: m.id }); }
+    });
+  } else {
+    links.push({ source: s[0], target: s[1] });
+  }
+});
+
+var width = window.innerWidth;
+var height = window.innerHeight - 44;
+
+var svg = d3.select('#chart').attr('viewBox', [0, 0, width, height]);
+var g = svg.append('g');
+
+var zoom = d3.zoom().scaleExtent([0.05, 4]).on('zoom', function(e) { g.attr('transform', e.transform); });
+svg.call(zoom);
+
+var tooltip = document.getElementById('tooltip');
+
+var simulation = d3.forceSimulation(nodes)
+  .force('link', d3.forceLink(links).id(function(d) { return d.id; }).distance(function(d) {
+    return d.target === 'root' || d.source === 'root' ? 120 : 60;
+  }).strength(function(d) {
+    return (d.source.id === 'root' || d.target.id === 'root') ? 0.8 : 0.3;
+  }))
+  .force('charge', d3.forceManyBody().strength(function(d) {
+    return d.id === 'root' ? -400 : -100;
+  }))
+  .force('center', d3.forceCenter(width / 2, height / 2))
+  .force('collision', d3.forceCollide().radius(function(d) { return d.radius * 1.5; }));
+
+var link = g.append('g')
+  .selectAll('line')
+  .data(links)
+  .join('line')
+  .attr('class', 'link')
+  .style('stroke-width', function(d) {
+    return (d.source.id === 'root' || d.target.id === 'root') ? 2 : 0.5;
+  })
+  .style('stroke-opacity', function(d) {
+    return (d.source.id === 'root' || d.target.id === 'root') ? 0.4 : 0.15;
+  });
+
+var node = g.append('g')
+  .selectAll('g')
+  .data(nodes)
+  .join('g')
+  .attr('class', 'node')
+  .call(d3.drag()
+    .on('start', function(e, d) {
+      if (!e.active) simulation.alphaTarget(0.3).restart();
+      d.fx = d.x; d.fy = d.y;
+    })
+    .on('drag', function(e, d) { d.fx = e.x; d.fy = e.y; })
+    .on('end', function(e, d) {
+      if (!e.active) simulation.alphaTarget(0);
+      d.fx = null; d.fy = null;
+    }));
+
+node.append('circle')
+  .attr('r', function(d) { return d.radius; })
+  .style('fill', function(d) {
+    if (d.id === 'root') return '#fbbf24';
+    return catById[d.group] ? catById[d.group].color : '#6366f1';
+  })
+  .style('stroke', function(d) { return d.id === 'root' ? '#fbbf24' : 'rgba(255,255,255,0.15)'; })
+  .style('stroke-width', function(d) { return d.id === 'root' ? 3 : 1; })
+  .style('filter', function(d) { return d.id === 'root' ? 'drop-shadow(0 0 12px #fbbf2480)' : 'none'; });
+
+node.append('text')
+  .text(function(d) { return d.name; })
+  .attr('x', function(d) { return d.radius + 6; })
+  .attr('y', 4)
+  .style('fill', function(d) { return d.id === 'root' ? '#fbbf24' : '#e8e8ed'; })
+  .style('font-size', function(d) { return d.radius >= 14 ? '11px' : '9px'; })
+  .style('font-weight', function(d) { return d.id === 'root' ? '800' : d.radius >= 14 ? '700' : '400'; });
+
+node.on('mouseenter', function(e, d) {
+  if (d.id !== 'root') {
+    tooltip.innerHTML = '<div class="tt-name">' + d.name + '</div>'
+      + (d.desc ? '<div class="tt-desc">' + d.desc + '</div>' : '');
+    tooltip.classList.add('show');
+  }
+});
+node.on('mousemove', function(e) {
+  tooltip.style.left = (e.clientX + 12) + 'px';
+  tooltip.style.top = (e.clientY - 8) + 'px';
+});
+node.on('mouseleave', function() { tooltip.classList.remove('show'); });
+
+simulation.on('tick', function() {
+  link
+    .attr('x1', function(d) { return d.source.x; })
+    .attr('y1', function(d) { return d.source.y; })
+    .attr('x2', function(d) { return d.target.x; })
+    .attr('y2', function(d) { return d.target.y; });
+  node.attr('transform', function(d) { return 'translate(' + d.x + ',' + d.y + ')'; });
+});
+
+// Legend
+var legend = document.getElementById('legend');
+CATEGORIES.forEach(function(c) {
+  var item = document.createElement('span');
+  item.className = 'lg-item';
+  item.style.background = c.color;
+  item.textContent = c.name;
+  legend.appendChild(item);
+});
+</script>
+</body>
+</html>
