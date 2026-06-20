@@ -45,8 +45,8 @@
   document.querySelectorAll('.toc-toggle').forEach(function (btn) {
     btn.addEventListener('click', function (e) {
       e.stopPropagation();
-      var children = this.nextElementSibling;
-      if (children && children.classList.contains('toc-children')) {
+      var children = this.parentElement.querySelector('.toc-children');
+      if (children) {
         var open = children.classList.toggle('open');
         this.classList.toggle('open', open);
       }
@@ -168,11 +168,9 @@
   /* ===== Auto-collapse TOC on load ===== */
   document.querySelectorAll('.toc-children').forEach(function (el) {
     setTimeout(function () {
-      var parentItem = el.closest('.toc-item');
-      if (parentItem && parentItem.querySelector('.toc-link.active')) {
+      if (el.querySelector('.toc-link.active')) {
         el.classList.add('open');
-        var toggle = parentItem.querySelector('.toc-toggle');
-        if (toggle) toggle.classList.add('open');
+        el.closest('.toc-item')?.querySelector('.toc-toggle')?.classList.add('open');
       }
     }, 100);
   });
