@@ -177,7 +177,7 @@
     }
   });
 
-  /* ===== Feature Map (markmap) ===== */
+  /* ===== Mindmap → Markdown ===== */
   function mindmapToMarkdown(code) {
     var lines = code.split('\n');
     var md = [];
@@ -199,135 +199,51 @@
     return md.join('\n');
   }
 
-  function loadFeatureMap() {
-    var blocks = document.querySelectorAll('pre.mermaid');
-    if (!blocks.length) return;
-    var mindmapBlocks = [];
-    blocks.forEach(function (block) {
-      var codeEl = block.querySelector('code');
-      if (!codeEl) return;
-      if (/^\s*mindmap\s/.test(codeEl.textContent)) {
-        mindmapBlocks.push({ block: block, code: codeEl.textContent.trim() });
-      }
-    });
-    if (!mindmapBlocks.length) return;
-
-    var script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/markmap-autoloader@0.18';
-    script.onload = function () {
-      mindmapBlocks.forEach(function (item) {
-        var md = mindmapToMarkdown(item.code);
-        var wrapper = document.createElement('div');
-        wrapper.className = 'markmap-wrapper';
-        wrapper.textContent = md;
-        if (item.block._placeholder) {
-          item.block._placeholder.parentElement.replaceChild(wrapper, item.block._placeholder);
-        }
-      });
-    };
-    document.head.appendChild(script);
-  }
-
-  /* ===== Mermaid ===== */
-  function makeZoomable(wrapper) {
-    var svg = wrapper.querySelector('svg');
-    if (!svg) return;
-
-    var scale = 1;
-    var panX = 0, panY = 0;
-    var dragging = false, startX, startY, startPanX, startPanY;
-
-    var controls = document.createElement('div');
-    controls.className = 'mermaid-zoom';
-    controls.innerHTML =
-      '<button class="z-in" title="\u0423\u0432\u0435\u043B\u0438\u0447\u0438\u0442\u044C">+</button>' +
-      '<span class="zoom-level">100%</span>' +
-      '<button class="z-out" title="\u0423\u043C\u0435\u043D\u044C\u0448\u0438\u0442\u044C">\u2212</button>' +
-      '<button class="z-reset" title="\u0421\u0431\u0440\u043E\u0441\u0438\u0442\u044C">\u27F3</button>';
-    wrapper.insertBefore(controls, wrapper.firstChild);
-
-    function applyTransform() {
-      svg.style.transform = 'translate(' + panX + 'px,' + panY + 'px) scale(' + scale + ')';
-      controls.querySelector('.zoom-level').textContent = Math.round(scale * 100) + '%';
-      wrapper.classList.toggle('zoomed', scale !== 1);
-    }
-
-    controls.querySelector('.z-in').addEventListener('click', function () {
-      scale = Math.min(scale * 1.4, 10);
-      applyTransform();
-    });
-    controls.querySelector('.z-out').addEventListener('click', function () {
-      scale = Math.max(scale / 1.4, 0.2);
-      panX = Math.min(0, panX);
-      panY = Math.min(0, panY);
-      applyTransform();
-    });
-    controls.querySelector('.z-reset').addEventListener('click', function () {
-      scale = 1; panX = 0; panY = 0;
-      applyTransform();
-      wrapper.scrollLeft = 0;
-      wrapper.scrollTop = 0;
-    });
-
-    wrapper.addEventListener('wheel', function (e) {
-      if (!e.ctrlKey && !e.metaKey) return;
-      e.preventDefault();
-      var rect = wrapper.getBoundingClientRect();
-      var mx = e.clientX - rect.left;
-      var my = e.clientY - rect.top;
-      var ox = (mx - panX) / scale;
-      var oy = (my - panY) / scale;
-      scale = e.deltaY < 0 ? Math.min(scale * 1.15, 10) : Math.max(scale / 1.15, 0.2);
-      panX = mx - ox * scale;
-      panY = my - oy * scale;
-      applyTransform();
-    });
-
-    wrapper.addEventListener('mousedown', function (e) {
-      if (e.button !== 0 || e.target.closest('.mermaid-zoom')) return;
-      dragging = true;
-      startX = e.clientX; startY = e.clientY;
-      startPanX = panX; startPanY = panY;
-      wrapper.style.cursor = 'grabbing';
-    });
-    document.addEventListener('mousemove', function (e) {
-      if (!dragging) return;
-      panX = startPanX + (e.clientX - startX);
-      panY = startPanY + (e.clientY - startY);
-      applyTransform();
-    });
-    document.addEventListener('mouseup', function () {
-      if (dragging) { dragging = false; wrapper.style.cursor = ''; }
-    });
-
-    svg.addEventListener('dblclick', function () {
-      scale = 1; panX = 0; panY = 0;
-      applyTransform();
-      wrapper.scrollLeft = 0;
-      wrapper.scrollTop = 0;
-    });
-  }
-
-  function loadMermaid() {
+  /* ===== Load all diagrams ===== */
+  function loadDiagrams() {
     var blocks = document.querySelectorAll('pre.mermaid');
     if (!blocks.length) return;
 
     var mermaidBlocks = [];
-    blocks.forEach(function (block) {
-      var codeEl = block.querySelector('code');
-      if (!codeEl) return;
-      if (/^\s*mindmap\s/.test(codeEl.textContent)) return;
-      mermaidBlocks.push(block);
-    });
-    if (!mermaidBlocks.length) return;
+    var mindmapBlocks = [];
 
-    mermaidBlocks.forEach(function (block) {
+    blocks.forEach(function (block) {
       var ph = document.createElement('div');
       ph.className = 'mermaid-placeholder';
       ph.textContent = '\u0417\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u0434\u0438\u0430\u0433\u0440\u0430\u043C\u043C\u044B\u2026';
       block.parentElement.insertBefore(ph, block.nextSibling);
       block._placeholder = ph;
+
+      var codeEl = block.querySelector('code');
+      if (!codeEl) return;
+      var code = codeEl.textContent.trim();
+      if (/^\s*mindmap\s/.test(code)) {
+        mindmapBlocks.push({ block: block, code: code });
+      } else {
+        mermaidBlocks.push({ block: block, code: code });
+      }
     });
+
+    /* Markmap (feature map only) */
+    if (mindmapBlocks.length) {
+      var mmScript = document.createElement('script');
+      mmScript.src = 'https://cdn.jsdelivr.net/npm/markmap-autoloader@0.18';
+      mmScript.onload = function () {
+        mindmapBlocks.forEach(function (item) {
+          var md = mindmapToMarkdown(item.code);
+          var wrapper = document.createElement('div');
+          wrapper.className = 'markmap-wrapper';
+          wrapper.textContent = md;
+          if (item.block._placeholder) {
+            item.block._placeholder.parentElement.replaceChild(wrapper, item.block._placeholder);
+          }
+        });
+      };
+      document.head.appendChild(mmScript);
+    }
+
+    /* Mermaid (all other diagrams) */
+    if (!mermaidBlocks.length) return;
 
     var script = document.createElement('script');
     script.src = 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js';
@@ -354,29 +270,25 @@
         }
       });
 
-      mermaidBlocks.forEach(function (block) {
-        var codeEl = block.querySelector('code');
-        if (!codeEl) return;
-        var code = codeEl.textContent.trim();
+      mermaidBlocks.forEach(function (item) {
         var wrapper = document.createElement('div');
         wrapper.className = 'mermaid-wrapper';
 
-        mermaid.render('d' + Math.random().toString(36).slice(2), code)
+        mermaid.render('d' + Math.random().toString(36).slice(2), item.code)
           .then(function (result) {
             wrapper.innerHTML = result.svg;
             if (result.bindFunctions) result.bindFunctions(wrapper);
-            if (block._placeholder) {
-              block._placeholder.parentElement.replaceChild(wrapper, block._placeholder);
+            if (item.block._placeholder) {
+              item.block._placeholder.parentElement.replaceChild(wrapper, item.block._placeholder);
             }
-            makeZoomable(wrapper);
           })
           .catch(function (err) {
             console.error('Mermaid error:', err);
             wrapper.textContent = '\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0440\u0438\u0441\u043E\u0432\u0430\u043D\u0438\u0438 \u0434\u0438\u0430\u0433\u0440\u0430\u043C\u043C\u044B: ' + err.message;
             wrapper.style.color = '#ff3b30';
             wrapper.style.padding = '20px';
-            if (block._placeholder) {
-              block._placeholder.parentElement.replaceChild(wrapper, block._placeholder);
+            if (item.block._placeholder) {
+              item.block._placeholder.parentElement.replaceChild(wrapper, item.block._placeholder);
             }
           });
       });
@@ -385,14 +297,9 @@
   }
 
   /* ===== Init ===== */
-  function init() {
-    loadFeatureMap();
-    loadMermaid();
-  }
-
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', loadDiagrams);
   } else {
-    init();
+    loadDiagrams();
   }
 })();

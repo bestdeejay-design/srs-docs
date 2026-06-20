@@ -206,16 +206,14 @@ a:hover { color: var(--blue-hover); text-decoration: underline }
 
 .toc-link {
   display: flex; align-items: center;
-  padding: 6px 16px 6px 20px;
+  padding: 4px 16px 4px 20px;
   font-size: 12.5px;
   color: var(--text2);
   text-decoration: none;
   line-height: 1.4;
   border-left: 2px solid transparent;
   transition: all .15s var(--ease);
-  cursor: default;
 }
-.toc-link.has-children { cursor: pointer }
 .toc-link:hover {
   color: var(--text);
   background: var(--blue-light);
@@ -230,12 +228,12 @@ a:hover { color: var(--blue-hover); text-decoration: underline }
 
 .toc-toggle {
   background: none; border: none; cursor: pointer;
-  font-size: 11px; color: var(--text3);
+  font-size: 9px; color: var(--text3);
   padding: 0;
-  width: 28px; height: 26px; line-height: 26px;
+  width: 18px; height: 18px; line-height: 18px;
   text-align: center; flex-shrink: 0;
   transition: transform .2s var(--ease);
-  border-radius: var(--r-sm); margin: 0 2px 0 -4px;
+  border-radius: 4px; margin: 1px 0;
 }
 .toc-toggle:hover { color: var(--blue); background: var(--blue-light) }
 .toc-toggle.open { transform: rotate(90deg) }
@@ -394,48 +392,13 @@ a:hover { color: var(--blue-hover); text-decoration: underline }
 }
 #content .mermaid-wrapper {
   margin: 24px 0;
-  padding: 0;
+  padding: 20px;
   background: var(--bg2);
   border-radius: var(--r-md);
   border: 1px solid var(--border);
-  overflow: auto;
-  position: relative;
-  cursor: grab;
-  max-height: 80vh;
+  overflow-x: auto;
 }
-#content .mermaid-wrapper:active { cursor: grabbing }
-#content .mermaid-wrapper svg { display: block; margin: 0 auto }
-#content .mermaid-wrapper.zoomed svg { max-width: none; height: auto; transform-origin: 0 0 }
-
-/* Zoom controls */
-.mermaid-zoom {
-  position: sticky; top: 8px; left: 8px; z-index: 10;
-  display: inline-flex; gap: 2px;
-  float: left; margin: 8px;
-  opacity: .35; transition: opacity .2s;
-}
-.mermaid-wrapper:hover .mermaid-zoom { opacity: 1 }
-.mermaid-zoom button {
-  width: 30px; height: 26px;
-  border: 1px solid var(--border2);
-  border-radius: var(--r-sm);
-  background: var(--bg);
-  color: var(--text);
-  font-size: 14px; line-height: 24px; text-align: center;
-  cursor: pointer;
-  font-family: var(--font);
-  transition: all .15s;
-}
-.mermaid-zoom button:hover {
-  border-color: var(--blue);
-  color: var(--blue);
-  background: var(--blue-light);
-}
-.mermaid-zoom .zoom-level {
-  font-size: 11px; color: var(--text2);
-  padding: 0 6px; line-height: 26px;
-  min-width: 36px; text-align: center;
-}
+#content .mermaid-wrapper svg { max-width: 100%; height: auto }
 
 #content hr {
   border: none; border-top: 1px solid var(--border);
