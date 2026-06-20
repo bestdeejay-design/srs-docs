@@ -227,10 +227,10 @@ var sim = d3.forceSimulation(nodes)
 
 // Draw links
 var link = mainG.append('g').selectAll('line').data(links).join('line')
-  .style('stroke','#22223a').style('stroke-width',function(l){
-    return (l.source.id==='root'||l.target.id==='root')?1.5:0.4;
+  .style('stroke','#5555aa').style('stroke-width',function(l){
+    return (l.source.id==='root'||l.target.id==='root')?2:0.6;
   }).style('opacity',function(l){
-    return (l.source.id==='root'||l.target.id==='root')?0.3:0.08;
+    return (l.source.id==='root'||l.target.id==='root')?0.6:0.25;
   });
 
 // Draw nodes
@@ -288,12 +288,12 @@ node.on('mouseenter', function(e,d) {
     d3.select(this).style('opacity', connected.has(n.id) ? 1 : 0.08);
   });
   link.style('opacity', function(l) {
-    if (l.source.id===d.id||l.target.id===d.id) return 0.5;
-    if (l.source.id==='root'||l.target.id==='root') return 0.06;
-    return 0.015;
+    if (l.source.id===d.id||l.target.id===d.id) return 0.7;
+    if (l.source.id==='root'||l.target.id==='root') return 0.2;
+    return 0.06;
   }).style('stroke-width', function(l) {
-    return (l.source.id===d.id||l.target.id===d.id) ? 2.5 : 
-      (l.source.id==='root'||l.target.id==='root') ? 1.5 : 0.4;
+    return (l.source.id===d.id||l.target.id===d.id) ? 3 : 
+      (l.source.id==='root'||l.target.id==='root') ? 2 : 0.6;
   });
   tip.innerHTML = '<div class="tn">'+d.n+'</div>'
     + (d.desc ? '<div class="td">'+d.desc+'</div>' : '')
@@ -363,10 +363,10 @@ function updateVisibility() {
   link.style('opacity', function(l) {
     var sShow = l.source.id === 'root' || catState[l.source.grp || ''] !== false;
     var tShow = l.target.id === 'root' || catState[l.target.grp || ''] !== false;
-    if (!sShow || !tShow) return 0.01;
-    if (!showLinks) return 0.01;
-    if (l.source.id === 'root' || l.target.id === 'root') return 0.3;
-    return 0.08;
+    if (!sShow || !tShow) return 0.02;
+    if (!showLinks) return 0.02;
+    if (l.source.id === 'root' || l.target.id === 'root') return 0.5;
+    return 0.2;
   });
 
   label.style('display', showLabels ? 'block' : 'none');
