@@ -7,273 +7,221 @@
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box }
-body { background: #0a0a0f; color: #e8e8ed; font-family: -apple-system, BlinkMacSystemFont, Inter, sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column }
-h1 { text-align: center; padding: 10px; font-size: 14px; font-weight: 600; color: #6b6b83; letter-spacing: 0.5px; flex-shrink: 0 }
-svg { flex: 1; display: block }
+body { background: #0a0a0f; color: #e8e8ed; font-family: -apple-system, BlinkMacSystemFont, Inter, sans-serif; overflow: hidden; height: 100vh }
+svg { width: 100vw; height: 100vh; display: block }
+.node { cursor: pointer }
+.node:hover circle { stroke: #fff !important; stroke-width: 2.5 !important }
+text { text-shadow: 0 1px 6px rgba(0,0,0,0.9); pointer-events: none }
 .tooltip { position: fixed; display: none; background: #12121a; border: 1px solid #262636; border-radius: 8px; padding: 6px 10px; font-size: 11px; max-width: 220px; pointer-events: none; z-index: 1000 }
 .tooltip.show { display: block }
-.node { cursor: pointer }
-.node:hover circle { stroke-width: 2.5 !important; stroke: #fff !important }
-.hint { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #6b6b83; background: #12121ab0; padding: 4px 14px; border-radius: 12px; border: 1px solid #262636; z-index: 100; backdrop-filter: blur(8px); pointer-events: none; opacity: 0; transition: opacity .5s }
-.hint.show { opacity: 1 }
+.tooltip .tt-name { font-weight: 700; font-size: 13px }
 </style>
 </head>
 <body>
-<h1>🌳 Mindmap — Карта функциональных требований</h1>
 <svg id="chart"></svg>
-<div class="hint" id="hint">Кликните по модулю чтобы раскрыть/свернуть · колёсико для зума · drag для перемещения</div>
 <div id="tooltip" class="tooltip"></div>
 <script>
 var CATEGORIES = [
-  { id: 'security',  name: 'Регистрация и безопасность', color: '#6366f1' },
-  { id: 'catalog',   name: 'Каталог',                    color: '#22c55e' },
-  { id: 'cart',      name: 'Корзина',                    color: '#f59e0b' },
-  { id: 'orders',    name: 'Заказы',                     color: '#ef4444' },
-  { id: 'delivery',  name: 'Доставка',                   color: '#3b82f6' },
-  { id: 'payments',  name: 'Платежи',                    color: '#8b5cf6' },
-  { id: 'notify',    name: 'Уведомления',                color: '#06b6d4' },
-  { id: 'admin',     name: 'Админка',                    color: '#f97316' },
-  { id: 'b2b',       name: 'B2B',                        color: '#14b8a6' },
-  { id: 'pricing',   name: 'Dynamic Pricing',            color: '#ec4899' },
-  { id: 'picker',    name: 'Приложение пикера',          color: '#84cc16' },
-  { id: 'courier',   name: 'Приложение курьера',         color: '#0ea5e9' },
-  { id: 'infra',     name: 'Инфраструктура',             color: '#64748b' },
-  { id: 'testing',   name: 'Тестирование',               color: '#a855f7' },
-  { id: 'analytics', name: 'Аналитика',                  color: '#10b981' }
+  { id: 'security',  name: 'Регистрация и безопасность', clr: '#6366f1' },
+  { id: 'catalog',   name: 'Каталог',                    clr: '#22c55e' },
+  { id: 'cart',      name: 'Корзина',                    clr: '#f59e0b' },
+  { id: 'orders',    name: 'Заказы',                     clr: '#ef4444' },
+  { id: 'delivery',  name: 'Доставка',                   clr: '#3b82f6' },
+  { id: 'payments',  name: 'Платежи',                    clr: '#8b5cf6' },
+  { id: 'notify',    name: 'Уведомления',                clr: '#06b6d4' },
+  { id: 'admin',     name: 'Админка',                    clr: '#f97316' },
+  { id: 'b2b',       name: 'B2B',                        clr: '#14b8a6' },
+  { id: 'pricing',   name: 'Dynamic Pricing',            clr: '#ec4899' },
+  { id: 'picker',    name: 'Приложение пикера',          clr: '#84cc16' },
+  { id: 'courier',   name: 'Приложение курьера',         clr: '#0ea5e9' },
+  { id: 'infra',     name: 'Инфраструктура',             clr: '#64748b' },
+  { id: 'testing',   name: 'Тестирование',               clr: '#a855f7' },
+  { id: 'analytics', name: 'Аналитика',                  clr: '#10b981' }
 ];
-var catMap = {};
-CATEGORIES.forEach(function(c) { catMap[c.id] = c; });
+var clrMap = {};
+CATEGORIES.forEach(function(c) { clrMap[c.id] = c; });
 
 var RAW = [
-  { name: 'Регистрация и безопасность', cat: 'security', features: ['Вход по телефону', 'SMS-подтверждение', 'Роли (RBAC)', 'JWT токены', 'Rate limiting', 'Audit log'] },
-  { name: 'Каталог', cat: 'catalog', features: ['Выбор магазина', 'Категории', 'Поиск (ES)', 'Фильтры', 'Карточка товара', 'Нормализация', 'Маппинг', 'Адаптеры', 'Синхронизация'] },
-  { name: 'Корзина', cat: 'cart', features: ['Добавление', 'Промокоды', 'Dynamic Pricing', 'Пересчёт', 'Оформление'] },
-  { name: 'Заказы', cat: 'orders', features: ['Создание', 'Статусы', 'Добавление после', 'История', 'Замена', 'Возврат', 'Event Sourcing'] },
-  { name: 'Доставка', cat: 'delivery', features: ['Слоты', 'Dispatch', 'ETA', 'Трекинг', 'Можно раньше'] },
-  { name: 'Платежи', cat: 'payments', features: ['Т-Банк', 'СБП (QR)', 'Карта курьеру', 'Наличные', 'Refund', 'Чек (54-ФЗ)'] },
-  { name: 'Уведомления', cat: 'notify', features: ['Push (FCM)', 'SMS', 'Email', 'Telegram', 'События'] },
-  { name: 'Админка', cat: 'admin', features: ['Заказы', 'Товары', 'Пользователи', 'Промокоды', 'Курьеры', 'Магазины', 'Сети', 'Audit log'] },
-  { name: 'B2B', cat: 'b2b', features: ['Корп. заказы', 'Регулярные', 'Цены', 'Отсрочка', 'ЭДО', 'Счета'] },
-  { name: 'Dynamic Pricing', cat: 'pricing', features: ['Факторы', 'Формула', 'Max 2×', 'Отображение'] },
-  { name: 'Приложение пикера', cat: 'picker', features: ['FIFO', 'Сканер', 'Замены', 'Звонок', 'Offline', 'Smart Sync', 'Упаковка'] },
-  { name: 'Приложение курьера', cat: 'courier', features: ['Multi-stop', 'Offline', 'Off-route', 'Оплата', 'Digital Sign.', 'Photo POD', 'Сканер', 'Статусы'] },
-  { name: 'Инфраструктура', cat: 'infra', features: ['CI/CD', 'Docker/K8s', 'Мониторинг', 'Sentry', 'Feature flags', 'Rollback'] },
-  { name: 'Тестирование', cat: 'testing', features: ['Unit', 'Integration', 'Contract', 'E2E', 'Load', 'Security'] },
-  { name: 'Аналитика', cat: 'analytics', features: ['Дашборды', 'Отчёты', 'Метрики'] }
+  { id: 'security',  name: '🔐 Регистрация и безопасность', items: ['Вход по телефону','SMS-подтверждение','Роли (RBAC)','JWT токены','Rate limiting','Audit log'] },
+  { id: 'catalog',   name: '🛒 Каталог',                    items: ['Выбор магазина','Категории','Поиск (ES)','Фильтры','Карточка товара','Нормализация','Маппинг','Адаптеры','Синхронизация'] },
+  { id: 'cart',      name: '🧺 Корзина',                    items: ['Добавление','Промокоды','Dynamic Pricing','Пересчёт','Оформление'] },
+  { id: 'orders',    name: '📋 Заказы',                     items: ['Создание','Статусы','Добавление после','История','Замена','Возврат','Event Sourcing'] },
+  { id: 'delivery',  name: '🚚 Доставка',                   items: ['Слоты','Dispatch','ETA','Трекинг','Можно раньше'] },
+  { id: 'payments',  name: '💳 Платежи',                    items: ['Т-Банк','СБП (QR)','Карта курьеру','Наличные','Refund','Чек (54-ФЗ)'] },
+  { id: 'notify',    name: '🔔 Уведомления',                items: ['Push (FCM)','SMS','Email','Telegram','События'] },
+  { id: 'admin',     name: '⚙️ Админка',                    items: ['Заказы','Товары','Пользователи','Промокоды','Курьеры','Магазины','Сети','Audit log'] },
+  { id: 'b2b',       name: '🏢 B2B',                        items: ['Корп. заказы','Регулярные','Цены','Отсрочка','ЭДО','Счета'] },
+  { id: 'pricing',   name: '💰 Dynamic Pricing',             items: ['Факторы','Формула','Max 2×','Отображение'] },
+  { id: 'picker',    name: '📱 Приложение пикера',          items: ['FIFO','Сканер','Замены','Звонок','Offline','Smart Sync','Упаковка'] },
+  { id: 'courier',   name: '🚀 Приложение курьера',         items: ['Multi-stop','Offline','Off-route','Оплата','Digital Sign.','Photo POD','Сканер','Статусы'] },
+  { id: 'infra',     name: '🏗️ Инфраструктура',             items: ['CI/CD','Docker/K8s','Мониторинг','Sentry','Feature flags','Rollback'] },
+  { id: 'testing',   name: '🧪 Тестирование',               items: ['Unit','Integration','Contract','E2E','Load','Security'] },
+  { id: 'analytics', name: '📊 Аналитика',                  items: ['Дашборды','Отчёты','Метрики'] }
 ];
 
-var width = window.innerWidth;
-var height = window.innerHeight - 44;
-var svg = d3.select('#chart').attr('viewBox', [0, 0, width, height]);
+var W = window.innerWidth, H = window.innerHeight;
+var svg = d3.select('#chart');
+var mainG = svg.append('g');
+var tip = document.getElementById('tooltip');
+var open = {};
 
-var g = svg.append('g');
-var zoom = d3.zoom().scaleExtent([0.05, 3]).on('zoom', function(e) { g.attr('transform', e.transform); });
+var zoom = d3.zoom().scaleExtent([0.05, 4]).on('zoom', function(e) { mainG.attr('transform', e.transform); });
 svg.call(zoom);
 
-var tooltip = document.getElementById('tooltip');
-var hint = document.getElementById('hint');
-setTimeout(function() { hint.classList.add('show'); }, 500);
-setTimeout(function() { hint.classList.remove('show'); }, 5000);
-
-function buildTree(expanded) {
-  expanded = expanded || {};
+function makeTree() {
   return {
     name: 'Агрегатор доставки продуктов',
     children: RAW.map(function(m) {
       return {
         name: m.name,
-        cat: m.cat,
-        children: expanded[m.cat] ? m.features.map(function(f) { return { name: f }; }) : null
+        id: m.id,
+        children: open[m.id] ? m.items.map(function(f) { return { name: f }; }) : null
       };
     })
   };
 }
 
-function render(expanded) {
-  expanded = expanded || {};
-  g.selectAll('*').remove();
-
-  var data = buildTree(expanded);
+function draw() {
+  mainG.selectAll('*').remove();
+  var data = makeTree();
   var root = d3.hierarchy(data);
-  var totalModules = RAW.length;
 
-  var layout = d3.tree()
-    .nodeSize([36, 0])
-    .separation(function(a, b) {
-      if (a.depth === 0) return 3;
-      return a.parent === b.parent ? 1.2 : 2;
-    });
-
+  var layout = d3.tree().size([H - 80, W - 250]);
   layout(root);
 
-  // Swap x/y → horizontal layout
+  // Horizontal: swap x ↔ y, root at left
   root.each(function(d) {
-    var t = d.x;
-    d.x = d.y;
-    d.y = t;
+    var t = d.x; d.x = d.y + 60; d.y = t - (H / 2);
   });
 
-  // Center vertically
-  var dy = root.y;
-  root.each(function(d) { d.y -= dy; });
-
-  function getColor(d) {
+  function nodeColor(d) {
     if (d.depth === 0) return '#fbbf24';
-    if (d.depth === 1) {
-      var cat = catMap[d.data.cat];
-      return cat ? cat.color : '#6366f1';
-    }
-    var p = d;
-    while (p.depth > 1) p = p.parent;
-    var cat = catMap[p.data.cat];
-    return cat ? cat.color : '#6366f1';
+    var id = d.depth === 1 ? d.data.id : d.parent.data.id;
+    var c = clrMap[id];
+    return c ? c.clr : '#6366f1';
   }
 
-  var nodes = root.descendants();
-
   // Links
-  g.selectAll('path')
+  mainG.selectAll('path.link')
     .data(root.links())
     .join('path')
     .attr('d', function(l) {
-      var sx = l.source.x, sy = l.source.y;
-      var tx = l.target.x, ty = l.target.y;
-      var dx = (tx - sx) * 0.4;
-      return 'M' + sx + ',' + sy + 'C' + (sx + dx) + ',' + sy + ' ' + (tx - dx) + ',' + ty + ' ' + tx + ',' + ty;
+      var dx = (l.target.x - l.source.x) * 0.3;
+      return 'M' + l.source.x + ',' + l.source.y
+        + 'C' + (l.source.x + dx) + ',' + l.source.y
+        + ' ' + (l.target.x - dx) + ',' + l.target.y
+        + ' ' + l.target.x + ',' + l.target.y;
     })
     .style('fill', 'none')
     .style('stroke', function(l) {
-      return l.target.depth <= 1 ? getColor(l.target) : '#22223a';
+      return l.target.depth <= 1 ? nodeColor(l.target) : '#33334a';
     })
     .style('stroke-width', function(l) { return l.target.depth <= 1 ? 2 : 1; })
-    .style('opacity', function(l) { return l.target.depth <= 1 ? 0.35 : 0.2; });
+    .style('opacity', function(l) { return l.target.depth <= 1 ? 0.3 : 0.15; });
 
   // Nodes
-  nodes.forEach(function(d) {
-    var isModule = d.depth === 1;
-    var isFeature = d.depth === 2;
-    var isRoot = d.depth === 0;
-    var color = getColor(d);
-    var r = isRoot ? 20 : isModule ? 10 : 5;
-    var hasKids = d.depth === 1 && d.data.cat;
-    var isExpanded = expanded[d.data.cat];
+  root.descendants().forEach(function(d) {
+    var isR = d.depth === 0, isM = d.depth === 1, isF = d.depth === 2;
+    var r = isR ? 22 : isM ? 12 : 5;
+    var c = nodeColor(d);
+    var g = mainG.append('g').attr('transform', 'translate(' + d.x + ',' + d.y + ')')
+      .attr('class', 'node');
 
-    var nodeG = g.append('g')
-      .attr('transform', 'translate(' + d.x + ',' + d.y + ')');
-
-    nodeG.append('circle')
+    g.append('circle')
       .attr('r', r)
-      .style('fill', color)
-      .style('stroke', isRoot ? '#fbbf24' : 'rgba(255,255,255,0.12)')
-      .style('stroke-width', isRoot ? 3 : 1.5)
-      .style('filter', isRoot ? 'drop-shadow(0 0 10px #fbbf2480)' : 'none');
+      .style('fill', c)
+      .style('stroke', isR ? '#fbbf24' : 'rgba(255,255,255,0.12)')
+      .style('stroke-width', isR ? 3 : 1)
+      .style('filter', isR ? 'drop-shadow(0 0 14px #fbbf2480)' : 'none');
 
-    nodeG.append('text')
-      .attr('x', r + 8)
-      .attr('y', 4)
-      .style('fill', isRoot ? '#fbbf24' : '#e8e8ed')
-      .style('font-size', isRoot ? '16px' : isModule ? '13px' : '10px')
-      .style('font-weight', isRoot ? '800' : isModule ? '700' : '400')
-      .style('pointer-events', 'none')
-      .style('text-shadow', '0 1px 4px rgba(0,0,0,0.8)')
+    g.append('text')
+      .attr('x', r + 6)
+      .attr('y', 5)
+      .style('fill', isR ? '#fbbf24' : '#e8e8ed')
+      .style('font-size', isR ? '20px' : isM ? '14px' : '11px')
+      .style('font-weight', isR ? '800' : isM ? '700' : '400')
+      .style('font-family', '-apple-system, BlinkMacSystemFont, Inter, sans-serif')
       .text(function() {
-        if (isRoot) return d.data.name;
-        if (isModule) {
-          var cnt = d.children ? d.children.length : (RAW.find(function(m) { return m.cat === d.data.cat; }) || {}).features.length || 0;
-          return d.data.name + (isExpanded ? '' : ' [' + cnt + ']');
+        if (isR) return d.data.name;
+        if (isM) {
+          var m = RAW.find(function(x) { return x.id === d.data.id; });
+          return d.data.name + '  [' + (d.children ? '' : (m ? m.items.length : '?')) + ']';
         }
         return d.data.name;
       });
 
-    // Expand/collapse indicator
-    if (isModule) {
-      nodeG.append('text')
-        .attr('x', -r - 14)
-        .attr('y', 4)
-        .style('fill', 'rgba(255,255,255,0.4)')
-        .style('font-size', '16px')
-        .style('pointer-events', 'none')
-        .style('text-shadow', '0 1px 4px rgba(0,0,0,0.8)')
-        .text(isExpanded ? '−' : '+');
+    // Expand/collapse toggle for modules
+    if (isM) {
+      g.append('text')
+        .attr('x', -r - 10)
+        .attr('y', 5)
+        .style('fill', 'rgba(255,255,255,0.35)')
+        .style('font-size', '18px')
+        .style('font-family', '-apple-system, BlinkMacSystemFont, Inter, sans-serif')
+        .text(open[d.data.id] ? '−' : '+');
+
+      g.on('click', function() {
+        open[d.data.id] = !open[d.data.id];
+        draw();
+      });
+
+      g.on('mouseenter', function(e) {
+        tip.innerHTML = '<div class="tt-name">' + d.data.name + '</div>';
+        tip.classList.add('show');
+      });
+      g.on('mousemove', function(e) {
+        tip.style.left = (e.clientX + 12) + 'px';
+        tip.style.top = (e.clientY - 8) + 'px';
+      });
+      g.on('mouseleave', function() { tip.classList.remove('show'); });
     }
 
-    // Events
-    if (isModule) {
-      nodeG.style('cursor', 'pointer')
-        .on('click', function() {
-          expanded[d.data.cat] = !expanded[d.data.cat];
-          render(expanded);
-        })
-        .on('mouseenter', function(e) {
-          tooltip.innerHTML = '<div class="tt-name">' + d.data.name + '</div>'
-            + (isExpanded ? '<div>кликните чтобы свернуть</div>' : '<div>кликните чтобы развернуть</div>');
-          tooltip.classList.add('show');
-        })
-        .on('mousemove', function(e) {
-          tooltip.style.left = (e.clientX + 12) + 'px';
-          tooltip.style.top = (e.clientY - 8) + 'px';
-        })
-        .on('mouseleave', function() { tooltip.classList.remove('show'); });
-    } else if (isFeature) {
-      nodeG
-        .on('mouseenter', function(e) {
-          tooltip.innerHTML = '<div class="tt-name">' + d.data.name + '</div>';
-          tooltip.classList.add('show');
-        })
-        .on('mousemove', function(e) {
-          tooltip.style.left = (e.clientX + 12) + 'px';
-          tooltip.style.top = (e.clientY - 8) + 'px';
-        })
-        .on('mouseleave', function() { tooltip.classList.remove('show'); });
+    if (isF) {
+      g.on('mouseenter', function(e) {
+        tip.innerHTML = '<div class="tt-name">' + d.data.name + '</div>';
+        tip.classList.add('show');
+      });
+      g.on('mousemove', function(e) {
+        tip.style.left = (e.clientX + 12) + 'px';
+        tip.style.top = (e.clientY - 8) + 'px';
+      });
+      g.on('mouseleave', function() { tip.classList.remove('show'); });
     }
   });
 
   // Auto-fit
   setTimeout(function() {
-    var bounds = g.node().getBBox();
-    if (bounds.width && bounds.height && bounds.width < 10000) {
-      var pad = 60;
-      var sx = (width - pad * 2) / (bounds.width || 1);
-      var sy = (height - pad * 2) / (bounds.height || 1);
-      var s = Math.min(sx, sy, 1.2);
-      s = Math.max(s, 0.05);
-      var tx = (width - bounds.width * s) / 2 - bounds.x * s;
-      var ty = (height - bounds.height * s) / 2 - bounds.y * s;
-      svg.transition().duration(400).call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(s));
-    }
-  }, 50);
+    try {
+      var b = mainG.node().getBBox();
+      if (b.width > 10 && b.height > 10) {
+        var p = 50;
+        var s = Math.min((W - p * 2) / b.width, (H - p * 2) / b.height, 1.5);
+        s = Math.max(s, 0.05);
+        var t = { x: (W - b.width * s) / 2 - b.x * s, y: (H - b.height * s) / 2 - b.y * s };
+        svg.transition().duration(400).call(zoom.transform, d3.zoomIdentity.translate(t.x, t.y).scale(s));
+      }
+    } catch(_) {}
+  }, 100);
 }
 
-var state = {};
-render(state);
-
-// Expand all button
+// Keyboard: E = expand all, C = collapse all
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'e' || e.key === 'E') {
-    RAW.forEach(function(m) { state[m.cat] = true; });
-    render(state);
-  }
-  if (e.key === 'c' || e.key === 'C') {
-    state = {};
-    render(state);
-  }
+  if (e.key === 'e' || e.key === 'E') { RAW.forEach(function(m) { open[m.id] = true; }); draw(); }
+  if (e.key === 'c' || e.key === 'C') { open = {}; draw(); }
 });
 
-// Click on root to toggle all
-g.on('click', function(e) {
-  if (e.target.tagName === 'svg') {
-    var allExpanded = RAW.every(function(m) { return state[m.cat]; });
-    if (allExpanded) { state = {}; }
-    else { RAW.forEach(function(m) { state[m.cat] = true; }); }
-    render(state);
-  }
-});
+// Bottom hint
+var hint = document.createElement('div');
+hint.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);font-size:11px;color:#6b6b83;background:#12121ab0;padding:4px 14px;border-radius:12px;border:1px solid #262636;z-index:100;backdrop-filter:blur(8px);pointer-events:none;font-family:-apple-system,BlinkMacSystemFont,Inter,sans-serif';
+hint.textContent = 'Кликните по модулю [+] чтобы раскрыть · E — все · C — свернуть · колёсико зум';
+document.body.appendChild(hint);
+
+draw();
 
 window.addEventListener('resize', function() {
-  width = window.innerWidth;
-  height = window.innerHeight - 44;
-  svg.attr('viewBox', [0, 0, width, height]);
-  render(state);
+  W = window.innerWidth; H = window.innerHeight;
+  svg.attr('viewBox', [0, 0, W, H]);
+  draw();
 });
 </script>
 </body>

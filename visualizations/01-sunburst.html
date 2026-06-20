@@ -6,262 +6,147 @@
 <title>Sunburst — Карта функций</title>
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box }
-body { background: #0a0a0f; color: #e8e8ed; font-family: -apple-system, BlinkMacSystemFont, Inter, sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column }
-h1 { text-align: center; padding: 10px; font-size: 14px; font-weight: 600; color: #6b6b83; letter-spacing: 0.5px; flex-shrink: 0 }
-svg { flex: 1; display: block }
-.tooltip { position: fixed; display: none; background: #12121a; border: 1px solid #262636; border-radius: 8px; padding: 8px 12px; font-size: 12px; max-width: 260px; pointer-events: none; z-index: 1000; backdrop-filter: blur(12px) }
-.tooltip.show { display: block }
-.tooltip .tt-name { font-weight: 700; font-size: 13px; margin-bottom: 2px }
-.tooltip .tt-desc { color: #6b6b83; font-size: 11px }
-.controls { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 100 }
-.controls button { padding: 6px 14px; border-radius: 8px; border: 1px solid #262636; background: #12121a; color: #e8e8ed; font-size: 11px; cursor: pointer; backdrop-filter: blur(12px); transition: background .12s, border-color .12s }
-.controls button:hover { background: #1c1c2a; border-color: #6366f1 }
-path { cursor: pointer; transition: opacity .15s }
-path:hover { opacity: 0.8 }
-.hint { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #6b6b83; background: #12121ab0; padding: 4px 14px; border-radius: 12px; border: 1px solid #262636; z-index: 100; backdrop-filter: blur(8px); pointer-events: none; opacity: 0; transition: opacity .5s }
-.hint.show { opacity: 1 }
+* { margin:0; padding:0; box-sizing:border-box }
+body { background:#0a0a0f; color:#e8e8ed; font-family:-apple-system,BlinkMacSystemFont,Inter,sans-serif; overflow:hidden; height:100vh }
+svg { width:100vw; height:100vh; display:block }
+path { cursor:pointer; transition:opacity .15s }
+path:hover { opacity:.85 !important }
+.tt { position:fixed; display:none; background:#12121a; border:1px solid #262636; border-radius:8px; padding:8px 12px; font-size:12px; max-width:260px; pointer-events:none; z-index:1000 }
+.tt.show { display:block }
+.tt .n { font-weight:700; font-size:13px; margin-bottom:2px }
+.tt .d { color:#6b6b83; font-size:11px }
 </style>
 </head>
 <body>
-<h1>☀️ Sunburst — Карта функциональных требований</h1>
-<svg id="chart"></svg>
-<div class="hint" id="hint">Кликните по модулю, чтобы раскрыть функции · ещё раз — свернуть</div>
-<div class="controls">
-  <button id="expandAll">⊞ Развернуть все</button>
-  <button id="collapseAll">⊟ Свернуть все</button>
-</div>
-<div id="tooltip" class="tooltip"></div>
+<svg id="c"></svg>
+<div id="t" class="tt"></div>
 <script>
-var CATEGORIES = [
-  { id: 'security',  name: 'Регистрация и безопасность', color: '#6366f1' },
-  { id: 'catalog',   name: 'Каталог',                    color: '#22c55e' },
-  { id: 'cart',      name: 'Корзина',                    color: '#f59e0b' },
-  { id: 'orders',    name: 'Заказы',                     color: '#ef4444' },
-  { id: 'delivery',  name: 'Доставка',                   color: '#3b82f6' },
-  { id: 'payments',  name: 'Платежи',                    color: '#8b5cf6' },
-  { id: 'notify',    name: 'Уведомления',                color: '#06b6d4' },
-  { id: 'admin',     name: 'Админка',                    color: '#f97316' },
-  { id: 'b2b',       name: 'B2B',                        color: '#14b8a6' },
-  { id: 'pricing',   name: 'Dynamic Pricing',            color: '#ec4899' },
-  { id: 'picker',    name: 'Приложение пикера',          color: '#84cc16' },
-  { id: 'courier',   name: 'Приложение курьера',         color: '#0ea5e9' },
-  { id: 'infra',     name: 'Инфраструктура',             color: '#64748b' },
-  { id: 'testing',   name: 'Тестирование',               color: '#a855f7' },
-  { id: 'analytics', name: 'Аналитика',                  color: '#10b981' }
-];
-var catMap = {};
-CATEGORIES.forEach(function(c) { catMap[c.id] = c; });
-
-var RAW = [
-  { name: 'Регистрация и безопасность', cat: 'security', features: ['Вход по телефону', 'SMS-подтверждение', 'Роли: клиент/пикер/курьер/админ/суперадмин', 'JWT access + refresh токены', 'Rate limiting', 'Audit log'] },
-  { name: 'Каталог', cat: 'catalog', features: ['Выбор магазина по адресу', 'Категории (3 уровня)', 'Поиск (Elasticsearch)', 'Динамические фильтры', 'Карточка товара', 'Нормализация данных сетей', 'Маппинг категорий сети → платформа', 'Адаптеры сетей', 'Синхронизация цен/остатков'] },
-  { name: 'Корзина', cat: 'cart', features: ['Добавление товаров', 'Промокоды и баллы', 'Dynamic Pricing', 'Пересчёт стоимости', 'Оформление'] },
-  { name: 'Заказы', cat: 'orders', features: ['Создание', 'Статусы заказа', 'Добавление после оформления', 'История заказов', 'Замена товара', 'Возврат и отмена', 'Event Sourcing'] },
-  { name: 'Доставка', cat: 'delivery', features: ['Временные слоты', 'Dispatch', 'ETA', 'Трекинг для клиента', 'Опция "Можно раньше"'] },
-  { name: 'Платежи', cat: 'payments', features: ['Т-Банк (онлайн)', 'СБП (QR от курьера)', 'Карта курьеру (POS)', 'Наличные', 'Refund', 'Чек (54-ФЗ, ОФД)'] },
-  { name: 'Уведомления', cat: 'notify', features: ['Push (FCM)', 'SMS', 'Email', 'Telegram', 'События'] },
-  { name: 'Админка', cat: 'admin', features: ['Управление заказами', 'Управление товарами', 'Пользователи', 'Промокоды', 'Курьеры и пикеры', 'Магазины и зоны', 'Управление сетями', 'Audit log'] },
-  { name: 'B2B', cat: 'b2b', features: ['Корпоративные заказы', 'Регулярные поставки', 'Индивидуальные цены', 'Отсрочка платежа', 'ЭДО', 'Счета и документы'] },
-  { name: 'Dynamic Pricing', cat: 'pricing', features: ['Факторы', 'Формула', 'Max надбавка: 2×', 'Отображение в корзине'] },
-  { name: 'Приложение пикера', cat: 'picker', features: ['Список заказов (FIFO)', 'Сканер штрихкодов', 'Замены товаров', 'Звонок клиенту', 'Offline-режим', 'Smart Sync Queue', 'Подтверждение упаковки'] },
-  { name: 'Приложение курьера', cat: 'courier', features: ['Multi-stop навигация', 'Offline-режим', 'Off-route detection', 'Приём оплаты', 'Digital Signature', 'Photo POD', 'Сканер', 'Статусы доставки'] },
-  { name: 'Инфраструктура', cat: 'infra', features: ['CI/CD', 'Docker → Kubernetes', 'Мониторинг', 'Sentry', 'Feature flags', 'Rollback'] },
-  { name: 'Тестирование', cat: 'testing', features: ['Unit', 'Integration', 'Contract', 'E2E', 'Load', 'Security'] },
-  { name: 'Аналитика', cat: 'analytics', features: ['Дашборды (Grafana)', 'Отчёты', 'Метрики'] }
+var CAT = { security:{clr:'#6366f1'}, catalog:{clr:'#22c55e'}, cart:{clr:'#f59e0b'}, orders:{clr:'#ef4444'}, delivery:{clr:'#3b82f6'}, payments:{clr:'#8b5cf6'}, notify:{clr:'#06b6d4'}, admin:{clr:'#f97316'}, b2b:{clr:'#14b8a6'}, pricing:{clr:'#ec4899'}, picker:{clr:'#84cc16'}, courier:{clr:'#0ea5e9'}, infra:{clr:'#64748b'}, testing:{clr:'#a855f7'}, analytics:{clr:'#10b981'} };
+var M = [
+  {id:'security',n:'Регистрация и безопасность',f:['Вход по телефону','SMS-подтверждение','Роли (RBAC)','JWT токены','Rate limiting','Audit log']},
+  {id:'catalog',n:'Каталог',f:['Выбор магазина','Категории','Поиск (ES)','Фильтры','Карточка товара','Нормализация','Маппинг','Адаптеры','Синхронизация']},
+  {id:'cart',n:'Корзина',f:['Добавление','Промокоды','Dynamic Pricing','Пересчёт','Оформление']},
+  {id:'orders',n:'Заказы',f:['Создание','Статусы','Добавление после','История','Замена','Возврат','Event Sourcing']},
+  {id:'delivery',n:'Доставка',f:['Слоты','Dispatch','ETA','Трекинг','Можно раньше']},
+  {id:'payments',n:'Платежи',f:['Т-Банк','СБП (QR)','Карта курьеру','Наличные','Refund','Чек (54-ФЗ)']},
+  {id:'notify',n:'Уведомления',f:['Push (FCM)','SMS','Email','Telegram','События']},
+  {id:'admin',n:'Админка',f:['Заказы','Товары','Пользователи','Промокоды','Курьеры','Магазины','Сети','Audit log']},
+  {id:'b2b',n:'B2B',f:['Корп. заказы','Регулярные','Цены','Отсрочка','ЭДО','Счета']},
+  {id:'pricing',n:'Dynamic Pricing',f:['Факторы','Формула','Max 2×','Отображение']},
+  {id:'picker',n:'Приложение пикера',f:['FIFO','Сканер','Замены','Звонок','Offline','Smart Sync','Упаковка']},
+  {id:'courier',n:'Приложение курьера',f:['Multi-stop','Offline','Off-route','Оплата','Digital Sign.','Photo POD','Сканер','Статусы']},
+  {id:'infra',n:'Инфраструктура',f:['CI/CD','Docker/K8s','Мониторинг','Sentry','Feature flags','Rollback']},
+  {id:'testing',n:'Тестирование',f:['Unit','Integration','Contract','E2E','Load','Security']},
+  {id:'analytics',n:'Аналитика',f:['Дашборды','Отчёты','Метрики']}
 ];
 
-var width = window.innerWidth;
-var height = window.innerHeight - 44;
-var radius = Math.min(width, height) / 2 * 0.82;
-
-var svg = d3.select('#chart')
-  .attr('viewBox', [-width/2, -height/2, width, height]);
-
+var W = window.innerWidth, H = window.innerHeight;
+var R = Math.min(W, H) / 2 * 0.9;
+var svg = d3.select('#c').attr('viewBox', [-W/2, -H/2, W, H]);
 var g = svg.append('g');
+var tip = document.getElementById('t');
+var focusId = null;
 
-var tooltip = document.getElementById('tooltip');
-var hint = document.getElementById('hint');
-setTimeout(function() { hint.classList.add('show'); }, 500);
-setTimeout(function() { hint.classList.remove('show'); }, 5000);
-
-function buildData(expanded) {
-  expanded = expanded || {};
-  return {
-    name: 'Агрегатор доставки продуктов',
-    children: RAW.map(function(m) {
-      return {
-        name: m.name,
-        cat: m.cat,
-        children: expanded[m.cat] ? m.features.map(function(f) { return { name: f }; }) : null
-      };
-    })
-  };
+function clr(d) {
+  while (d.depth > 1) d = d.parent;
+  return d.data.id ? (CAT[d.data.id] ? CAT[d.data.id].clr : '#6366f1') : '#fbbf24';
 }
 
-function render(expanded) {
+function draw() {
   g.selectAll('*').remove();
-  expanded = expanded || {};
-  var data = buildData(expanded);
+  var data = {n:'Продукт', children:M.map(function(m) {
+    return {n:m.n, id:m.id, children: focusId === m.id ? m.f.map(function(f) { return {n:f}; }) : null};
+  })};
 
-  var root = d3.partition()
-    .size([2 * Math.PI, radius])
-    .padding(0.5)(
-    d3.hierarchy(data)
-      .sum(function(d) { return d.children ? 0 : 1; })
+  var root = d3.partition().size([2*Math.PI, R]).padding(focusId ? 0.3 : 0.8)(
+    d3.hierarchy(data).sum(function(d) { return d.children ? 0 : 1; })
   );
 
-  var arc = d3.arc()
-    .startAngle(function(d) { return d.x0; })
-    .endAngle(function(d) { return d.x1; })
-    .innerRadius(function(d) { return d.y0; })
-    .outerRadius(function(d) { return d.y1; });
+  var arc = d3.arc().startAngle(function(d) { return d.x0; }).endAngle(function(d) { return d.x1; })
+    .innerRadius(function(d) { return d.y0; }).outerRadius(function(d) { return d.y1; });
 
-  // Root circle
-  g.append('circle')
-    .attr('r', 6)
-    .style('fill', '#fbbf24')
-    .style('filter', 'drop-shadow(0 0 10px #fbbf2480)');
+  // Center circle
+  var cc = g.append('circle').attr('r', R * 0.12).style('fill','#fbbf24').style('cursor','pointer')
+    .style('filter','drop-shadow(0 0 12px #fbbf2480)')
+    .on('click', function() { if (focusId) { focusId = null; draw(); } })
+    .on('mouseenter', function() {
+      tip.innerHTML = '<div class="n">Агрегатор доставки продуктов</div>' + (focusId ? '<div class="d">кликните чтобы вернуться</div>' : '');
+      tip.classList.add('show');
+    })
+    .on('mousemove', function(e) { tip.style.left=(e.clientX+12)+'px'; tip.style.top=(e.clientY-8)+'px'; })
+    .on('mouseleave', function() { tip.classList.remove('show'); });
 
-  g.append('text')
-    .attr('text-anchor', 'middle')
-    .attr('dy', '0.35em')
-    .attr('x', 16)
-    .style('fill', '#fbbf24')
-    .style('font-size', '13px')
-    .style('font-weight', '700')
-    .style('pointer-events', 'none')
-    .text('Продукт');
+  g.append('text').attr('text-anchor','middle').attr('dy','0.35em')
+    .style('fill','#fff').style('font-size','11px').style('font-weight','700').style('pointer-events','none')
+    .text(focusId ? '← назад' : 'Продукт');
 
-  // Modules (depth 1)
-  var modules = root.descendants().filter(function(d) { return d.depth === 1; });
+  root.descendants().filter(function(d) { return d.depth > 0; }).forEach(function(d) {
+    var isMod = d.depth === 1, isFeat = d.depth === 2;
+    var c = clr(d);
+    var p = g.append('path').attr('d', arc(d))
+      .style('fill', c).style('stroke', '#0a0a0f').style('stroke-width', isMod ? 2 : 0.5)
+      .style('opacity', isFeat ? 0.6 : 0.9);
 
-  modules.forEach(function(d) {
-    var cat = catMap[d.data.cat];
-    var color = cat ? cat.color : '#6366f1';
-    var hasChildren = expanded[d.data.cat];
-    var isExpanded = !!hasChildren;
+    if (isMod) {
+      p.on('click', function() {
+        focusId = focusId === d.data.id ? null : d.data.id;
+        draw();
+      }).on('mouseenter', function(e) {
+        var m = M.find(function(x) { return x.id === d.data.id; });
+        tip.innerHTML = '<div class="n">' + d.data.n + '</div><div class="d">' + (m ? m.f.length : '?') + ' функций · кликните чтобы ' + (focusId === d.data.id ? 'свернуть' : 'развернуть') + '</div>';
+        tip.classList.add('show');
+      }).on('mousemove', function(e) { tip.style.left=(e.clientX+12)+'px'; tip.style.top=(e.clientY-8)+'px'; })
+      .on('mouseleave', function() { tip.classList.remove('show'); });
 
-    g.append('path')
-      .attr('d', arc(d))
-      .style('fill', color)
-      .style('stroke', '#0a0a0f')
-      .style('stroke-width', 1.5)
-      .style('opacity', 0.9)
-      .on('click', function() {
-        expanded[d.data.cat] = !expanded[d.data.cat];
-        render(expanded);
-      })
-      .on('mouseenter', function(e) {
-        tooltip.innerHTML = '<div class="tt-name">' + d.data.name + '</div>'
-          + (isExpanded ? '<div class="tt-desc">кликните чтобы свернуть</div>' : '<div class="tt-desc">кликните чтобы развернуть (' + (d.value || '?') + ' функций)</div>');
-        tooltip.classList.add('show');
-        d3.select(this).style('opacity', 1);
-      })
-      .on('mousemove', function(e) {
-        tooltip.style.left = (e.clientX + 12) + 'px';
-        tooltip.style.top = (e.clientY - 8) + 'px';
-      })
-      .on('mouseleave', function() {
-        tooltip.classList.remove('show');
-        d3.select(this).style('opacity', 0.9);
-      });
-
-    // Module label
-    var a = (d.x0 + d.x1) / 2;
-    var r = (d.y0 + d.y1) / 2;
-    var label = d.data.name.length > 15 ? d.data.name.slice(0, 14) + '…' : d.data.name;
-    g.append('text')
-      .attr('transform', 'rotate(' + (a * 180 / Math.PI - 90) + ') translate(' + r + ',0)')
-      .attr('text-anchor', 'middle')
-      .attr('dy', '0.35em')
-      .style('fill', '#fff')
-      .style('font-size', '10px')
-      .style('font-weight', '600')
-      .style('pointer-events', 'none')
-      .style('text-shadow', '0 1px 4px rgba(0,0,0,0.8)')
-      .text(label);
-
-    // Expand indicator
-    if (!isExpanded) {
-      var ea = a;
-      var er = d.y0 + (d.y1 - d.y0) * 0.5;
-      var ex = Math.cos(ea - Math.PI / 2) * er;
-      var ey = Math.sin(ea - Math.PI / 2) * er;
-      g.append('text')
-        .attr('x', ex)
-        .attr('y', ey)
-        .attr('text-anchor', 'middle')
-        .attr('dy', '0.35em')
-        .style('fill', 'rgba(255,255,255,0.5)')
-        .style('font-size', '14px')
-        .style('pointer-events', 'none')
-        .text('+');
+      // Label
+      var a = (d.x0+d.x1)/2, r = (d.y0+d.y1)/2;
+      g.append('text').attr('transform','rotate('+(a*180/Math.PI-90)+') translate('+r+',0)')
+        .attr('text-anchor','middle').attr('dy','0.35em')
+        .style('fill','#fff').style('font-size','10px').style('font-weight','700')
+        .style('pointer-events','none').style('text-shadow','0 1px 4px rgba(0,0,0,0.9)')
+        .text(function() {
+          var name = d.data.n;
+          var m2 = M.find(function(x) { return x.id === d.data.id; });
+          var cnt = m2 ? m2.f.length : 0;
+          return name.length > 16 ? name.slice(0,15)+'…' : name;
+        });
     }
 
-    // Feature arcs (depth 2)
-    if (isExpanded && d.children) {
-      d.children.forEach(function(f) {
-        g.append('path')
-          .attr('d', arc(f))
-          .style('fill', color)
-          .style('stroke', '#0a0a0f')
-          .style('stroke-width', 0.5)
-          .style('opacity', 0.6)
-          .on('mouseenter', function(e) {
-            tooltip.innerHTML = '<div class="tt-name">' + f.data.name + '</div>';
-            tooltip.classList.add('show');
-            d3.select(this).style('opacity', 1);
-          })
-          .on('mousemove', function(e) {
-            tooltip.style.left = (e.clientX + 12) + 'px';
-            tooltip.style.top = (e.clientY - 8) + 'px';
-          })
-          .on('mouseleave', function() {
-            tooltip.classList.remove('show');
-            d3.select(this).style('opacity', 0.6);
-          });
+    if (isFeat) {
+      p.on('mouseenter', function(e) {
+        tip.innerHTML = '<div class="n">' + d.data.n + '</div>';
+        tip.classList.add('show');
+      }).on('mousemove', function(e) { tip.style.left=(e.clientX+12)+'px'; tip.style.top=(e.clientY-8)+'px'; })
+      .on('mouseleave', function() { tip.classList.remove('show'); });
 
-        // Feature label (if wide enough)
-        if (f.x1 - f.x0 > 0.15 && f.y1 - f.y0 > 8) {
-          var fa = (f.x0 + f.x1) / 2;
-          var fr = (f.y0 + f.y1) / 2;
-          g.append('text')
-            .attr('transform', 'rotate(' + (fa * 180 / Math.PI - 90) + ') translate(' + fr + ',0)')
-            .attr('text-anchor', 'middle')
-            .attr('dy', '0.35em')
-            .style('fill', '#fff')
-            .style('font-size', '8px')
-            .style('pointer-events', 'none')
-            .style('text-shadow', '0 1px 3px rgba(0,0,0,0.8)')
-            .text(f.data.name.length > 12 ? f.data.name.slice(0, 11) + '…' : f.data.name);
-        }
-      });
+      if (d.x1 - d.x0 > 0.12 && d.y1 - d.y0 > 6) {
+        var fa = (d.x0+d.x1)/2, fr = (d.y0+d.y1)/2;
+        g.append('text').attr('transform','rotate('+(fa*180/Math.PI-90)+') translate('+fr+',0)')
+          .attr('text-anchor','middle').attr('dy','0.35em')
+          .style('fill','#fff').style('font-size','7px').style('pointer-events','none')
+          .style('text-shadow','0 1px 3px rgba(0,0,0,0.8)')
+          .text(d.data.n.length > 10 ? d.data.n.slice(0,9)+'…' : d.data.n);
+      }
     }
+  });
+
+  // Legend bottom
+  M.forEach(function(m, i) {
+    var c = CAT[m.id].clr;
+    var cols = 5, row = Math.floor(i/cols), col = i%cols;
+    var lx = -W/2 + 20 + col * 220, ly = H/2 - 60 + row * 18;
+    g.append('rect').attr('x', lx).attr('y', ly-7).attr('width', 8).attr('height', 8).attr('rx', 2)
+      .style('fill', c).style('opacity', 0.7);
+    g.append('text').attr('x', lx+12).attr('y', ly).style('fill','#6b6b83').style('font-size','9px')
+      .style('pointer-events','none').text(m.n.length > 20 ? m.n.slice(0,19)+'…' : m.n);
   });
 }
 
-var state = {};
+draw();
 
-document.getElementById('expandAll').addEventListener('click', function() {
-  RAW.forEach(function(m) { state[m.cat] = true; });
-  render(state);
-});
-
-document.getElementById('collapseAll').addEventListener('click', function() {
-  state = {};
-  render(state);
-});
-
-render(state);
-
-// Resize
 window.addEventListener('resize', function() {
-  width = window.innerWidth;
-  height = window.innerHeight - 44;
-  radius = Math.min(width, height) / 2 * 0.82;
-  svg.attr('viewBox', [-width/2, -height/2, width, height]);
-  render(state);
+  W = window.innerWidth; H = window.innerHeight; R = Math.min(W,H)/2*0.9;
+  svg.attr('viewBox', [-W/2, -H/2, W, H]); draw();
 });
 </script>
 </body>
