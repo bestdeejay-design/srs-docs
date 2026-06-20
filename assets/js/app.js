@@ -226,39 +226,18 @@
 
     /* Markmap (feature map only) */
     if (mindmapBlocks.length) {
-      var lib = document.createElement('script');
-      lib.src = 'https://cdn.jsdelivr.net/npm/markmap-lib@0.18.8';
-      lib.onload = function () {
-        var view = document.createElement('script');
-        view.src = 'https://cdn.jsdelivr.net/npm/markmap-view@0.18.8';
-        view.onload = function () {
-          var mm = markmap;
-          mindmapBlocks.forEach(function (item) {
-            var md = mindmapToMarkdown(item.code);
-            var wrapper = document.createElement('div');
-            wrapper.className = 'markmap-wrapper';
-            if (item.block._placeholder) {
-              item.block._placeholder.parentElement.replaceChild(wrapper, item.block._placeholder);
-            }
-            try {
-              var t = new mm.Transformer();
-              var root = t.transform(md);
-              mm.Markmap.create(wrapper, {
-                colorFreezeLevel: 2,
-                zoom: true,
-                pan: true,
-                style: dark ? 'dark' : 'light'
-              }, root);
-            } catch (e) {
-              wrapper.textContent = '\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u043E\u0441\u0442\u0440\u043E\u0435\u043D\u0438\u044F \u043A\u0430\u0440\u0442\u044B: ' + e.message;
-              wrapper.style.color = '#ff3b30';
-              wrapper.style.padding = '20px';
-            }
-          });
-        };
-        document.head.appendChild(view);
-      };
-      document.head.appendChild(lib);
+      mindmapBlocks.forEach(function (item) {
+        var md = mindmapToMarkdown(item.code);
+        var wrapper = document.createElement('div');
+        wrapper.className = 'markmap';
+        wrapper.textContent = md + '\n';
+        if (item.block._placeholder) {
+          item.block._placeholder.parentElement.replaceChild(wrapper, item.block._placeholder);
+        }
+      });
+      var aScript = document.createElement('script');
+      aScript.src = 'https://cdn.jsdelivr.net/npm/markmap-autoloader@0.15';
+      document.head.appendChild(aScript);
     }
 
     /* Mermaid (all other diagrams) */

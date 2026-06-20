@@ -406,7 +406,7 @@ a:hover { color: var(--blue-hover); text-decoration: underline }
 }
 
 /* ===== Markmap (Feature Map) ===== */
-.markmap-wrapper {
+.markmap {
   margin: 24px 0;
   padding: 0;
   background: var(--bg2);
@@ -415,8 +415,8 @@ a:hover { color: var(--blue-hover); text-decoration: underline }
   overflow: hidden;
   min-height: 500px;
 }
-.markmap-wrapper svg { display: block }
-.markmap-wrapper .markmap-foreign {
+.markmap svg { display: block }
+.markmap .markmap-foreign {
   font-family: var(--font);
   font-size: 13px;
 }
