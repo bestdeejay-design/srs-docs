@@ -1222,61 +1222,99 @@ fallback</li>
 </tbody>
 </table>
 <h4 id="юнит-экономика">1.6.3 Юнит-экономика</h4>
+<blockquote>
+<p><strong>Фактические данные за фев–мар/май 2026:</strong> детальный
+анализ — в бизнес-модели.</p>
+</blockquote>
 <table>
 <colgroup>
-<col style="width: 33%" />
-<col style="width: 33%" />
-<col style="width: 33%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
 </colgroup>
 <thead>
 <tr>
 <th>Метрика</th>
-<th>B2C</th>
+<th>B2C (план)</th>
 <th>B2B</th>
+<th>Фев–Мар 2026</th>
+<th>Май 2026</th>
 </tr>
 </thead>
 <tbody>
 <tr>
+<td><strong>Заказов/день</strong></td>
+<td>—</td>
+<td>—</td>
+<td><strong>380</strong></td>
+<td><strong>186</strong></td>
+</tr>
+<tr>
 <td><strong>Средний чек</strong></td>
 <td>4 800 руб</td>
 <td>8 000–15 000 руб</td>
+<td><strong>6 826 руб</strong></td>
+<td><strong>7 459 руб</strong></td>
 </tr>
 <tr>
 <td><strong>Комиссия сервиса</strong></td>
 <td>15% (720 руб)</td>
 <td>10% + фикс (договор)</td>
+<td><strong>16% (1 071 руб)</strong></td>
+<td><strong>18% (1 343 руб)</strong></td>
 </tr>
 <tr>
 <td><strong>Стоимость сборки</strong></td>
 <td>180 руб</td>
 <td>300–400 руб</td>
+<td><strong>205 руб</strong></td>
+<td><strong>279 руб</strong></td>
 </tr>
 <tr>
 <td><strong>Стоимость доставки</strong></td>
 <td>300 руб</td>
 <td>300–500 руб</td>
+<td><strong>143 руб</strong></td>
+<td><strong>171 руб</strong></td>
 </tr>
 <tr>
 <td><strong>Комиссия эквайринга</strong></td>
 <td>~2.2% (105 руб)</td>
 <td>~2.2% (включено в договор)</td>
+<td><strong>~2.5% (171 руб)</strong></td>
+<td><strong>~2.5% (186 руб)</strong></td>
 </tr>
 <tr>
-<td><strong>Маржинальность (до операционных расходов)</strong></td>
+<td><strong>Чистая прибыль/заказ</strong></td>
 <td>~135 руб</td>
 <td>200–500 руб</td>
+<td><strong>~455 руб</strong></td>
+<td><strong>~530 руб</strong></td>
+</tr>
+<tr>
+<td><strong>Чистая прибыль/мес</strong></td>
+<td>&gt; 0 руб</td>
+<td>&gt; 0 руб</td>
+<td><strong>~4.27 млн руб</strong></td>
+<td><strong>~2.86 млн руб</strong></td>
 </tr>
 <tr>
 <td><strong>LTV (жизненный цикл)</strong></td>
 <td>3–6 месяцев (10–20 заказов)</td>
 <td>12+ месяцев (регулярные)</td>
+<td>Нет данных</td>
+<td>Нет данных</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Ключевой вывод:</strong> B2C — бизнес на объёме,
 маржинальность ~2.8% от оборота (выход в плюс при среднем чеке от 4 500
-руб). B2B — бизнес на сервисе, маржинальность 3–6%. Оба сегмента взаимно
-дополняют друг друга.</p>
+руб). Фактический средний чек (6 826–7 459 руб) и комиссия (16–18%)
+превысили плановые показатели, что даёт чистую прибыль ~455–530
+руб/заказ. B2B — бизнес на сервисе, маржинальность 3–6%. Оба сегмента
+взаимно дополняют друг друга.</p>
 <h4 id="модель-ценообразования-pricing">1.6.4 Модель ценообразования
 (Pricing)</h4>
 <table>
@@ -1325,15 +1363,19 @@ fallback</li>
 дашборда</h4>
 <table>
 <colgroup>
-<col style="width: 33%" />
-<col style="width: 33%" />
-<col style="width: 33%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
 </colgroup>
 <thead>
 <tr>
 <th>Метрика</th>
 <th>Формула</th>
 <th>Цель (MVP)</th>
+<th>Фев–Мар 2026</th>
+<th>Май 2026</th>
 </tr>
 </thead>
 <tbody>
@@ -1341,41 +1383,57 @@ fallback</li>
 <td><strong>Заказов/день</strong></td>
 <td>—</td>
 <td>≥ 50</td>
+<td><strong>380</strong> ✅</td>
+<td><strong>186</strong> ✅</td>
 </tr>
 <tr>
 <td><strong>Выручка/день</strong></td>
 <td>Сумма комиссий + доставка + сервис</td>
 <td>≥ 100 000 руб</td>
+<td><strong>2 598 000 руб</strong> ✅</td>
+<td><strong>1 390 746 руб</strong> ✅</td>
 </tr>
 <tr>
 <td><strong>Средний чек</strong></td>
 <td>Выручка / кол-во заказов</td>
 <td>≥ 2 500 руб</td>
+<td><strong>6 826 руб</strong> ✅</td>
+<td><strong>7 459 руб</strong> ✅</td>
 </tr>
 <tr>
 <td><strong>Конверсия</strong></td>
 <td>Заказов / посетителей сайта</td>
 <td>≥ 3%</td>
+<td>Нет данных</td>
+<td>Нет данных</td>
 </tr>
 <tr>
 <td><strong>Маржинальность</strong></td>
 <td>(Выручка - затраты) / Выручка</td>
 <td>&gt; 0% (с V2 — &gt; 10%)</td>
+<td><strong>~26%</strong> ✅</td>
+<td><strong>~33%</strong> ✅</td>
 </tr>
 <tr>
 <td><strong>CAC (стоимость привлечения)</strong></td>
 <td>Расходы на маркетинг / новые клиенты</td>
 <td>&lt; 500 руб</td>
+<td>Нет данных (117/мес) ⚠️</td>
+<td>Нет данных (14/мес) ⚠️</td>
 </tr>
 <tr>
 <td><strong>LTV/CAC</strong></td>
 <td>LTV / CAC</td>
 <td>&gt; 3</td>
+<td>Нет данных</td>
+<td>Нет данных</td>
 </tr>
 <tr>
 <td><strong>NPS</strong></td>
 <td>Опрос клиентов</td>
 <td>&gt; 40</td>
+<td>Нет данных</td>
+<td>Нет данных</td>
 </tr>
 </tbody>
 </table>
