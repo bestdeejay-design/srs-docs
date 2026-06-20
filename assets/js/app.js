@@ -161,30 +161,30 @@
   });
 
   /* ===== Mermaid ===== */
-  function htmlDecode(s) {
-    var t = document.createElement('textarea');
-    t.innerHTML = s;
-    return t.value;
-  }
-
-  function renderMermaid() {
+  function loadMermaid() {
     var blocks = document.querySelectorAll('pre.mermaid');
     if (!blocks.length) return;
 
-    // Show loading placeholder
+    function htmlDecode(s) {
+      var t = document.createElement('textarea');
+      t.innerHTML = s;
+      return t.value;
+    }
+
     blocks.forEach(function (block) {
-      var placeholder = document.createElement('div');
-      placeholder.className = 'mermaid-placeholder';
-      placeholder.textContent = '\u0417\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u0434\u0438\u0430\u0433\u0440\u0430\u043C\u043C\u044B\u2026';
-      block.parentElement.insertBefore(placeholder, block.nextSibling);
+      var ph = document.createElement('div');
+      ph.className = 'mermaid-placeholder';
+      ph.textContent = '\u0417\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u0434\u0438\u0430\u0433\u0440\u0430\u043C\u043C\u044B\u2026';
+      block.parentElement.insertBefore(ph, block.nextSibling);
+      block._placeholder = ph;
     });
 
     var script = document.createElement('script');
     script.src = 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js';
     script.onload = function () {
       mermaid.initialize({
-        startOnLoad: false,
         theme: dark ? 'dark' : 'default',
+        maxTextSize: 100000,
         themeVariables: dark ? {
           primaryColor: '#2997ff',
           primaryTextColor: '#f5f5f7',
@@ -209,41 +209,30 @@
         var wrapper = document.createElement('div');
         wrapper.className = 'mermaid-wrapper';
 
-        try {
-          mermaid.render('mermaid-' + Math.random().toString(36).slice(2), code, wrapper);
-        } catch (e) {
-          wrapper.textContent = '\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0440\u0438\u0441\u043E\u0432\u0430\u043D\u0438\u0438 \u0434\u0438\u0430\u0433\u0440\u0430\u043C\u043C\u044B';
-          wrapper.style.color = '#ff3b30';
-        }
-
-        // Replace placeholder
-        var placeholder = block.nextElementSibling;
-        if (placeholder && placeholder.classList.contains('mermaid-placeholder')) {
-          placeholder.parentElement.replaceChild(wrapper, placeholder);
-        }
+        mermaid.render('d' + Math.random().toString(36).slice(2), code)
+          .then(function (result) {
+            wrapper.innerHTML = result.svg;
+            if (result.bindFunctions) result.bindFunctions(wrapper);
+            if (block._placeholder) {
+              block._placeholder.parentElement.replaceChild(wrapper, block._placeholder);
+            }
+          })
+          .catch(function (err) {
+            console.error('Mermaid error:', err);
+            wrapper.textContent = '\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0440\u0438\u0441\u043E\u0432\u0430\u043D\u0438\u0438 \u0434\u0438\u0430\u0433\u0440\u0430\u043C\u043C\u044B: ' + err.message;
+            wrapper.style.color = '#ff3b30';
+            if (block._placeholder) {
+              block._placeholder.parentElement.replaceChild(wrapper, block._placeholder);
+            }
+          });
       });
     };
     document.head.appendChild(script);
   }
 
-  // Render after DOM ready
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', renderMermaid);
+    document.addEventListener('DOMContentLoaded', loadMermaid);
   } else {
-    renderMermaid();
-  }
-
-  // Re-render on theme change with debounce
-  var themeTimer;
-  if (themeToggle) {
-    themeToggle.addEventListener('click', function () {
-      clearTimeout(themeTimer);
-      themeTimer = setTimeout(function () {
-        // Re-init mermaid theme and re-render
-        if (window.mermaid) {
-          mermaid.initialize({ theme: dark ? 'dark' : 'default' });
-        }
-      }, 500);
-    });
+    loadMermaid();
   }
 })();
