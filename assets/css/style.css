@@ -442,6 +442,22 @@ a:hover { color: var(--blue-hover); text-decoration: underline }
   margin: 36px 0;
 }
 
+/* ===== Markmap (Feature Map) ===== */
+.markmap-wrapper {
+  margin: 24px 0;
+  padding: 0;
+  background: var(--bg2);
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  min-height: 500px;
+}
+.markmap-wrapper svg { display: block }
+.markmap-wrapper .markmap-foreign {
+  font-family: var(--font);
+  font-size: 13px;
+}
+
 /* ===== Mermaid ===== */
 pre.mermaid {
   display: none;

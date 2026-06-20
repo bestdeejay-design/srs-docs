@@ -177,6 +177,57 @@
     }
   });
 
+  /* ===== Feature Map (markmap) ===== */
+  function mindmapToMarkdown(code) {
+    var lines = code.split('\n');
+    var md = [];
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      var trimmed = line.trim();
+      if (!trimmed || trimmed === 'mindmap') continue;
+      if (/^root\s*\(/.test(trimmed)) {
+        md.push('- ' + trimmed.replace(/^root\s*\(\s*|\)\s*$/g, ''));
+        continue;
+      }
+      var indent = line.search(/\S/);
+      var level = Math.max(0, Math.floor(indent / 2) - 1);
+      var prefix = '';
+      for (var j = 0; j < level; j++) prefix += '  ';
+      if (level === 0) md.push(prefix + '- **' + trimmed + '**');
+      else md.push(prefix + '- ' + trimmed);
+    }
+    return md.join('\n');
+  }
+
+  function loadFeatureMap() {
+    var blocks = document.querySelectorAll('pre.mermaid');
+    if (!blocks.length) return;
+    var mindmapBlocks = [];
+    blocks.forEach(function (block) {
+      var codeEl = block.querySelector('code');
+      if (!codeEl) return;
+      if (/^\s*mindmap\s/.test(codeEl.textContent)) {
+        mindmapBlocks.push({ block: block, code: codeEl.textContent.trim() });
+      }
+    });
+    if (!mindmapBlocks.length) return;
+
+    var script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/markmap-autoloader@0.18';
+    script.onload = function () {
+      mindmapBlocks.forEach(function (item) {
+        var md = mindmapToMarkdown(item.code);
+        var wrapper = document.createElement('div');
+        wrapper.className = 'markmap-wrapper';
+        wrapper.textContent = md;
+        if (item.block._placeholder) {
+          item.block._placeholder.parentElement.replaceChild(wrapper, item.block._placeholder);
+        }
+      });
+    };
+    document.head.appendChild(script);
+  }
+
   /* ===== Mermaid ===== */
   function makeZoomable(wrapper) {
     var svg = wrapper.querySelector('svg');
@@ -261,7 +312,16 @@
     var blocks = document.querySelectorAll('pre.mermaid');
     if (!blocks.length) return;
 
+    var mermaidBlocks = [];
     blocks.forEach(function (block) {
+      var codeEl = block.querySelector('code');
+      if (!codeEl) return;
+      if (/^\s*mindmap\s/.test(codeEl.textContent)) return;
+      mermaidBlocks.push(block);
+    });
+    if (!mermaidBlocks.length) return;
+
+    mermaidBlocks.forEach(function (block) {
       var ph = document.createElement('div');
       ph.className = 'mermaid-placeholder';
       ph.textContent = '\u0417\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u0434\u0438\u0430\u0433\u0440\u0430\u043C\u043C\u044B\u2026';
@@ -294,7 +354,7 @@
         }
       });
 
-      blocks.forEach(function (block) {
+      mermaidBlocks.forEach(function (block) {
         var codeEl = block.querySelector('code');
         if (!codeEl) return;
         var code = codeEl.textContent.trim();
@@ -324,9 +384,15 @@
     document.head.appendChild(script);
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', loadMermaid);
-  } else {
+  /* ===== Init ===== */
+  function init() {
+    loadFeatureMap();
     loadMermaid();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
   }
 })();
