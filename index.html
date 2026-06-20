@@ -1,393 +1,311 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SRS — Агрегатор доставки продуктов</title>
 <meta name="description" content="Software Requirements Specification — агрегатор доставки продуктов из супермаркетов. Бизнес-требования, архитектура, функциональные и нефункциональные требования.">
-<meta name="keywords" content="SRS, спецификация, доставка продуктов, агрегатор, требования, архитектура, API">
-<meta name="author" content="SRS Team">
-<meta name="robots" content="index, follow">
-
-<!-- Open Graph -->
-<meta property="og:title" content="SRS — Агрегатор доставки продуктов">
-<meta property="og:description" content="Полная спецификация программного продукта: бизнес-требования, архитектура микросервисов, API, 14 бизнес-процессов, модель данных и план разработки.">
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://bestdeejay-design.github.io/srs-docs/">
-<meta property="og:image" content="https://bestdeejay-design.github.io/srs-docs/assets/feature-map.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:locale" content="ru_RU">
-
-<!-- Twitter Card -->
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="SRS — Агрегатор доставки продуктов">
-<meta name="twitter:description" content="Software Requirements Specification — агрегатор доставки продуктов из супермаркетов.">
-<meta name="twitter:image" content="https://bestdeejay-design.github.io/srs-docs/assets/feature-map.png">
-<style>
-:root{--bg:#fff;--bg2:#f6f8fa;--text:#1a1a1a;--text2:#444;--border:#ddd;--accent:#0052cc;--accent2:#003d99;--code:#f6f8fa;--font:-apple-system,BlinkMacSystemFont,sans-serif;--font-mono:'SF Mono','Menlo',monospace;--shadow:rgba(0,0,0,0.06);--radius:6px}
-body.dark{--bg:#0d1117;--bg2:#161b22;--text:#e6edf3;--text2:#8b949e;--border:#30363d;--accent:#58a6ff;--accent2:#79c0ff;--code:#161b22;--shadow:rgba(0,0,0,0.3)}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
-body{font-family:var(--font);font-size:16px;line-height:1.6;color:var(--text);background:var(--bg);display:flex;transition:background .15s,color .15s}
-#sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:99;-webkit-tap-highlight-color:transparent}
-#sidebar{position:fixed;top:0;left:0;bottom:0;width:280px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100;transition:transform .25s}
-#sidebar-header{padding:14px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-#sidebar-header .logo{font-size:14px;font-weight:700;color:var(--accent)}
-.theme-btn{width:32px;height:28px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text2);font-size:13px;cursor:pointer;padding:0;line-height:28px;text-align:center;transition:all .12s}
-.theme-btn:hover{border-color:var(--accent);color:var(--accent)}
-#search-wrap{padding:10px 12px;flex-shrink:0}
-#search{width:100%;padding:8px 10px;font-size:14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);outline:none}
-#search:focus{border-color:var(--accent)}
-#search-clear{display:none;position:absolute;right:20px;top:50%;transform:translateY(-50%);width:18px;height:18px;border:none;border-radius:50%;background:var(--text2);color:#fff;font-size:10px;line-height:18px;text-align:center;cursor:pointer;padding:0}
-#search-results{display:none;position:absolute;top:100%;left:8px;right:8px;max-height:50vh;overflow-y:auto;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);z-index:200;box-shadow:0 8px 24px var(--shadow)}
-#search-results.show{display:block}
-#search-results a{display:block;padding:8px 14px;font-size:14px;text-decoration:none;color:var(--text);border-bottom:1px solid var(--border)}
-#search-results a:last-child{border:none}
-#search-results a:hover{background:var(--bg2)}
-#search-results .sr-title{font-weight:600}
-#search-results .sr-context{font-size:12px;color:var(--text2);margin-top:1px}
-#toc-container{flex:1;overflow-y:auto;padding:4px 0;-webkit-overflow-scrolling:touch}
-#toc-container ul{list-style:none;padding:0;margin:0}
-#toc-container>ul{padding-left:6px}
-#toc-container li{padding:1px 0;position:relative}
-#toc-container a{display:inline;padding:3px 6px 3px 2px;font-size:13px;color:var(--text2);text-decoration:none;line-height:1.4;border-radius:3px;transition:color .1s}
-#toc-container .sw a{padding-left:6px}
-#toc-container a.active{color:var(--accent);font-weight:600;background:rgba(0,82,204,0.07)}
-body.dark #toc-container a.active{background:rgba(88,166,255,0.09)}
-.tb{background:none;border:none;cursor:pointer;font-size:10px;color:var(--text2);padding:0;width:16px;height:16px;line-height:16px;text-align:center;vertical-align:middle;transition:transform .12s;border-radius:3px}
-.tb:hover{color:var(--accent);background:rgba(0,0,0,0.04)}
-.tb.open{transform:rotate(90deg)}
-.sw{overflow:hidden;max-height:0;transition:max-height .2s ease;padding-left:10px;border-left:1px solid var(--border);margin:2px 0 2px 6px}
-.sw.open{max-height:3000px}
-#content{margin-left:280px;flex:1;max-width:960px;padding:40px 56px 80px}
-#content h1{font-size:30px;font-weight:700;margin:0 0 8px;color:var(--accent)}
-#content h2{font-size:22px;font-weight:600;margin:36px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--border)}
-#content h3{font-size:18px;font-weight:600;margin:28px 0 8px}
-#content h4{font-size:16px;font-weight:600;margin:20px 0 6px;color:var(--text2)}
-#content p{margin-bottom:16px;word-wrap:break-word}
-#content ul,#content ol{margin:8px 0 16px 24px}
-#content li{margin-bottom:4px}
-#content blockquote{border-left:3px solid var(--accent);padding:10px 18px;margin:16px 0;background:var(--bg2);color:var(--text2);border-radius:0 var(--radius) var(--radius) 0}
-#content pre{background:var(--code);padding:14px 18px;border-radius:var(--radius);overflow-x:auto;font-size:13px;margin:16px 0;font-family:var(--font-mono);line-height:1.45;border:1px solid var(--border);-webkit-overflow-scrolling:touch}
-#content code{font-family:var(--font-mono);font-size:13px;background:var(--code);padding:1px 5px;border-radius:3px;color:var(--accent);word-break:break-word}
-#content pre code{background:none;padding:0;color:inherit;word-break:normal}
-#content table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;border:1px solid var(--border);display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
-#content th,#content td{padding:6px 10px;text-align:left;border:1px solid var(--border);white-space:nowrap}
-#content th{background:var(--bg2);font-weight:600;font-size:13px}
-#content img{max-width:100%;height:auto;margin:16px 0;border-radius:var(--radius);border:1px solid var(--border)}
-#content hr{border:none;border-top:1px solid var(--border);margin:28px 0}
-#progress{position:fixed;top:0;left:0;right:0;height:2px;z-index:300;background:var(--border)}
-#progress-bar{height:100%;background:var(--accent);width:0%}
-#menu-toggle{display:none;position:fixed;top:10px;left:10px;z-index:200;width:40px;height:40px;border:none;border-radius:10px;background:var(--accent);color:#fff;font-size:18px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.15);-webkit-tap-highlight-color:transparent}
-#menu-toggle:active{transform:scale(.92)}
-@media(max-width:1023px){
-  #sidebar-overlay.show{display:block}
-  #sidebar{transform:translateX(-100%);width:300px}
-  body.dark #sidebar-overlay{background:rgba(0,0,0,.5)}
-  #sidebar.open{transform:translateX(0)}
-  #content{margin-left:0;padding:56px 20px 64px}
-  #menu-toggle{display:flex;align-items:center;justify-content:center}
-  #toc-container a{padding:5px 8px 5px 4px}
-  #toc-container .sw a{padding-left:10px}
-  .tb{width:22px;height:22px;line-height:22px;font-size:12px}
-  #search-results{position:fixed;top:auto;left:0;right:0;max-height:60vh;margin:0 10px}
-  #progress{height:3px}
-}
-@media(max-width:480px){
-  #content{padding:52px 14px 56px}
-  #content h1{font-size:24px}
-  #content h2{font-size:19px;margin:28px 0 8px}
-  #content h3{font-size:16px;margin:22px 0 6px}
-  #content h4{font-size:15px}
-  #content table{font-size:13px}
-  #content th,#content td{padding:5px 7px}
-  #content blockquote{padding:8px 12px}
-  #content pre{padding:10px 12px;font-size:12px}
-  #content ul,#content ol{margin-left:18px}
-  #menu-toggle{top:8px;left:8px;width:36px;height:36px;font-size:16px}
-  #sidebar{width:100%}
-}
-</style>
+<link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-<div id="progress"><div id="progress-bar"></div></div>
-<button id="menu-toggle" onclick="t()" aria-label="Открыть навигацию">☰</button>
-<div id="sidebar-overlay" onclick="t()"></div>
+<div id="progress-bar"></div>
+<button id="menu-toggle" aria-label="Открыть навигацию">☰</button>
+<div id="sidebar-overlay"></div>
 <div id="sidebar">
-  <div id="sidebar-header">
-    <div class="logo">SRS</div>
-    <button class="theme-btn" onclick="d()" id="theme-switch" aria-label="Переключить тему">●</button>
+  <div class="sidebar-header">
+    <span class="logo">SRS v2</span>
+    <button class="theme-toggle" id="theme-toggle" aria-label="Переключить тему">●</button>
   </div>
-  <div id="search-wrap" style="position:relative">
+  <div class="search-wrap" id="search-wrap">
     <input type="text" id="search" placeholder="Поиск…" aria-label="Поиск">
-    <button id="search-clear" onclick="c()" aria-label="Очистить">×</button>
+    <button class="search-clear" id="search-clear" aria-label="Очистить">×</button>
     <div id="search-results"></div>
   </div>
-  <div id="toc-container"><ul>
-<li><span class="tb"></span><a href="#как-читать-этот-документ">Как читать этот документ</a></li>
-<li class="s"><button class="tb" onclick="tg(this)">▸</button><a href="#product-overview-общие-сведения">1. Product Overview (Общие
-сведения)</a><div class="sw"><ul>
-<li class="s"><button class="tb" onclick="tg(this)">▸</button><a href="#purpose-scope">1.1 Purpose &amp; Scope</a><div class="sw"><ul>
-<li><span class="tb"></span><a href="#текущее-состояние-системы-as-is">1.1.2 Текущее состояние системы
+  <nav id="toc-container"><ul class="toc-list">
+<li class="toc-item"><a class="toc-link" href="#changelog">Changelog</a></li>
+<li class="toc-item"><a class="toc-link" href="#как-читать-этот-документ">Как читать этот документ</a></li>
+<li class="toc-item"><button class="toc-toggle">▸</button><a class="toc-link" href="#product-overview-общие-сведения">1. Product Overview (Общие
+сведения)</a><div class="toc-children"><ul class="toc-list">
+<li class="toc-item"><button class="toc-toggle">▸</button><a class="toc-link" href="#purpose-scope">1.1 Purpose &amp;amp; Scope</a><div class="toc-children"><ul class="toc-list">
+<li class="toc-item"><a class="toc-link" href="#текущее-состояние-системы-as-is">1.1.2 Текущее состояние системы
 (AS IS)</a></li>
-<li><span class="tb"></span><a href="#география-покрытия">1.1.3 География покрытия</a></li>
-<li><span class="tb"></span><a href="#user-personas-пользовательские-роли">1.1.4 User Personas
+<li class="toc-item"><a class="toc-link" href="#география-покрытия">1.1.3 География покрытия</a></li>
+<li class="toc-item"><a class="toc-link" href="#user-personas-пользовательские-роли">1.1.4 User Personas
 (Пользовательские роли)</a></li>
 </ul>
 </div></li>
-<li><span class="tb"></span><a href="#glossary-глоссарий">1.2 Glossary (Глоссарий)</a></li>
-<li class="s"><button class="tb" onclick="tg(this)">▸</button><a href="#non-functional-requirements-nfr">1.3 Non-Functional Requirements
-(NFR)</a><div class="sw"><ul>
-<li><span class="tb"></span><a href="#frontend-performance-budget">1.3.1 Frontend Performance
+<li class="toc-item"><a class="toc-link" href="#glossary-глоссарий">1.2 Glossary (Глоссарий)</a></li>
+<li class="toc-item"><button class="toc-toggle">▸</button><a class="toc-link" href="#non-functional-requirements-nfr">1.3 Non-Functional Requirements
+(NFR)</a><div class="toc-children"><ul class="toc-list">
+<li class="toc-item"><a class="toc-link" href="#frontend-performance-budget">1.3.1 Frontend Performance
 Budget</a></li>
 </ul>
 </div></li>
-<li><span class="tb"></span><a href="#external-integrations-внешние-интеграции">1.4 External
+<li class="toc-item"><a class="toc-link" href="#external-integrations-внешние-интеграции">1.4 External
 Integrations (Внешние интеграции)</a></li>
-<li><span class="tb"></span><a href="#error-handling-resilience-обработка-исключений">1.5 Error
-Handling &amp; Resilience (Обработка исключений)</a></li>
-<li class="s"><button class="tb" onclick="tg(this)">▸</button><a href="#business-model-бизнес-модель">1.6 Business Model
-(Бизнес-модель)</a><div class="sw"><ul>
-<li><span class="tb"></span><a href="#доходы-revenue-streams">1.6.1 Доходы (Revenue Streams)</a></li>
-<li><span class="tb"></span><a href="#расходы-cost-structure">1.6.2 Расходы (Cost Structure)</a></li>
-<li><span class="tb"></span><a href="#юнит-экономика">1.6.3 Юнит-экономика</a></li>
-<li><span class="tb"></span><a href="#модель-ценообразования-pricing">1.6.4 Модель ценообразования
+<li class="toc-item"><a class="toc-link" href="#error-handling-resilience-обработка-исключений">1.5 Error
+Handling &amp;amp; Resilience (Обработка исключений)</a></li>
+<li class="toc-item"><button class="toc-toggle">▸</button><a class="toc-link" href="#business-model-бизнес-модель">1.6 Business Model
+(Бизнес-модель)</a><div class="toc-children"><ul class="toc-list">
+<li class="toc-item"><a class="toc-link" href="#доходы-revenue-streams">1.6.1 Доходы (Revenue Streams)</a></li>
+<li class="toc-item"><a class="toc-link" href="#расходы-cost-structure">1.6.2 Расходы (Cost Structure)</a></li>
+<li class="toc-item"><a class="toc-link" href="#юнит-экономика">1.6.3 Юнит-экономика</a></li>
+<li class="toc-item"><a class="toc-link" href="#модель-ценообразования-pricing">1.6.4 Модель ценообразования
 (Pricing)</a></li>
-<li><span class="tb"></span><a href="#ключевые-метрики-для-дашборда">1.6.5 Ключевые метрики для
+<li class="toc-item"><a class="toc-link" href="#ключевые-метрики-для-дашборда">1.6.5 Ключевые метрики для
 дашборда</a></li>
+<li class="toc-item"><a class="toc-link" href="#франшиза-franchise-model">1.6.6 Франшиза (Franchise Model)</a></li>
 </ul>
 </div></li>
 </ul>
 </div></li>
-<li class="s"><button class="tb" onclick="tg(this)">▸</button><a href="#system-architecture-архитектура-системы">2. System Architecture
-(Архитектура системы)</a><div class="sw"><ul>
-<li><span class="tb"></span><a href="#architecture-style-patterns">2.1 Architecture Style &amp;
+<li class="toc-item"><button class="toc-toggle">▸</button><a class="toc-link" href="#system-architecture-архитектура-системы">2. System Architecture
+(Архитектура системы)</a><div class="toc-children"><ul class="toc-list">
+<li class="toc-item"><a class="toc-link" href="#architecture-style-patterns">2.1 Architecture Style &amp;amp;
 Patterns</a></li>
-<li><span class="tb"></span><a href="#technology-stack">2.2 Technology Stack</a></li>
-<li><span class="tb"></span><a href="#microservices-breakdown">2.3 Microservices Breakdown</a></li>
-<li><span class="tb"></span><a href="#architecture-decision-records-adrs">2.4 Architecture Decision
+<li class="toc-item"><a class="toc-link" href="#technology-stack">2.2 Technology Stack</a></li>
+<li class="toc-item"><a class="toc-link" href="#microservices-breakdown">2.3 Microservices Breakdown</a></li>
+<li class="toc-item"><a class="toc-link" href="#architecture-decision-records-adrs">2.4 Architecture Decision
 Records (ADRs)</a></li>
-<li class="s"><button class="tb" onclick="tg(this)">▸</button><a href="#integration-context-map-context-map">2.5 Integration Context Map
-(Context Map)</a><div class="sw"><ul>
-<li><span class="tb"></span><a href="#store-api-integration-details">2.5.1 Store API Integration
+<li class="toc-item"><button class="toc-toggle">▸</button><a class="toc-link" href="#integration-context-map-context-map">2.5 Integration Context Map
+(Context Map)</a><div class="toc-children"><ul class="toc-list">
+<li class="toc-item"><a class="toc-link" href="#store-api-integration-details">2.5.1 Store API Integration
 Details</a></li>
 </ul>
 </div></li>
-<li class="s"><button class="tb" onclick="tg(this)">▸</button><a href="#observability">2.6 Observability</a><div class="sw"><ul>
-<li><span class="tb"></span><a href="#analytics-events-schema">2.6.1 Analytics Events Schema</a></li>
+<li class="toc-item"><button class="toc-toggle">▸</button><a class="toc-link" href="#observability">2.6 Observability</a><div class="toc-children"><ul class="toc-list">
+<li class="toc-item"><a class="toc-link" href="#analytics-events-schema">2.6.1 Analytics Events Schema</a></li>
 </ul>
 </div></li>
-<li class="s"><button class="tb" onclick="tg(this)">▸</button><a href="#api-versioning-deprecation-policy-error-code-standard">2.7 API
-Versioning, Deprecation Policy &amp; Error Code Standard</a><div class="sw"><ul>
-<li><span class="tb"></span><a href="#api-versioning">2.7.1 API Versioning</a></li>
-<li><span class="tb"></span><a href="#deprecation-policy">2.7.2 Deprecation Policy</a></li>
-<li><span class="tb"></span><a href="#стратегия-для-мобильных-приложений">2.7.3 Стратегия для
+<li class="toc-item"><button class="toc-toggle">▸</button><a class="toc-link" href="#api-versioning-deprecation-policy-error-code-standard">2.7 API
+Versioning, Deprecation Policy &amp;amp; Error Code Standard</a><div class="toc-children"><ul class="toc-list">
+<li class="toc-item"><a class="toc-link" href="#api-versioning">2.7.1 API Versioning</a></li>
+<li class="toc-item"><a class="toc-link" href="#deprecation-policy">2.7.2 Deprecation Policy</a></li>
+<li class="toc-item"><a class="toc-link" href="#стратегия-для-мобильных-приложений">2.7.3 Стратегия для
 мобильных приложений</a></li>
-<li><span class="tb"></span><a href="#feature-flags-для-api">2.7.4 Feature Flags для API</a></li>
-<li><span class="tb"></span><a href="#error-code-standard">2.7.5 Error Code Standard</a></li>
+<li class="toc-item"><a class="toc-link" href="#feature-flags-для-api">2.7.4 Feature Flags для API</a></li>
+<li class="toc-item"><a class="toc-link" href="#error-code-standard">2.7.5 Error Code Standard</a></li>
 </ul>
 </div></li>
-<li><span class="tb"></span><a href="#event-catalog">2.9 Event Catalog</a></li>
-<li class="s"><button class="tb" onclick="tg(this)">▸</button><a href="#state-machine-diagrams">2.10 State Machine Diagrams</a><div class="sw"><ul>
-<li><span class="tb"></span><a href="#order">2.10.1 Order</a></li>
-<li><span class="tb"></span><a href="#payment">2.10.2 Payment</a></li>
-<li><span class="tb"></span><a href="#delivery">2.10.3 Delivery</a></li>
-<li><span class="tb"></span><a href="#courier">2.10.4 Courier</a></li>
-<li><span class="tb"></span><a href="#picker-task">2.10.5 Picker Task</a></li>
+<li class="toc-item"><a class="toc-link" href="#mobile-application-architecture">2.8 Mobile Application
+Architecture</a></li>
+<li class="toc-item"><a class="toc-link" href="#event-catalog">2.9 Event Catalog</a></li>
+<li class="toc-item"><button class="toc-toggle">▸</button><a class="toc-link" href="#state-machine-diagrams">2.10 State Machine Diagrams</a><div class="toc-children"><ul class="toc-list">
+<li class="toc-item"><a class="toc-link" href="#order">2.10.1 Order</a></li>
+<li class="toc-item"><a class="toc-link" href="#payment">2.10.2 Payment</a></li>
+<li class="toc-item"><a class="toc-link" href="#delivery">2.10.3 Delivery</a></li>
+<li class="toc-item"><a class="toc-link" href="#courier">2.10.4 Courier</a></li>
+<li class="toc-item"><a class="toc-link" href="#picker-task">2.10.5 Picker Task</a></li>
 </ul>
 </div></li>
-<li class="s"><button class="tb" onclick="tg(this)">▸</button><a href="#sequence-diagrams">2.11 Sequence Diagrams</a><div class="sw"><ul>
-<li><span class="tb"></span><a href="#оформление-заказа">2.11.1 Оформление заказа</a></li>
-<li><span class="tb"></span><a href="#сборка-с-заменой-товара">2.11.2 Сборка с заменой товара</a></li>
-<li><span class="tb"></span><a href="#назначение-курьера-dispatch">2.11.3 Назначение курьера
+<li class="toc-item"><button class="toc-toggle">▸</button><a class="toc-link" href="#sequence-diagrams">2.11 Sequence Diagrams</a><div class="toc-children"><ul class="toc-list">
+<li class="toc-item"><a class="toc-link" href="#оформление-заказа">2.11.1 Оформление заказа</a></li>
+<li class="toc-item"><a class="toc-link" href="#сборка-с-заменой-товара">2.11.2 Сборка с заменой товара</a></li>
+<li class="toc-item"><a class="toc-link" href="#назначение-курьера-dispatch">2.11.3 Назначение курьера
 (Dispatch)</a></li>
-<li><span class="tb"></span><a href="#refund">2.11.4 Refund</a></li>
-<li><span class="tb"></span><a href="#offline-sync-курьера">2.11.5 Offline-sync курьера</a></li>
+<li class="toc-item"><a class="toc-link" href="#refund">2.11.4 Refund</a></li>
+<li class="toc-item"><a class="toc-link" href="#offline-sync-курьера">2.11.5 Offline-sync курьера</a></li>
 </ul>
 </div></li>
-<li class="s"><button class="tb" onclick="tg(this)">▸</button><a href="#event-json-schemas">2.12 Event JSON Schemas</a><div class="sw"><ul>
-<li><span class="tb"></span><a href="#envelope">2.12.1 Envelope</a></li>
-<li><span class="tb"></span><a href="#схемы-событий">2.12.2 Схемы событий</a></li>
-<li><span class="tb"></span><a href="#матрица-соответствия">2.12.3 Матрица соответствия</a></li>
+<li class="toc-item"><button class="toc-toggle">▸</button><a class="toc-link" href="#event-json-schemas">2.12 Event JSON Schemas</a><div class="toc-children"><ul class="toc-list">
+<li class="toc-item"><a class="toc-link" href="#envelope">2.12.1 Envelope</a></li>
+<li class="toc-item"><button class="toc-toggle">▸</button><a class="toc-link" href="#схемы-событий">2.12.2 Схемы событий</a><div class="toc-children"><ul class="toc-list">
+<li class="toc-item"><a class="toc-link" href="#order.created">order.created</a></li>
+<li class="toc-item"><a class="toc-link" href="#order.paid">order.paid</a></li>
+<li class="toc-item"><a class="toc-link" href="#order.assigned">order.assigned</a></li>
+<li class="toc-item"><a class="toc-link" href="#order.picking_started">order.picking_started</a></li>
+<li class="toc-item"><a class="toc-link" href="#order.picking_completed">order.picking_completed</a></li>
+<li class="toc-item"><a class="toc-link" href="#order.in_transit">order.in_transit</a></li>
+<li class="toc-item"><a class="toc-link" href="#order.delivered">order.delivered</a></li>
+<li class="toc-item"><a class="toc-link" href="#order.cancelled">order.cancelled</a></li>
+<li class="toc-item"><a class="toc-link" href="#payment.refunded">payment.refunded</a></li>
+<li class="toc-item"><a class="toc-link" href="#inventory.low">inventory.low</a></li>
+<li class="toc-item"><a class="toc-link" href="#catalog.synced">catalog.synced</a></li>
+<li class="toc-item"><a class="toc-link" href="#dispatch.cycle">dispatch.cycle</a></li>
 </ul>
 </div></li>
-<li class="s"><button class="tb" onclick="tg(this)">▸</button><a href="#idempotency-policy">2.13 Idempotency Policy</a><div class="sw"><ul>
-<li><span class="tb"></span><a href="#общие-правила">2.13.1 Общие правила</a></li>
-<li><span class="tb"></span><a href="#таблица-идемпотентности-по-эндпоинтам">2.13.2 Таблица
+<li class="toc-item"><a class="toc-link" href="#матрица-соответствия">2.12.3 Матрица соответствия</a></li>
+</ul>
+</div></li>
+<li class="toc-item"><button class="toc-toggle">▸</button><a class="toc-link" href="#idempotency-policy">2.13 Idempotency Policy</a><div class="toc-children"><ul class="toc-list">
+<li class="toc-item"><a class="toc-link" href="#общие-правила">2.13.1 Общие правила</a></li>
+<li class="toc-item"><a class="toc-link" href="#таблица-идемпотентности-по-эндпоинтам">2.13.2 Таблица
 идемпотентности по эндпоинтам</a></li>
-<li><span class="tb"></span><a href="#edge-cases">2.13.3 Edge cases</a></li>
-<li><span class="tb"></span><a href="#пример-реализации-rails-middleware">2.13.4 Пример реализации
+<li class="toc-item"><a class="toc-link" href="#edge-cases">2.13.3 Edge cases</a></li>
+<li class="toc-item"><a class="toc-link" href="#пример-реализации-rails-middleware">2.13.4 Пример реализации
 (Rails middleware)</a></li>
-<li><span class="tb"></span><a href="#пример-реализации-go-middleware">2.13.5 Пример реализации (Go
+<li class="toc-item"><a class="toc-link" href="#пример-реализации-go-middleware">2.13.5 Пример реализации (Go
 middleware)</a></li>
 </ul>
 </div></li>
-<li class="s"><button class="tb" onclick="tg(this)">▸</button><a href="#data-migration-strategy">2.14 Data Migration Strategy</a><div class="sw"><ul>
-<li><span class="tb"></span><a href="#порядок-миграции-сервисов">2.14.1 Порядок миграции сервисов</a></li>
-<li><span class="tb"></span><a href="#стратегия-двойной-записи-double-write">2.14.2 Стратегия двойной
+<li class="toc-item"><button class="toc-toggle">▸</button><a class="toc-link" href="#data-migration-strategy">2.14 Data Migration Strategy</a><div class="toc-children"><ul class="toc-list">
+<li class="toc-item"><a class="toc-link" href="#порядок-миграции-сервисов">2.14.1 Порядок миграции сервисов</a></li>
+<li class="toc-item"><a class="toc-link" href="#стратегия-двойной-записи-double-write">2.14.2 Стратегия двойной
 записи (Double Write)</a></li>
-<li><span class="tb"></span><a href="#cut-over-критерии">2.14.3 Cut-over критерии</a></li>
-<li><span class="tb"></span><a href="#rollback-план">2.14.4 Rollback-план</a></li>
-<li><span class="tb"></span><a href="#миграция-исторических-данных">2.14.5 Миграция исторических
+<li class="toc-item"><a class="toc-link" href="#cut-over-критерии">2.14.3 Cut-over критерии</a></li>
+<li class="toc-item"><a class="toc-link" href="#rollback-план">2.14.4 Rollback-план</a></li>
+<li class="toc-item"><a class="toc-link" href="#миграция-исторических-данных">2.14.5 Миграция исторических
 данных</a></li>
-<li><span class="tb"></span><a href="#таблица-рисков-и-митигаций">2.14.6 Таблица рисков и
+<li class="toc-item"><a class="toc-link" href="#таблица-рисков-и-митигаций">2.14.6 Таблица рисков и
 митигаций</a></li>
 </ul>
 </div></li>
-<li class="s"><button class="tb" onclick="tg(this)">▸</button><a href="#rate-limits-quotas">2.15 Rate Limits &amp; Quotas</a><div class="sw"><ul>
-<li><span class="tb"></span><a href="#таблица-лимитов-по-эндпоинтам">2.15.1 Таблица лимитов по
+<li class="toc-item"><button class="toc-toggle">▸</button><a class="toc-link" href="#rate-limits-quotas">2.15 Rate Limits &amp;amp; Quotas</a><div class="toc-children"><ul class="toc-list">
+<li class="toc-item"><a class="toc-link" href="#таблица-лимитов-по-эндпоинтам">2.15.1 Таблица лимитов по
 эндпоинтам</a></li>
-<li><span class="tb"></span><a href="#лимиты-по-ролям">2.15.2 Лимиты по ролям</a></li>
-<li><span class="tb"></span><a href="#http-ответ-при-превышении-лимита">2.15.3 HTTP-ответ при
+<li class="toc-item"><a class="toc-link" href="#лимиты-по-ролям">2.15.2 Лимиты по ролям</a></li>
+<li class="toc-item"><a class="toc-link" href="#http-ответ-при-превышении-лимита">2.15.3 HTTP-ответ при
 превышении лимита</a></li>
-<li><span class="tb"></span><a href="#реализация">2.15.4 Реализация</a></li>
-<li><span class="tb"></span><a href="#burst-политика">2.15.5 Burst-политика</a></li>
+<li class="toc-item"><a class="toc-link" href="#реализация">2.15.4 Реализация</a></li>
+<li class="toc-item"><a class="toc-link" href="#burst-политика">2.15.5 Burst-политика</a></li>
 </ul>
 </div></li>
 </ul>
 </div></li>
-<li class="s"><button class="tb" onclick="tg(this)">▸</button><a href="#data-model">3. Data Model</a><div class="sw"><ul>
-<li><span class="tb"></span><a href="#catalog-schema-архитектура-хранения-каталога">3.2 Catalog Schema
+<li class="toc-item"><button class="toc-toggle">▸</button><a class="toc-link" href="#data-model">3. Data Model</a><div class="toc-children"><ul class="toc-list">
+<li class="toc-item"><a class="toc-link" href="#catalog-schema-архитектура-хранения-каталога">3.2 Catalog Schema
 (Архитектура хранения каталога)</a></li>
-<li><span class="tb"></span><a href="#orders-payments-schema">3.3 Orders &amp; Payments Schema</a></li>
-<li><span class="tb"></span><a href="#users-auth-schema">3.4 Users &amp; Auth Schema</a></li>
-<li><span class="tb"></span><a href="#delivery-dispatch-schema">3.5 Delivery &amp; Dispatch
+<li class="toc-item"><a class="toc-link" href="#orders-payments-schema">3.3 Orders &amp;amp; Payments Schema</a></li>
+<li class="toc-item"><a class="toc-link" href="#users-auth-schema">3.4 Users &amp;amp; Auth Schema</a></li>
+<li class="toc-item"><a class="toc-link" href="#delivery-dispatch-schema">3.5 Delivery &amp;amp; Dispatch
 Schema</a></li>
-<li><span class="tb"></span><a href="#notifications-promotions-schema">3.6 Notifications &amp;
+<li class="toc-item"><a class="toc-link" href="#notifications-promotions-schema">3.6 Notifications &amp;amp;
 Promotions Schema</a></li>
 </ul>
 </div></li>
-<li class="s"><button class="tb" onclick="tg(this)">▸</button><a href="#functional-requirements-функциональные-требования">4. Functional
-Requirements (Функциональные требования)</a><div class="sw"><ul>
-<li class="s"><button class="tb" onclick="tg(this)">▸</button><a href="#customer-domain-клиент">4.1 Customer Domain (Клиент)</a><div class="sw"><ul>
-<li><span class="tb"></span><a href="#bp-01-регистрация-и-аутентификация-14-чел.-дней">BP-01:
+<li class="toc-item"><button class="toc-toggle">▸</button><a class="toc-link" href="#functional-requirements-функциональные-требования">4. Functional
+Requirements (Функциональные требования)</a><div class="toc-children"><ul class="toc-list">
+<li class="toc-item"><button class="toc-toggle">▸</button><a class="toc-link" href="#customer-domain-клиент">4.1 Customer Domain (Клиент)</a><div class="toc-children"><ul class="toc-list">
+<li class="toc-item"><a class="toc-link" href="#bp-01-регистрация-и-аутентификация-14-чел.-дней">BP-01:
 Регистрация и аутентификация (14 чел.-дней)</a></li>
-<li><span class="tb"></span><a href="#bp-02-каталог-и-поиск-товаров-28-чел.-дней">BP-02: Каталог и
+<li class="toc-item"><a class="toc-link" href="#bp-02-каталог-и-поиск-товаров-28-чел.-дней">BP-02: Каталог и
 поиск товаров (28 чел.-дней)</a></li>
-<li><span class="tb"></span><a href="#bp-03-оформление-заказа-корзина-заказ-34-чел.-дней">BP-03:
+<li class="toc-item"><a class="toc-link" href="#bp-03-оформление-заказа-корзина-заказ-34-чел.-дней">BP-03:
 Оформление заказа (Корзина → Заказ) (34 чел.-дней)</a></li>
-<li><span class="tb"></span><a href="#bp-04-оплата-заказа-26-чел.-дней">BP-04: Оплата заказа (26
+<li class="toc-item"><a class="toc-link" href="#bp-04-оплата-заказа-26-чел.-дней">BP-04: Оплата заказа (26
 чел.-дней)</a></li>
-<li><span class="tb"></span><a href="#bp-10-личный-кабинет-и-история-заказов-13-чел.-дней">BP-10:
+<li class="toc-item"><a class="toc-link" href="#bp-10-личный-кабинет-и-история-заказов-13-чел.-дней">BP-10:
 Личный кабинет и история заказов (13 чел.-дней)</a></li>
 </ul>
 </div></li>
-<li class="s"><button class="tb" onclick="tg(this)">▸</button><a href="#picker-domain-пикер">4.2 Picker Domain (Пикер)</a><div class="sw"><ul>
-<li><span class="tb"></span><a href="#bp-05-сборка-и-упаковка-заказа-21-чел.-дней">BP-05: Сборка и
+<li class="toc-item"><button class="toc-toggle">▸</button><a class="toc-link" href="#picker-domain-пикер">4.2 Picker Domain (Пикер)</a><div class="toc-children"><ul class="toc-list">
+<li class="toc-item"><a class="toc-link" href="#bp-05-сборка-и-упаковка-заказа-21-чел.-дней">BP-05: Сборка и
 упаковка заказа (21 чел.-дней)</a></li>
 </ul>
 </div></li>
-<li class="s"><button class="tb" onclick="tg(this)">▸</button><a href="#courier-domain-курьер">4.3 Courier Domain (Курьер)</a><div class="sw"><ul>
-<li><span class="tb"></span><a href="#bp-06-доставка-заказа-29-чел.-дней">BP-06: Доставка заказа (29
+<li class="toc-item"><button class="toc-toggle">▸</button><a class="toc-link" href="#courier-domain-курьер">4.3 Courier Domain (Курьер)</a><div class="toc-children"><ul class="toc-list">
+<li class="toc-item"><a class="toc-link" href="#bp-06-доставка-заказа-29-чел.-дней">BP-06: Доставка заказа (29
 чел.-дней)</a></li>
 </ul>
 </div></li>
-<li class="s"><button class="tb" onclick="tg(this)">▸</button><a href="#admin-domain-администратор">4.4 Admin Domain
-(Администратор)</a><div class="sw"><ul>
-<li><span class="tb"></span><a href="#bp-07-возврат-и-отмена-заказа-14-чел.-дней">BP-07: Возврат и
+<li class="toc-item"><button class="toc-toggle">▸</button><a class="toc-link" href="#admin-domain-администратор">4.4 Admin Domain
+(Администратор)</a><div class="toc-children"><ul class="toc-list">
+<li class="toc-item"><a class="toc-link" href="#bp-07-возврат-и-отмена-заказа-14-чел.-дней">BP-07: Возврат и
 отмена заказа (14 чел.-дней)</a></li>
-<li><span class="tb"></span><a href="#bp-08-управление-промокодами-и-акциями-10-чел.-дней">BP-08:
+<li class="toc-item"><a class="toc-link" href="#bp-08-управление-промокодами-и-акциями-10-чел.-дней">BP-08:
 Управление промокодами и акциями (10 чел.-дней)</a></li>
-<li><span class="tb"></span><a href="#bp-15-dispute-chargeback-workflow-18-чел.-дней">BP-15: Dispute
-&amp; Chargeback Workflow (18 чел.-дней)</a></li>
-<li><span class="tb"></span><a href="#bp-12-аналитика-и-дашборды-15-чел.-дней">BP-12: Аналитика и
+<li class="toc-item"><a class="toc-link" href="#bp-15-dispute-chargeback-workflow-18-чел.-дней">BP-15: Dispute
+&amp;amp; Chargeback Workflow (18 чел.-дней)</a></li>
+<li class="toc-item"><a class="toc-link" href="#bp-12-аналитика-и-дашборды-15-чел.-дней">BP-12: Аналитика и
 дашборды (15 чел.-дней)</a></li>
 </ul>
 </div></li>
-<li class="s"><button class="tb" onclick="tg(this)">▸</button><a href="#b2b-domain-корпоративные-заказы">4.5 B2B Domain (Корпоративные
-заказы)</a><div class="sw"><ul>
-<li><span class="tb"></span><a href="#bp-13-b2b-корпоративные-заказы-27-чел.-дней">BP-13: B2B —
+<li class="toc-item"><button class="toc-toggle">▸</button><a class="toc-link" href="#b2b-domain-корпоративные-заказы">4.5 B2B Domain (Корпоративные
+заказы)</a><div class="toc-children"><ul class="toc-list">
+<li class="toc-item"><a class="toc-link" href="#bp-13-b2b-корпоративные-заказы-27-чел.-дней">BP-13: B2B —
 Корпоративные заказы (27 чел.-дней)</a></li>
 </ul>
 </div></li>
-<li class="s"><button class="tb" onclick="tg(this)">▸</button><a href="#cross-cutting-domains-сквозные">4.6 Cross-Cutting Domains
-(Сквозные)</a><div class="sw"><ul>
-<li><span class="tb"></span><a href="#bp-09-уведомления-push-sms-email-9-чел.-дней">BP-09: Уведомления
+<li class="toc-item"><button class="toc-toggle">▸</button><a class="toc-link" href="#cross-cutting-domains-сквозные">4.6 Cross-Cutting Domains
+(Сквозные)</a><div class="toc-children"><ul class="toc-list">
+<li class="toc-item"><a class="toc-link" href="#bp-09-уведомления-push-sms-email-9-чел.-дней">BP-09: Уведомления
 (Push / SMS / Email) (9 чел.-дней)</a></li>
-<li><span class="tb"></span><a href="#bp-14-dynamic-pricing-динамическое-ценообразование-15-чел.-дней">BP-14:
+<li class="toc-item"><a class="toc-link" href="#bp-14-dynamic-pricing-динамическое-ценообразование-15-чел.-дней">BP-14:
 Dynamic Pricing (динамическое ценообразование) (15 чел.-дней)</a></li>
 </ul>
 </div></li>
-<li><span class="tb"></span><a href="#feature-map-карта-функциональных-требований">4.7 Feature Map
+<li class="toc-item"><a class="toc-link" href="#feature-map-карта-функциональных-требований">4.7 Feature Map
 (Карта функциональных требований)</a></li>
-<li><span class="tb"></span><a href="#cross-cutting-offline-strategy">4.8 Cross-Cutting: Offline
+<li class="toc-item"><a class="toc-link" href="#cross-cutting-offline-strategy">4.8 Cross-Cutting: Offline
 Strategy</a></li>
-<li><span class="tb"></span><a href="#customer-support-workflow">4.9 Customer Support Workflow</a></li>
+<li class="toc-item"><a class="toc-link" href="#customer-support-workflow">4.9 Customer Support Workflow</a></li>
 </ul>
 </div></li>
-<li class="s"><button class="tb" onclick="tg(this)">▸</button><a href="#infrastructure-devops-инфраструктура">5. Infrastructure &amp;
-DevOps (Инфраструктура)</a><div class="sw"><ul>
-<li><span class="tb"></span><a href="#environments-окружения">5.1 Environments (Окружения)</a></li>
-<li><span class="tb"></span><a href="#cicd-pipeline">5.2 CI/CD Pipeline</a></li>
-<li><span class="tb"></span><a href="#deployment-release-strategy">5.3 Deployment &amp; Release
+<li class="toc-item"><button class="toc-toggle">▸</button><a class="toc-link" href="#infrastructure-devops-инфраструктура">5. Infrastructure &amp;amp;
+DevOps (Инфраструктура)</a><div class="toc-children"><ul class="toc-list">
+<li class="toc-item"><a class="toc-link" href="#environments-окружения">5.1 Environments (Окружения)</a></li>
+<li class="toc-item"><a class="toc-link" href="#cicd-pipeline">5.2 CI/CD Pipeline</a></li>
+<li class="toc-item"><a class="toc-link" href="#deployment-release-strategy">5.3 Deployment &amp;amp; Release
 Strategy</a></li>
-<li><span class="tb"></span><a href="#monitoring-alerting">5.4 Monitoring &amp; Alerting</a></li>
-<li><span class="tb"></span><a href="#performance-slas">5.5 Performance &amp; SLAs</a></li>
-<li><span class="tb"></span><a href="#incident-response">5.6 Incident Response</a></li>
-<li><span class="tb"></span><a href="#backup-disaster-recovery">5.7 Backup &amp; Disaster
+<li class="toc-item"><a class="toc-link" href="#monitoring-alerting">5.4 Monitoring &amp;amp; Alerting</a></li>
+<li class="toc-item"><a class="toc-link" href="#performance-slas">5.5 Performance &amp;amp; SLAs</a></li>
+<li class="toc-item"><a class="toc-link" href="#incident-response">5.6 Incident Response</a></li>
+<li class="toc-item"><a class="toc-link" href="#backup-disaster-recovery">5.7 Backup &amp;amp; Disaster
 Recovery</a></li>
-<li><span class="tb"></span><a href="#finops-оптимизация-расходов-на-облако">5.8 FinOps (Оптимизация
+<li class="toc-item"><a class="toc-link" href="#finops-оптимизация-расходов-на-облако">5.8 FinOps (Оптимизация
 расходов на облако)</a></li>
-<li><span class="tb"></span><a href="#service-readiness-checklist">5.9 Service Readiness
+<li class="toc-item"><a class="toc-link" href="#service-readiness-checklist">5.9 Service Readiness
 Checklist</a></li>
-<li><span class="tb"></span><a href="#vendor-lock-in-exit-strategy">5.10 Vendor Lock-in &amp; Exit
+<li class="toc-item"><a class="toc-link" href="#vendor-lock-in-exit-strategy">5.10 Vendor Lock-in &amp;amp; Exit
 Strategy</a></li>
-<li><span class="tb"></span><a href="#multi-region-disaster-recovery">5.11 Multi-Region &amp; Disaster
+<li class="toc-item"><a class="toc-link" href="#multi-region-disaster-recovery">5.11 Multi-Region &amp;amp; Disaster
 Recovery</a></li>
 </ul>
 </div></li>
-<li class="s"><button class="tb" onclick="tg(this)">▸</button><a href="#security-compliance-безопасность">6. Security &amp; Compliance
-(Безопасность)</a><div class="sw"><ul>
-<li><span class="tb"></span><a href="#authentication-authorization">6.1 Authentication &amp;
+<li class="toc-item"><button class="toc-toggle">▸</button><a class="toc-link" href="#security-compliance-безопасность">6. Security &amp;amp; Compliance
+(Безопасность)</a><div class="toc-children"><ul class="toc-list">
+<li class="toc-item"><a class="toc-link" href="#authentication-authorization">6.1 Authentication &amp;amp;
 Authorization</a></li>
-<li><span class="tb"></span><a href="#data-protection">6.2 Data Protection</a></li>
-<li><span class="tb"></span><a href="#compliance-matrix-юридические-требования">6.3 Compliance Matrix
+<li class="toc-item"><a class="toc-link" href="#data-protection">6.2 Data Protection</a></li>
+<li class="toc-item"><a class="toc-link" href="#compliance-matrix-юридические-требования">6.3 Compliance Matrix
 (Юридические требования)</a></li>
-<li><span class="tb"></span><a href="#accessibility-доступность">6.4 Accessibility (Доступность)</a></li>
-<li class="s"><button class="tb" onclick="tg(this)">▸</button><a href="#fraud-detection-requirements">6.5 Fraud Detection
-Requirements</a><div class="sw"><ul>
-<li><span class="tb"></span><a href="#сигналы-правила">6.5.1 Сигналы (правила)</a></li>
-<li><span class="tb"></span><a href="#scoring-модель">6.5.2 Scoring-модель</a></li>
-<li><span class="tb"></span><a href="#workflow-проверки">6.5.3 Workflow проверки</a></li>
-<li><span class="tb"></span><a href="#интеграции">6.5.4 Интеграции</a></li>
-<li><span class="tb"></span><a href="#feedback-loop">6.5.5 Feedback loop</a></li>
-<li><span class="tb"></span><a href="#метрики-эффективности">6.5.6 Метрики эффективности</a></li>
+<li class="toc-item"><a class="toc-link" href="#accessibility-доступность">6.4 Accessibility (Доступность)</a></li>
+<li class="toc-item"><button class="toc-toggle">▸</button><a class="toc-link" href="#fraud-detection-requirements">6.5 Fraud Detection
+Requirements</a><div class="toc-children"><ul class="toc-list">
+<li class="toc-item"><a class="toc-link" href="#сигналы-правила">6.5.1 Сигналы (правила)</a></li>
+<li class="toc-item"><a class="toc-link" href="#scoring-модель">6.5.2 Scoring-модель</a></li>
+<li class="toc-item"><a class="toc-link" href="#workflow-проверки">6.5.3 Workflow проверки</a></li>
+<li class="toc-item"><a class="toc-link" href="#интеграции">6.5.4 Интеграции</a></li>
+<li class="toc-item"><a class="toc-link" href="#feedback-loop">6.5.5 Feedback loop</a></li>
+<li class="toc-item"><a class="toc-link" href="#метрики-эффективности">6.5.6 Метрики эффективности</a></li>
 </ul>
 </div></li>
 </ul>
 </div></li>
-<li class="s"><button class="tb" onclick="tg(this)">▸</button><a href="#testing-strategy-стратегия-тестирования">7. Testing Strategy
-(Стратегия тестирования)</a><div class="sw"><ul>
-<li><span class="tb"></span><a href="#test-levels">7.1 Test Levels</a></li>
-<li><span class="tb"></span><a href="#инфраструктура-тестирования">7.2 Инфраструктура
+<li class="toc-item"><button class="toc-toggle">▸</button><a class="toc-link" href="#testing-strategy-стратегия-тестирования">7. Testing Strategy
+(Стратегия тестирования)</a><div class="toc-children"><ul class="toc-list">
+<li class="toc-item"><a class="toc-link" href="#test-levels">7.1 Test Levels</a></li>
+<li class="toc-item"><a class="toc-link" href="#инфраструктура-тестирования">7.2 Инфраструктура
 тестирования</a></li>
-<li><span class="tb"></span><a href="#critical-e2e-scenarios">7.3 Critical E2E Scenarios</a></li>
-<li><span class="tb"></span><a href="#load-testing-targets">7.4 Load Testing Targets</a></li>
+<li class="toc-item"><a class="toc-link" href="#critical-e2e-scenarios">7.3 Critical E2E Scenarios</a></li>
+<li class="toc-item"><a class="toc-link" href="#load-testing-targets">7.4 Load Testing Targets</a></li>
 </ul>
 </div></li>
-<li class="s"><button class="tb" onclick="tg(this)">▸</button><a href="#project-estimation-roadmap-оценка-и-план">8. Project Estimation
-&amp; Roadmap (Оценка и план)</a><div class="sw"><ul>
-<li><span class="tb"></span><a href="#effort-estimation-by-bp">8.1 Effort Estimation by BP</a></li>
-<li><span class="tb"></span><a href="#store-integration-costs">8.2 Store Integration Costs</a></li>
-<li class="s"><button class="tb" onclick="tg(this)">▸</button><a href="#mvp-vs-v2-vs-v3-roadmap">8.3 MVP vs V2 vs V3 Roadmap</a><div class="sw"><ul>
-<li><span class="tb"></span><a href="#moscow-приоритизация-внутри-mvp">8.3.1 MoSCoW-приоритизация
+<li class="toc-item"><button class="toc-toggle">▸</button><a class="toc-link" href="#project-estimation-roadmap-оценка-и-план">8. Project Estimation
+&amp;amp; Roadmap (Оценка и план)</a><div class="toc-children"><ul class="toc-list">
+<li class="toc-item"><a class="toc-link" href="#effort-estimation-by-bp">8.1 Effort Estimation by BP</a></li>
+<li class="toc-item"><a class="toc-link" href="#store-integration-costs">8.2 Store Integration Costs</a></li>
+<li class="toc-item"><button class="toc-toggle">▸</button><a class="toc-link" href="#mvp-vs-v2-vs-v3-roadmap">8.3 MVP vs V2 vs V3 Roadmap</a><div class="toc-children"><ul class="toc-list">
+<li class="toc-item"><a class="toc-link" href="#moscow-приоритизация-внутри-mvp">8.3.1 MoSCoW-приоритизация
 внутри MVP</a></li>
-<li><span class="tb"></span><a href="#дорожная-карта-по-этапам">8.3.2 Дорожная карта по этапам</a></li>
+<li class="toc-item"><a class="toc-link" href="#дорожная-карта-по-этапам">8.3.2 Дорожная карта по этапам</a></li>
 </ul>
 </div></li>
 </ul>
 </div></li>
-<li class="s"><button class="tb" onclick="tg(this)">▸</button><a href="#appendices-приложения">9. Appendices (Приложения)</a><div class="sw"><ul>
-<li><span class="tb"></span><a href="#о-документе-discovery-фаза">9.1 О документе: Discovery-фаза</a></li>
-<li><span class="tb"></span><a href="#references-open-source">9.2 References &amp; Open-Source</a></li>
-<li><span class="tb"></span><a href="#completeness-checklist">9.3 Completeness Checklist</a></li>
-<li><span class="tb"></span><a href="#developer-quick-start">9.4 Developer Quick-Start</a></li>
+<li class="toc-item"><button class="toc-toggle">▸</button><a class="toc-link" href="#appendices-приложения">9. Appendices (Приложения)</a><div class="toc-children"><ul class="toc-list">
+<li class="toc-item"><a class="toc-link" href="#о-документе-discovery-фаза">9.1 О документе: Discovery-фаза</a></li>
+<li class="toc-item"><a class="toc-link" href="#references-open-source">9.2 References &amp;amp; Open-Source</a></li>
+<li class="toc-item"><a class="toc-link" href="#completeness-checklist">9.3 Completeness Checklist</a></li>
+<li class="toc-item"><a class="toc-link" href="#developer-quick-start">9.4 Developer Quick-Start</a></li>
+<li class="toc-item"><a class="toc-link" href="#текущее-состояние-системы-as-is-1">9.5 Текущее состояние системы
+(AS IS)</a></li>
 </ul>
 </div></li>
 </ul>
+</nav>
 </div>
-</div>
-<div id="content">
+<main id="content">
 <header id="title-block-header">
 <h1 class="title">SRS</h1>
 </header>
@@ -397,8 +315,183 @@ Specification</h1>
 <p><strong>Назначение:</strong> Документ спецификации программного
 продукта — агрегатора доставки продуктов из супермаркетов.
 <strong>Цель:</strong> Позволить команде разработки оценить трудозатраты
-и реализовать продукт-аналог.</p>
+и реализовать продукт-аналог. <strong>Источник данных:</strong>
+<code>ШАБЛОН_СПЕЦИФИКАЦИИ_ПРОДУКТА.md</code> — черновой документ, из
+которого данные перенесены в эту SRS.</p>
 </blockquote>
+<h2 id="changelog">Changelog</h2>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 18%" />
+<col style="width: 21%" />
+<col style="width: 34%" />
+</colgroup>
+<thead>
+<tr>
+<th>Версия</th>
+<th>Дата</th>
+<th>Автор</th>
+<th>Изменения</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2.0</td>
+<td>2026-06-19</td>
+<td>—</td>
+<td>Prompt 18: Ревизия по реальным данным из <code>rewiew/</code> —
+обновлён Tech Stack (§2.2), Data Model (§3) приведена к реальной схеме
+<code>db/schema.rb</code>, добавлено примечание о монолитном API V10
+(§2.7), обновлены интеграции (§2.5), дополнен AS IS (§1.1.2)</td>
+</tr>
+<tr>
+<td>1.17</td>
+<td>2026-06-17</td>
+<td>—</td>
+<td>Prompt 17: Финальная сквозная проверка — исправлен TODO в <a
+href="#cross-cutting-offline-strategy">§4.8</a> (офлайн-карты), все 15
+BP, 7 ADR, 12 event schemas, 17 analytics events верифицированы</td>
+</tr>
+<tr>
+<td>1.16</td>
+<td>2026-06-17</td>
+<td>—</td>
+<td>Prompt 16: Multi-Region &amp; DR — <a
+href="#multi-region-disaster-recovery">§5.11</a>, Active-Passive/V2/V3
+эволюция, geo-routing, data sync (PG/Redis/RabbitMQ/S3/ES), failover
+procedure (runbook), regional dependencies</td>
+</tr>
+<tr>
+<td>1.15</td>
+<td>2026-06-17</td>
+<td>—</td>
+<td>Prompt 15: Vendor Lock-in &amp; Exit Strategy — <a
+href="#vendor-lock-in-exit-strategy">§5.10</a>, матрица 12 зависимостей,
+план выхода по категориям риска, contractual safeguards</td>
+</tr>
+<tr>
+<td>1.14</td>
+<td>2026-06-17</td>
+<td>—</td>
+<td>Prompt 14: Analytics Events Schema — <a
+href="#analytics-events-schema">§2.6.1</a>, стандартная схема, каталог
+17 событий с sampling, PII-фильтрация, интеграции (Яндекс.Метрика,
+Firebase, ClickHouse, Amplitude), enforcement</td>
+</tr>
+<tr>
+<td>1.13</td>
+<td>2026-06-17</td>
+<td>—</td>
+<td>Prompt 13: Frontend Performance Budget — <a
+href="#frontend-performance-budget">§1.3.1</a>, Core Web Vitals,
+bundle/image/font/third-party бюджеты, monitoring, enforcement в CI</td>
+</tr>
+<tr>
+<td>1.12</td>
+<td>2026-06-17</td>
+<td>—</td>
+<td>Prompt 12: Compliance Matrix — полная матрица (12 требований), риски
+несоответствия, roadmap MVP/V2/V3</td>
+</tr>
+<tr>
+<td>1.11</td>
+<td>2026-06-17</td>
+<td>—</td>
+<td>Prompt 11: Fraud Detection — <a
+href="#fraud-detection-requirements">§6.5</a>, сигналы (velocity, geo,
+device, behavioral), scoring-модель, workflow (Mermaid), интеграции,
+feedback loop, метрики</td>
+</tr>
+<tr>
+<td>1.10</td>
+<td>2026-06-17</td>
+<td>—</td>
+<td>Prompt 10: Dispute &amp; Chargeback Workflow — <a
+href="#bp-15-dispute-chargeback-workflow-18-чел.-дней">BP-15</a>, типы
+споров, workflow (Mermaid state machine), таблица ответственности,
+блокировка клиентов, SLA, финансовые последствия</td>
+</tr>
+<tr>
+<td>1.9</td>
+<td>2026-06-17</td>
+<td>—</td>
+<td>Prompt 9: Rate Limits &amp; Quotas — таблица лимитов по 10
+эндпоинтам, лимиты по ролям, HTTP 429, реализация Nginx+Redis,
+burst-политика</td>
+</tr>
+<tr>
+<td>1.8</td>
+<td>2026-06-17</td>
+<td>—</td>
+<td>Prompt 8: Data Migration Strategy — порядок миграции, Double Write +
+Transactional Outbox, reconciliation, cut-over criteria, rollback,
+backfill, таблица рисков</td>
+</tr>
+<tr>
+<td>1.7</td>
+<td>2026-06-17</td>
+<td>—</td>
+<td>Review fix: Courier SM (добавлены 2 перехода в таблицу), Idempotency
+Policy (противоречие, код), Sequence 2.11.1/2.11.2 (retry/fallback),
+созданы migrations/*.sql и db/schema.rb</td>
+</tr>
+<tr>
+<td>1.6</td>
+<td>2026-06-17</td>
+<td>—</td>
+<td>Prompt 7: API Versioning &amp; Deprecation Policy — SLA,
+уведомления, mobile strategy, feature flags, Error Code Standard</td>
+</tr>
+<tr>
+<td>1.5</td>
+<td>2026-06-17</td>
+<td>—</td>
+<td>Prompt 6: Idempotency Policy — общие правила, таблица эндпоинтов,
+edge cases, примеры кода (Rails/Go)</td>
+</tr>
+<tr>
+<td>1.4</td>
+<td>2026-06-17</td>
+<td>—</td>
+<td>Prompt 5: Event JSON Schemas — Envelope + 12 полных JSON Schema
+(draft-07) для всех событий из <a href="#event-catalog">§2.9</a></td>
+</tr>
+<tr>
+<td>1.3</td>
+<td>2026-06-17</td>
+<td>—</td>
+<td>Prompt 4: Sequence Diagrams для 5 сценариев (Order flow,
+Substitution, Dispatch, Refund, Offline-sync) с Mermaid
+sequenceDiagram</td>
+</tr>
+<tr>
+<td>1.2</td>
+<td>2026-06-17</td>
+<td>—</td>
+<td>Prompt 3: State Machine Diagrams для 5 сущностей (Order, Payment,
+Delivery, Courier, Picker Task) с Mermaid + таблицами переходов</td>
+</tr>
+<tr>
+<td>1.1</td>
+<td>2026-06-17</td>
+<td>—</td>
+<td>Prompt 2: User Stories + Acceptance Criteria для всех 14 BP (<a
+href="#bp-01-регистрация-и-аутентификация-14-чел.-дней">BP-01</a>…<a
+href="#bp-14-dynamic-pricing-динамическое-ценообразование-15-чел.-дней">BP-14</a>),
+Placeholder-ссылки на State Machine / Sequence / API</td>
+</tr>
+<tr>
+<td>1.0</td>
+<td>2026-06-17</td>
+<td>—</td>
+<td>Структурная реорганизация: разделение на 2 тома (Business
+Requirements + Technical Specification), вынос артефактов в отдельные
+файлы, сокращение <a href="#accessibility-доступность">§6.4</a>
+Accessibility</td>
+</tr>
+</tbody>
+</table>
 <h2 id="как-читать-этот-документ">Как читать этот документ</h2>
 <p>SRS разделён на два тома. В зависимости от вашей роли читайте
 соответствующие разделы:</p>
@@ -1571,12 +1664,17 @@ href="business_model.md">business_model.md</a>. Кратко: план по ср
 </tr>
 </tbody>
 </table>
+<h4 id="франшиза-franchise-model">1.6.6 Франшиза (Franchise Model)</h4>
+<p>Подробнее — в <a
+href="roadmap/V3_FRANCHISE.md">roadmap/V3_FRANCHISE.md</a>. Этап
+внедрения: V3.</p>
 <h1 id="том-2-technical-specification">Том 2: Technical
 Specification</h1>
 <h2 id="system-architecture-архитектура-системы">2. System Architecture
 (Архитектура системы)</h2>
 <h3 id="architecture-style-patterns">2.1 Architecture Style &amp;
 Patterns</h3>
+<p><strong>Источник:</strong> Раздел 5.7.1 исходного документа.</p>
 <p><strong>Микросервисная архитектура</strong> (миграция с монолита
 Rails).</p>
 <p><em>Обоснование:</em> каждый BP можно масштабировать независимо,
@@ -1780,6 +1878,7 @@ ltree, pg_trgm, pgcrypto, plpgsql, pageinspect, pg_stat_statements)</td>
 </tbody>
 </table>
 <h3 id="microservices-breakdown">2.3 Microservices Breakdown</h3>
+<p><strong>Источник:</strong> Раздел 5.7.2 исходного документа.</p>
 <table>
 <colgroup>
 <col style="width: 20%" />
@@ -1917,6 +2016,7 @@ reservation-логики, (в) живут по своим SLA.</p>
 → сервисы). Event Sourcing — EventStoreDB для Order.</p>
 <h3 id="architecture-decision-records-adrs">2.4 Architecture Decision
 Records (ADRs)</h3>
+<p><strong>Источник:</strong> Раздел 5.7.3 исходного документа.</p>
 <table>
 <colgroup>
 <col style="width: 25%" />
@@ -1980,6 +2080,7 @@ search</strong></td>
 </table>
 <h3 id="integration-context-map-context-map">2.5 Integration Context Map
 (Context Map)</h3>
+<p><strong>Источник:</strong> Раздел 5.7.4 исходного документа.</p>
 <pre class="mermaid"><code>graph TB
     subgraph &quot;Внешние системы&quot;
         L[Лента Pickup API + парсинг]
@@ -2046,6 +2147,7 @@ href="integrations/super_babylon.md">integrations/super_babylon.md</a> —
 без API, физическая сборка в магазине</li>
 </ul>
 <h3 id="observability">2.6 Observability</h3>
+<p><strong>Источник:</strong> Раздел 5.7.5 исходного документа.</p>
 <table>
 <colgroup>
 <col style="width: 33%" />
@@ -2536,6 +2638,14 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb3-1"><a href="
 </tr>
 </tbody>
 </table>
+<h3 id="mobile-application-architecture">2.8 Mobile Application
+Architecture</h3>
+<p>Подробное описание мобильной архитектуры вынесено в отдельный ADR:
+<strong><code>ADR-007: Mobile Architecture</code></strong>.</p>
+<p>Кратко: клиентские приложения на Flutter 3.x, единая кодовая база для
+iOS/Android. State management: Provider (пикер), BLoC + Provider
+(курьер), MobX (клиент). Offline: Hive (курьер), Firestore offline
+persistence (пикер).</p>
 <h3 id="event-catalog">2.9 Event Catalog</h3>
 <p>Система событий (Event-Driven через RabbitMQ). Каждое событие
 публикуется одним сервисом, потребляется одним или несколькими.</p>
@@ -7329,6 +7439,7 @@ Queue — batch upload при появлении сети. Off-route detection �
 <h2 id="infrastructure-devops-инфраструктура">5. Infrastructure &amp;
 DevOps (Инфраструктура)</h2>
 <h3 id="environments-окружения">5.1 Environments (Окружения)</h3>
+<p><strong>Источник:</strong> Раздел 5.10.1 исходного документа.</p>
 <table>
 <colgroup>
 <col style="width: 20%" />
@@ -7371,6 +7482,7 @@ DevOps (Инфраструктура)</h2>
 </tbody>
 </table>
 <h3 id="cicd-pipeline">5.2 CI/CD Pipeline</h3>
+<p><strong>Источник:</strong> Раздел 5.10.2 исходного документа.</p>
 <pre class="mermaid"><code>graph LR
     A[Push PR] --&gt; B[Lint]
     B --&gt; C[Unit Tests]
@@ -7396,6 +7508,7 @@ Docker-образа</li>
 </ul>
 <h3 id="deployment-release-strategy">5.3 Deployment &amp; Release
 Strategy</h3>
+<p><strong>Источник:</strong> Раздел 5.15 исходного документа.</p>
 <p><strong>Цикл релиза:</strong></p>
 <table>
 <colgroup>
@@ -7497,6 +7610,7 @@ Strategy</h3>
 </tbody>
 </table>
 <h3 id="monitoring-alerting">5.4 Monitoring &amp; Alerting</h3>
+<p><strong>Источник:</strong> Раздел 5.7.5 исходного документа.</p>
 <ul>
 <li>Prometheus + Grafana (метрики, дашборды)</li>
 <li>Loki + Promtail (логи)</li>
@@ -8198,6 +8312,7 @@ class="sourceCode bash"><code class="sourceCode bash"><span id="cb45-1"><a href=
 (Безопасность)</h2>
 <h3 id="authentication-authorization">6.1 Authentication &amp;
 Authorization</h3>
+<p><strong>Источник:</strong> Раздел 5.13.1 исходного документа.</p>
 <table>
 <colgroup>
 <col style="width: 33%" />
@@ -8247,6 +8362,7 @@ Authorization</h3>
 </tbody>
 </table>
 <h3 id="data-protection">6.2 Data Protection</h3>
+<p><strong>Источник:</strong> Раздел 5.13.2 исходного документа.</p>
 <table>
 <colgroup>
 <col style="width: 50%" />
@@ -9375,20 +9491,26 @@ CI)</td>
 </tr>
 </tbody>
 </table>
-</div>
-<script>
-function t(){const s=document.getElementById('sidebar'),o=document.getElementById('sidebar-overlay');s.classList.toggle('open');o.classList.toggle('show')}
-function tg(b){b.classList.toggle('open');b.nextElementSibling.nextElementSibling.classList.toggle('open')}
-const si=[];document.querySelectorAll('#content h2,#content h3,#content h4').forEach(h=>{const id=h.id||'',t=h.textContent.trim();let e=h.nextElementSibling,c='';while(e&&!/^h[234]$/i.test(e.tagName)){c+=' '+(e.textContent||'').trim();e=e.nextElementSibling;if(c.length>200)break}si.push({id,text:t,context:c.trim().slice(0,300)})});
-function s(q){const r=document.getElementById('search-results');if(!q||q.length<2){r.classList.remove('show');return}q=q.toLowerCase();const m=si.filter(e=>e.text.toLowerCase().includes(q)||e.context.toLowerCase().includes(q)).slice(0,20);if(!m.length){r.classList.remove('show');return}r.innerHTML=m.map(x=>'<a href="#'+x.id+'" onclick="t()"><b>'+esc(x.text)+'</b><br><small>'+esc(x.context.slice(0,120))+'</small></a>').join('');r.classList.add('show')}
-function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
-document.getElementById('toc-container').addEventListener('click',function(e){var a=e.target.closest('a');if(a&&a.getAttribute('href')&&a.getAttribute('href').startsWith('#')){setTimeout(function(){t()},100)}})
-document.addEventListener('click',function(e){if(!e.target.closest('#search-wrap'))document.getElementById('search-results').classList.remove('show')});
-document.getElementById('search').addEventListener('input',function(){s(this.value);document.getElementById('search-clear').style.display=this.value?'block':'none'});
-function c(){const i=document.getElementById('search');i.value='';i.focus();s('');document.getElementById('search-clear').style.display='none'}
-function d(){document.body.classList.toggle('dark');document.getElementById('theme-switch').textContent=document.body.classList.contains('dark')?'◐':'●';try{localStorage.setItem('dark',document.body.classList.contains('dark')?'1':'0')}catch(e){}}
-try{if(localStorage.getItem('dark')==='1')d()}catch(e){}
-window.addEventListener('scroll',function(){const h=document.documentElement;p=(h.scrollTop/(h.scrollHeight-h.clientHeight))*100;document.getElementById('progress-bar').style.width=p+'%';let a='';document.querySelectorAll('#content h2,#content h3,#content h4').forEach(h=>{if(h.getBoundingClientRect().top<60)a=''+h.id});document.querySelectorAll('#toc-container a').forEach(l=>l.classList.toggle('active',l.getAttribute('href')==='#'+a))})
-</script>
+<p><strong>Локальный запуск:</strong></p>
+<div class="sourceCode" id="cb47"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose up          <span class="co"># поднять все сервисы</span></span>
+<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose up <span class="at">-d</span> pg redis rabbitmq  <span class="co"># только инфраструктура</span></span>
+<span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a><span class="ex">rails</span> s                    <span class="co"># backend (dev)</span></span>
+<span id="cb47-4"><a href="#cb47-4" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run dev                <span class="co"># frontend (dev)</span></span></code></pre></div>
+<p><strong>Первый PR:</strong></p>
+<ol type="1">
+<li>Создать feature branch от <code>main</code></li>
+<li><code>git commit -m "feat: ..."</code> (линтер проверит)</li>
+<li>Открыть Pull Request → CI запустит lint + unit + integration</li>
+<li>После approval — squash merge в <code>main</code></li>
+<li>Авто-деплой на staging; прод — вручную через GitHub Actions</li>
+</ol>
+<h3 id="текущее-состояние-системы-as-is-1">9.5 Текущее состояние системы
+(AS IS)</h3>
+<p>Полное описание AS IS вынесено в <a
+href="AUDIT_AS_IS.md">AUDIT_AS_IS.md</a>. Включает: схему БД,
+API-запросы, ключевые алгоритмы, инфраструктуру и состав команды.</p>
+</main>
+<script src="assets/js/app.js"></script>
 </body>
 </html>
