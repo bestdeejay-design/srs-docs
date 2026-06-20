@@ -7174,6 +7174,78 @@ final_fee = base_delivery_fee * product(multipliers)</code></pre>
 </table>
 <h3 id="feature-map-карта-функциональных-требований">4.7 Feature Map
 (Карта функциональных требований)</h3>
+<pre class="mermaid"><code>mindmap
+  root((Продукт))
+    Регистрация и безопасность
+      Вход по телефону
+      SMS-подтверждение
+      Роли: клиент/пикер/курьер/админ/суперадмин
+      JWT access + refresh токены
+      Rate limiting
+      Audit log
+    Каталог
+      Выбор магазина по адресу
+      Категории (3 уровня)
+      Поиск (Elasticsearch)
+      Динамические фильтры
+      Карточка товара
+      Нормализация данных сетей
+      Маппинг категорий сети → платформа
+      Адаптеры сетей
+      Синхронизация цен/остатков
+    Корзина
+      Добавление товаров
+      Промокоды и баллы
+      Dynamic Pricing
+      Пересчёт стоимости
+      Оформление
+    Заказы
+      Создание
+      Статусы
+      Замена товара
+      Возврат и отмена
+      Event Sourcing
+    Доставка
+      Временные слоты
+      Dispatch
+      ETA (OSRM + ML)
+      Трекинг
+    Платежи
+      Т-Банк / СБП
+      Карта / Наличные
+      Refund
+      Чек (54-ФЗ)
+    Уведомления
+      Push / SMS / Email / Telegram
+    Админка
+      Управление заказами и товарами
+      Пользователи / Промокоды
+      Курьеры и пикеры
+      Магазины и зоны
+    B2B
+      Корпоративные заказы
+      Регулярные поставки
+      Индивидуальные цены
+      ЭДО / Счета
+    Dynamic Pricing
+      base_fee × multipliers
+      Надбавка до 2×
+    Приложение пикера
+      Список заказов
+      Сканер (Scandit)
+      Замены товаров
+      Offline-режим
+    Приложение курьера
+      Навигация / Offline
+      Оплата / POD
+    Инфраструктура
+      CI/CD / Docker → K8s
+      Мониторинг / Sentry
+      Feature flags
+    Тестирование
+      Unit / Integration / Contract / E2E / Load / Security
+    Аналитика
+      Дашборды / Метрики / Отчёты</code></pre>
 <ul>
 <li><strong>Регистрация и безопасность</strong>
 <ul>
@@ -8244,24 +8316,24 @@ order creation</td>
 </tbody>
 </table>
 <p><strong>Runbook (MVP failover):</strong></p>
-<div class="sourceCode" id="cb45"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Проверить, что standby жив</span></span>
-<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> deploy@standby-selectel <span class="st">&quot;pg_isready -h localhost&quot;</span></span>
-<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Promote standby → master</span></span>
-<span id="cb45-5"><a href="#cb45-5" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> deploy@standby-selectel <span class="st">&quot;pg_ctl promote -D /var/lib/postgresql/data&quot;</span></span>
-<span id="cb45-6"><a href="#cb45-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb45-7"><a href="#cb45-7" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Обновить DNS</span></span>
-<span id="cb45-8"><a href="#cb45-8" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-X</span> PATCH <span class="st">&quot;https://api.cloudflare.com/client/v4/zones/</span><span class="va">$ZONE</span><span class="st">/dns_records/</span><span class="va">$RECORD</span><span class="st">&quot;</span> <span class="dt">\</span></span>
-<span id="cb45-9"><a href="#cb45-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">-H</span> <span class="st">&quot;Authorization: Bearer </span><span class="va">$TOKEN</span><span class="st">&quot;</span> <span class="dt">\</span></span>
-<span id="cb45-10"><a href="#cb45-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">-H</span> <span class="st">&quot;Content-Type: application/json&quot;</span> <span class="dt">\</span></span>
-<span id="cb45-11"><a href="#cb45-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">-d</span> <span class="st">&#39;{&quot;content&quot;: &quot;STANDBY_IP&quot;, &quot;ttl&quot;: 60}&#39;</span></span>
-<span id="cb45-12"><a href="#cb45-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb45-13"><a href="#cb45-13" aria-hidden="true" tabindex="-1"></a><span class="co"># 4. Перезапустить приложения в standby-region с новым DB_HOST</span></span>
-<span id="cb45-14"><a href="#cb45-14" aria-hidden="true" tabindex="-1"></a><span class="ex">gh</span> workflow run deploy.yml <span class="at">-f</span> region=standby <span class="at">-f</span> db_host=localhost</span>
-<span id="cb45-15"><a href="#cb45-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb45-16"><a href="#cb45-16" aria-hidden="true" tabindex="-1"></a><span class="co"># 5. Проверить healthcheck</span></span>
-<span id="cb45-17"><a href="#cb45-17" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-f</span> https://health.example.com/api/health <span class="kw">&amp;&amp;</span> <span class="bu">echo</span> <span class="st">&quot;OK&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb46"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Проверить, что standby жив</span></span>
+<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> deploy@standby-selectel <span class="st">&quot;pg_isready -h localhost&quot;</span></span>
+<span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb46-4"><a href="#cb46-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Promote standby → master</span></span>
+<span id="cb46-5"><a href="#cb46-5" aria-hidden="true" tabindex="-1"></a><span class="fu">ssh</span> deploy@standby-selectel <span class="st">&quot;pg_ctl promote -D /var/lib/postgresql/data&quot;</span></span>
+<span id="cb46-6"><a href="#cb46-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb46-7"><a href="#cb46-7" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Обновить DNS</span></span>
+<span id="cb46-8"><a href="#cb46-8" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-X</span> PATCH <span class="st">&quot;https://api.cloudflare.com/client/v4/zones/</span><span class="va">$ZONE</span><span class="st">/dns_records/</span><span class="va">$RECORD</span><span class="st">&quot;</span> <span class="dt">\</span></span>
+<span id="cb46-9"><a href="#cb46-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">-H</span> <span class="st">&quot;Authorization: Bearer </span><span class="va">$TOKEN</span><span class="st">&quot;</span> <span class="dt">\</span></span>
+<span id="cb46-10"><a href="#cb46-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">-H</span> <span class="st">&quot;Content-Type: application/json&quot;</span> <span class="dt">\</span></span>
+<span id="cb46-11"><a href="#cb46-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">-d</span> <span class="st">&#39;{&quot;content&quot;: &quot;STANDBY_IP&quot;, &quot;ttl&quot;: 60}&#39;</span></span>
+<span id="cb46-12"><a href="#cb46-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb46-13"><a href="#cb46-13" aria-hidden="true" tabindex="-1"></a><span class="co"># 4. Перезапустить приложения в standby-region с новым DB_HOST</span></span>
+<span id="cb46-14"><a href="#cb46-14" aria-hidden="true" tabindex="-1"></a><span class="ex">gh</span> workflow run deploy.yml <span class="at">-f</span> region=standby <span class="at">-f</span> db_host=localhost</span>
+<span id="cb46-15"><a href="#cb46-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb46-16"><a href="#cb46-16" aria-hidden="true" tabindex="-1"></a><span class="co"># 5. Проверить healthcheck</span></span>
+<span id="cb46-17"><a href="#cb46-17" aria-hidden="true" tabindex="-1"></a><span class="ex">curl</span> <span class="at">-f</span> https://health.example.com/api/health <span class="kw">&amp;&amp;</span> <span class="bu">echo</span> <span class="st">&quot;OK&quot;</span></span></code></pre></div>
 <h2 id="security-compliance-безопасность">6. Security &amp; Compliance
 (Безопасность)</h2>
 <h3 id="authentication-authorization">6.1 Authentication &amp;
@@ -9440,11 +9512,11 @@ CI)</td>
 </tbody>
 </table>
 <p><strong>Локальный запуск:</strong></p>
-<div class="sourceCode" id="cb47"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose up          <span class="co"># поднять все сервисы</span></span>
-<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose up <span class="at">-d</span> pg redis rabbitmq  <span class="co"># только инфраструктура</span></span>
-<span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a><span class="ex">rails</span> s                    <span class="co"># backend (dev)</span></span>
-<span id="cb47-4"><a href="#cb47-4" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run dev                <span class="co"># frontend (dev)</span></span></code></pre></div>
+<div class="sourceCode" id="cb48"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose up          <span class="co"># поднять все сервисы</span></span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> compose up <span class="at">-d</span> pg redis rabbitmq  <span class="co"># только инфраструктура</span></span>
+<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a><span class="ex">rails</span> s                    <span class="co"># backend (dev)</span></span>
+<span id="cb48-4"><a href="#cb48-4" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run dev                <span class="co"># frontend (dev)</span></span></code></pre></div>
 <p><strong>Первый PR:</strong></p>
 <ol type="1">
 <li>Создать feature branch от <code>main</code></li>
