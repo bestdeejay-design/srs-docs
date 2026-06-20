@@ -165,12 +165,6 @@
     var blocks = document.querySelectorAll('pre.mermaid');
     if (!blocks.length) return;
 
-    function htmlDecode(s) {
-      var t = document.createElement('textarea');
-      t.innerHTML = s;
-      return t.value;
-    }
-
     blocks.forEach(function (block) {
       var ph = document.createElement('div');
       ph.className = 'mermaid-placeholder';
@@ -205,7 +199,9 @@
       });
 
       blocks.forEach(function (block) {
-        var code = htmlDecode(block.innerHTML.trim());
+        var codeEl = block.querySelector('code');
+        if (!codeEl) return;
+        var code = codeEl.textContent.trim();
         var wrapper = document.createElement('div');
         wrapper.className = 'mermaid-wrapper';
 
@@ -221,6 +217,7 @@
             console.error('Mermaid error:', err);
             wrapper.textContent = '\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0440\u0438\u0441\u043E\u0432\u0430\u043D\u0438\u0438 \u0434\u0438\u0430\u0433\u0440\u0430\u043C\u043C\u044B: ' + err.message;
             wrapper.style.color = '#ff3b30';
+            wrapper.style.padding = '20px';
             if (block._placeholder) {
               block._placeholder.parentElement.replaceChild(wrapper, block._placeholder);
             }
