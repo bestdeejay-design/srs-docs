@@ -3,337 +3,1106 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Feature Map</title>
+<title>Feature Map — Карта функциональных требований</title>
+<meta name="description" content="Интерактивная карта функциональных требований продукта — визуализация всех модулей и фич системы доставки продуктов">
+<meta name="keywords" content="feature map, карта функций, SRS, доставка продуктов, требования">
+<meta name="author" content="SRS Team">
+<meta property="og:title" content="Feature Map — Карта функциональных требований">
+<meta property="og:description" content="Интерактивная карта всех функций продукта: 15 модулей, 80+ фич">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://bestdeejay-design.github.io/srs-docs/feature-map.html">
+<meta property="og:image" content="https://bestdeejay-design.github.io/srs-docs/assets/feature-map.png">
+<meta property="og:locale" content="ru_RU">
+
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0 }
-  html, body { width: 100%; height: 100%; overflow: hidden }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, Roboto, sans-serif;
-    background: #f5f5f7;
-  }
-  svg {
-    display: block;
-    width: 100%;
-    height: 100%;
-    cursor: grab;
-  }
-  svg:active { cursor: grabbing }
-  .node circle {
-    fill: #0071e3;
-    stroke: #fff;
-    stroke-width: 2;
-    cursor: pointer;
-    transition: fill .2s;
-  }
-  .node circle:hover { fill: #2997ff }
-  .node circle.folded { fill: #aeaeb2; stroke: none }
-  .node circle.leaf { fill: #0071e3; cursor: default; opacity: .4 }
-  .node text {
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, Roboto, sans-serif;
-    fill: #1d1d1f;
-  }
-  .link {
-    fill: none;
-    stroke: #aeaeb2;
-    stroke-width: 1.5;
-  }
+:root {
+  --bg: #0a0a0f;
+  --bg-panel: #12121a;
+  --bg-hover: #1c1c2a;
+  --text: #e8e8ed;
+  --text-dim: #6b6b83;
+  --border: #262636;
+  --accent: #6366f1;
+  --shadow: 0 4px 24px rgba(0,0,0,0.5);
+  --radius: 10px;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, Roboto, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0 }
+html, body { width: 100%; height: 100%; overflow: hidden }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+}
+svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  -webkit-user-select: none;
+  user-select: none;
+}
+svg:active { cursor: grabbing }
+
+/* Nodes */
+.node { cursor: pointer; outline: none; }
+.node:focus-visible circle { stroke: #fff !important; stroke-width: 3 !important; }
+.node circle {
+  stroke: rgba(255,255,255,0.12);
+  stroke-width: 2;
+  transition: fill .2s, stroke .2s, opacity .2s;
+}
+.node circle:hover { stroke: rgba(255,255,255,0.5); }
+.node circle.folded { opacity: 0.7 }
+.node circle.leaf { cursor: default; opacity: 0.65 }
+.node circle.leaf:hover { opacity: 0.9 }
+.node circle.matched {
+  stroke: #fff;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 8px currentColor);
+}
+
+.node text {
+  fill: var(--text);
+  pointer-events: none;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.7);
+}
+.node text.matched { fill: #fff; font-weight: 700 !important; }
+
+/* Links */
+.link {
+  fill: none;
+  stroke: #22223a;
+  stroke-width: 1.5;
+  opacity: 0.5;
+  transition: stroke .3s;
+}
+
+/* Tooltip */
+#tooltip {
+  position: fixed;
+  display: none;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 320px;
+  pointer-events: none;
+  z-index: 1000;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+#tooltip.show { display: block }
+#tooltip .tt-cat { font-size: 10px; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 2px; }
+#tooltip .tt-name { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+#tooltip .tt-desc { color: var(--text-dim); font-size: 12px; }
+
+/* Breadcrumb */
+#breadcrumb {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 16px;
+  font-size: 12px;
+  color: var(--text-dim);
+  z-index: 100;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: var(--shadow);
+  white-space: nowrap;
+  max-width: 50vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .3s;
+}
+#breadcrumb.show { opacity: 1 }
+#breadcrumb .bc-sep { margin: 0 6px; color: var(--border); font-size: 14px; }
+#breadcrumb .bc-current { color: var(--accent); font-weight: 600; }
+
+/* Zoom controls */
+#controls {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  z-index: 200;
+}
+#controls button {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-panel);
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .12s, border-color .12s, transform .1s;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--shadow);
+}
+#controls button:hover { background: var(--bg-hover); border-color: var(--accent); color: #fff; }
+#controls button:active { transform: scale(0.9); }
+
+/* Search */
+#search-wrap {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 200;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+#search-input {
+  width: 220px;
+  padding: 7px 14px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--bg-panel);
+  color: var(--text);
+  font-size: 13px;
+  font-family: var(--font);
+  outline: none;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--shadow);
+  transition: border-color .15s;
+}
+#search-input:focus { border-color: var(--accent) }
+#search-input::placeholder { color: var(--text-dim) }
+#search-clear {
+  display: none;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--bg-panel);
+  color: var(--text-dim);
+  font-size: 12px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--shadow);
+}
+#search-clear:hover { border-color: var(--accent); color: var(--text); }
+#search-count {
+  display: none;
+  position: fixed;
+  top: 56px;
+  left: 16px;
+  font-size: 11px;
+  color: var(--text-dim);
+  background: var(--bg-panel);
+  padding: 3px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  z-index: 200;
+}
+
+/* Legend */
+#legend-toggle, #legend-close {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  z-index: 200;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--bg-panel);
+  color: var(--text);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--shadow);
+  transition: background .12s, transform .1s;
+}
+#legend-toggle:hover { background: var(--bg-hover); border-color: var(--accent); }
+#legend-toggle:active, #legend-close:active { transform: scale(0.9); }
+#legend-toggle.active { border-color: var(--accent); background: var(--accent); }
+
+#legend {
+  position: fixed;
+  bottom: 64px;
+  right: 16px;
+  z-index: 200;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  min-width: 220px;
+  max-height: 60vh;
+  overflow-y: auto;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: var(--shadow);
+  transform-origin: bottom right;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s;
+}
+#legend.show { opacity: 1; pointer-events: auto; }
+#legend .lg-title { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); margin-bottom: 8px; }
+#legend .lg-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 0; font-size: 12px; cursor: pointer;
+  border-radius: 4px; transition: color .12s;
+}
+#legend .lg-item:hover { color: var(--accent); }
+#legend .lg-item .lg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.08); }
+#legend .lg-item .lg-emoji { font-size: 13px; flex-shrink: 0; }
+#legend .lg-item .lg-name { flex: 1; }
+#legend .lg-item .lg-count { font-size: 10px; color: var(--text-dim); }
+
+/* Status bar */
+#status {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: var(--text-dim);
+  background: var(--bg-panel);
+  padding: 3px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  z-index: 100;
+  white-space: nowrap;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* Hint */
+#hint {
+  position: fixed;
+  bottom: 50px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: var(--text-dim);
+  opacity: 0.5;
+  z-index: 99;
+  pointer-events: none;
+  text-align: center;
+  transition: opacity 1s;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  #search-input { width: 160px; font-size: 12px; padding: 6px 12px; }
+  #breadcrumb { font-size: 10px; padding: 4px 12px; max-width: 40vw; top: 12px; }
+  #controls { top: 12px; right: 12px; gap: 4px; }
+  #controls button { width: 30px; height: 30px; font-size: 12px; border-radius: 6px; }
+  #legend-toggle { width: 36px; height: 36px; font-size: 16px; bottom: 12px; right: 12px; }
+  #legend { right: 12px; bottom: 56px; min-width: 180px; }
+  #status { font-size: 9px; padding: 2px 10px; }
+  #hint { font-size: 10px; bottom: 44px; }
+  #search-count { font-size: 10px; top: 52px; left: 12px; padding: 2px 10px; }
+}
+@media (max-width: 480px) {
+  #search-wrap { left: 8px; top: 12px; }
+  #search-input { width: 120px; font-size: 11px; }
+  #breadcrumb { display: none; }
+  #controls { top: 12px; right: 8px; }
+  #controls button { width: 28px; height: 28px; font-size: 11px; border-radius: 5px; }
+  #legend { right: 8px; min-width: 150px; max-height: 50vh; }
+}
 </style>
 </head>
 <body>
+
 <svg id="tree"></svg>
+
+<div id="breadcrumb"></div>
+
+<div id="search-wrap">
+  <input type="search" id="search-input" placeholder="🔍 Поиск…" aria-label="Поиск по функциям" autocomplete="off">
+  <button id="search-clear" aria-label="Очистить поиск">✕</button>
+</div>
+<div id="search-count"></div>
+
+<div id="controls">
+  <button id="btn-zoom-in" aria-label="Приблизить">＋</button>
+  <button id="btn-zoom-out" aria-label="Отдалить">−</button>
+  <button id="btn-reset" aria-label="Сбросить масштаб">⟲</button>
+  <button id="btn-collapse-all" aria-label="Свернуть всё">⊟</button>
+  <button id="btn-expand-all" aria-label="Развернуть всё">⊞</button>
+</div>
+
+<button id="legend-toggle" aria-label="Показать легенду">◉</button>
+<div id="legend" role="listbox" aria-label="Легенда категорий"></div>
+
+<div id="tooltip"></div>
+<div id="status"></div>
+<div id="hint">Кликните на категорию, чтобы развернуть · колёсико для зума · / для поиска</div>
+
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <script>
-var svg = d3.select('#tree');
-var width = window.innerWidth;
-var height = window.innerHeight;
+(function () {
+  'use strict';
 
-var data = {
-  name: 'Продукт',
-  children: [
-    { name: 'Регистрация и безопасность', children: [
-      { name: 'Вход по телефону' },
-      { name: 'SMS-подтверждение' },
-      { name: 'Роли: клиент/пикер/курьер/админ/суперадмин' },
-      { name: 'JWT access + refresh токены' },
-      { name: 'Rate limiting' },
-      { name: 'Audit log' },
-    ]},
-    { name: 'Каталог', children: [
-      { name: 'Выбор магазина по адресу' },
-      { name: 'Категории (3 уровня)' },
-      { name: 'Поиск (Elasticsearch)' },
-      { name: 'Динамические фильтры' },
-      { name: 'Карточка товара' },
-      { name: 'Нормализация данных сетей' },
-      { name: 'Маппинг категорий сети → платформа' },
-      { name: 'Адаптеры сетей (Лента, METRO, Вкусвилл и др.)' },
-      { name: 'Синхронизация цен/остатков (шедулер)' },
-    ]},
-    { name: 'Корзина', children: [
-      { name: 'Добавление товаров' },
-      { name: 'Промокоды и баллы' },
-      { name: 'Dynamic Pricing' },
-      { name: 'Пересчёт стоимости' },
-      { name: 'Оформление' },
-    ]},
-    { name: 'Заказы', children: [
-      { name: 'Создание' },
-      { name: 'Статусы (оплачен → сборка → доставка → завершён)' },
-      { name: 'Добавление товаров после оформления' },
-      { name: 'История' },
-      { name: 'Замена товара (пикер → звонок → альтернатива)' },
-      { name: 'Возврат и отмена (до/после сборки, комиссия)' },
-      { name: 'Event Sourcing (цепочка событий)' },
-    ]},
-    { name: 'Доставка', children: [
-      { name: 'Временные слоты (3 дня вперёд)' },
-      { name: 'Dispatch (multi-objective optimization)' },
-      { name: 'ETA (OSRM + ML гибрид)' },
-      { name: 'Трекинг для клиента' },
-      { name: 'Опция «Можно раньше»' },
-    ]},
-    { name: 'Платежи', children: [
-      { name: 'Т-Банк (онлайн, 3DSecure)' },
-      { name: 'СБП (QR от курьера)' },
-      { name: 'Карта курьеру (POS-терминал)' },
-      { name: 'Наличные' },
-      { name: 'Refund (полный/частичный)' },
-      { name: 'Чек (54-ФЗ, ОФД)' },
-    ]},
-    { name: 'Уведомления', children: [
-      { name: 'Push (FCM)' },
-      { name: 'SMS' },
-      { name: 'Email' },
-      { name: 'Telegram' },
-      { name: 'События: создан / сборка / курьер / доставлен' },
-    ]},
-    { name: 'Админка', children: [
-      { name: 'Управление заказами (CRUD, статусы)' },
-      { name: 'Управление товарами (CRUD, импорт CSV)' },
-      { name: 'Пользователи (блокировка, роли)' },
-      { name: 'Промокоды (создание, статистика)' },
-      { name: 'Курьеры и пикеры (зоны, рейтинг)' },
-      { name: 'Магазины и зоны доставки (полигоны)' },
-      { name: 'Управление сетями-адаптерами (вкл/выкл)' },
-      { name: 'Audit log (кто, когда, что сделал)' },
-    ]},
-    { name: 'B2B', children: [
-      { name: 'Корпоративные заказы в офис' },
-      { name: 'Регулярные поставки (ежедневно/еженедельно)' },
-      { name: 'Индивидуальные цены по договору' },
-      { name: 'Отсрочка платежа (3–30 дней)' },
-      { name: 'ЭДО (Диадок / СБИС, УПД)' },
-      { name: 'Счета и закрывающие документы' },
-    ]},
-    { name: 'Dynamic Pricing', children: [
-      { name: 'Факторы: загрузка, время, погода, расстояние, вес' },
-      { name: 'Формула: base_fee × product(multipliers)' },
-      { name: 'Max надбавка: 2×' },
-      { name: 'Отображение в корзине' },
-    ]},
-    { name: 'Приложение пикера', children: [
-      { name: 'Список заказов (FIFO)' },
-      { name: 'Сканер штрихкодов (Scandit)' },
-      { name: 'Замены товаров (поиск альтернатив)' },
-      { name: 'Звонок клиенту (скрытый номер)' },
-      { name: 'Offline-режим (Firestore cache)' },
-      { name: 'Smart Sync Queue (batch upload)' },
-      { name: 'Подтверждение упаковки' },
-    ]},
-    { name: 'Приложение курьера', children: [
-      { name: 'Навигация с multi-stop маршрутом' },
-      { name: 'Offline-режим (Hive + Smart Sync)' },
-      { name: 'Off-route detection' },
-      { name: 'Приём оплаты (офлайн hold → sync)' },
-      { name: 'Digital Signature (POD)' },
-      { name: 'Photo POD' },
-      { name: 'Сканер' },
-      { name: 'Статусы доставки' },
-    ]},
-    { name: 'Инфраструктура', children: [
-      { name: 'CI/CD (GitHub Actions, testcontainers)' },
-      { name: 'Docker Compose → Kubernetes' },
-      { name: 'Мониторинг (Prometheus + Grafana + Loki + Jaeger)' },
-      { name: 'Sentry (error tracking)' },
-      { name: 'Feature flags (Flipper / LaunchDarkly)' },
-      { name: 'Rollback (git revert + rolling update)' },
-    ]},
-    { name: 'Тестирование', children: [
-      { name: 'Unit (mockery + testify)' },
-      { name: 'Integration (testcontainers)' },
-      { name: 'Contract (Pact CDC)' },
-      { name: 'E2E (Cypress + K6)' },
-      { name: 'Load (K6: stress, soak, spike)' },
-      { name: 'Security (SonarCloud + Trivy + Aikido)' },
-    ]},
-    { name: 'Аналитика', children: [
-      { name: 'Дашборды (Grafana)' },
-      { name: 'Отчёты (выручка, заказы, конверсия)' },
-      { name: 'Метрики (DAU/MAU, время сборки, ETA, топ товаров)' },
-    ]},
-  ]
-};
+  // —————————————————————————————————————
+  //  DATA
+  // —————————————————————————————————————
+  var CATEGORIES = [
+    { id: 'security',  name: 'Регистрация и безопасность', emoji: '🔐', color: '#6366f1' },
+    { id: 'catalog',   name: 'Каталог',                    emoji: '🛒', color: '#22c55e' },
+    { id: 'cart',      name: 'Корзина',                    emoji: '🧺', color: '#f59e0b' },
+    { id: 'orders',    name: 'Заказы',                     emoji: '📋', color: '#ef4444' },
+    { id: 'delivery',  name: 'Доставка',                   emoji: '🚚', color: '#3b82f6' },
+    { id: 'payments',  name: 'Платежи',                    emoji: '💳', color: '#8b5cf6' },
+    { id: 'notify',    name: 'Уведомления',                emoji: '🔔', color: '#06b6d4' },
+    { id: 'admin',     name: 'Админка',                    emoji: '⚙️', color: '#f97316' },
+    { id: 'b2b',       name: 'B2B',                        emoji: '🏢', color: '#14b8a6' },
+    { id: 'pricing',   name: 'Dynamic Pricing',            emoji: '💰', color: '#ec4899' },
+    { id: 'picker',    name: 'Приложение пикера',          emoji: '📱', color: '#84cc16' },
+    { id: 'courier',   name: 'Приложение курьера',         emoji: '🚀', color: '#0ea5e9' },
+    { id: 'infra',     name: 'Инфраструктура',             emoji: '🏗️', color: '#64748b' },
+    { id: 'testing',   name: 'Тестирование',               emoji: '🧪', color: '#a855f7' },
+    { id: 'analytics', name: 'Аналитика',                  emoji: '📊', color: '#10b981' },
+  ];
 
-var g = svg.append('g');
+  var DATA = {
+    name: '🚀 Продукт',
+    desc: 'Агрегатор доставки продуктов из супермаркетов',
+    children: [
+      { name: '🔐 Регистрация и безопасность', cat: 'security', desc: 'Управление доступом, аутентификация и безопасность системы', children: [
+        { name: 'Вход по телефону', desc: 'Аутентификация по номеру телефона через SMS-код' },
+        { name: 'SMS-подтверждение', desc: 'OTP-код подтверждения через SMS-провайдера' },
+        { name: 'Роли: клиент/пикер/курьер/админ/суперадмин', desc: 'RBAC: 5 ролей с разграничением доступа' },
+        { name: 'JWT access + refresh токены', desc: 'Двухтокенная аутентификация с ротацией' },
+        { name: 'Rate limiting', desc: 'Защита от брутфорса и DDoS-атак' },
+        { name: 'Audit log', desc: 'Логирование всех действий пользователей' },
+      ]},
+      { name: '🛒 Каталог', cat: 'catalog', desc: 'Управление товарами, категориями и поиском по магазинам', children: [
+        { name: 'Выбор магазина по адресу', desc: 'Поиск ближайших доступных магазинов' },
+        { name: 'Категории (3 уровня)', desc: 'Иерархия: категория → подкатегория → подподкатегория' },
+        { name: 'Поиск (Elasticsearch)', desc: 'Полнотекстовый поиск с учётом морфологии и опечаток' },
+        { name: 'Динамические фильтры', desc: 'Фильтрация по цене, бренду, весу, характеристикам' },
+        { name: 'Карточка товара', desc: 'Фото, описание, цена за единицу, БЖУ, рейтинг' },
+        { name: 'Нормализация данных сетей', desc: 'Приведение данных от разных сетей к единому формату' },
+        { name: 'Маппинг категорий сети → платформа', desc: 'Сопоставление категорий каждой сети с категориями платформы' },
+        { name: 'Адаптеры сетей', desc: 'Лента, METRO, Вкусвилл и другие — интеграция через адаптеры' },
+        { name: 'Синхронизация цен/остатков', desc: 'Периодическая синхронизация по шедулеру' },
+      ]},
+      { name: '🧺 Корзина', cat: 'cart', desc: 'Работа с корзиной: добавление, промокоды, динамическая цена', children: [
+        { name: 'Добавление товаров', desc: 'Добавление/удаление/изменение количества товаров' },
+        { name: 'Промокоды и баллы', desc: 'Применение промокодов и списание бонусных баллов' },
+        { name: 'Dynamic Pricing', desc: 'Динамическая наценка в зависимости от условий' },
+        { name: 'Пересчёт стоимости', desc: 'Автоматический пересчёт при изменении состава корзины' },
+        { name: 'Оформление', desc: 'Переход к оформлению заказа с выбором адреса и слота' },
+      ]},
+      { name: '📋 Заказы', cat: 'orders', desc: 'Жизненный цикл заказа: создание, статусы, замена, возврат', children: [
+        { name: 'Создание', desc: 'Формирование заказа из корзины с фиксацией состава' },
+        { name: 'Статусы заказа', desc: 'оплачен → сборка → доставка → завершён с нотификациями' },
+        { name: 'Добавление после оформления', desc: 'Возможность добавить товары после создания заказа' },
+        { name: 'История заказов', desc: 'Полная история всех заказов пользователя' },
+        { name: 'Замена товара', desc: 'Пикер звонит клиенту и предлагает альтернативу' },
+        { name: 'Возврат и отмена', desc: 'Отмена до/после сборки с комиссией — возврат средств' },
+        { name: 'Event Sourcing', desc: 'Цепочка событий заказа для аудита и восстановления' },
+      ]},
+      { name: '🚚 Доставка', cat: 'delivery', desc: 'Маршрутизация, расчёт ETA, трекинг и управление курьерами', children: [
+        { name: 'Временные слоты', desc: 'Доступные окна доставки на 3 дня вперёд' },
+        { name: 'Dispatch', desc: 'Multi-objective оптимизация: Cheapest Insertion + 2-opt' },
+        { name: 'ETA', desc: 'OSRM маршрут + XGBoost коррекция по 13 признакам' },
+        { name: 'Трекинг для клиента', desc: 'Отслеживание курьера на карте в реальном времени' },
+        { name: 'Опция «Можно раньше»', desc: 'Возможность получить заказ раньше выбранного слота' },
+      ]},
+      { name: '💳 Платежи', cat: 'payments', desc: 'Приём и обработка платежей, возвраты, фискализация', children: [
+        { name: 'Т-Банк (онлайн)', desc: 'Оплата картой онлайн с 3DSecure' },
+        { name: 'СБП (QR от курьера)', desc: 'Оплата через СБП по QR-коду курьера' },
+        { name: 'Карта курьеру (POS)', desc: 'Оплата картой через POS-терминал курьера' },
+        { name: 'Наличные', desc: 'Оплата наличными курьеру при получении' },
+        { name: 'Refund', desc: 'Полный или частичный возврат средств на карту/СБП' },
+        { name: 'Чек (54-ФЗ, ОФД)', desc: 'Формирование чека по 54-ФЗ с отправкой в ОФД' },
+      ]},
+      { name: '🔔 Уведомления', cat: 'notify', desc: 'Push, SMS, Email, Telegram — все каналы оповещений', children: [
+        { name: 'Push (FCM)', desc: 'Push-уведомления через Firebase Cloud Messaging' },
+        { name: 'SMS', desc: 'SMS-уведомления через SMS-провайдера' },
+        { name: 'Email', desc: 'Email-уведомления по ключевым событиям' },
+        { name: 'Telegram', desc: 'Уведомления через Telegram-бота' },
+        { name: 'События', desc: 'Создан → сборка → курьер выехал → доставлен' },
+      ]},
+      { name: '⚙️ Админка', cat: 'admin', desc: 'Панель управления: заказы, товары, пользователи, промокоды', children: [
+        { name: 'Управление заказами', desc: 'CRUD, смена статусов, добавление комментариев' },
+        { name: 'Управление товарами', desc: 'CRUD, импорт/экспорт CSV, модерация' },
+        { name: 'Пользователи', desc: 'Блокировка, управление ролями, просмотр активности' },
+        { name: 'Промокоды', desc: 'Создание, статистика использования, срок действия' },
+        { name: 'Курьеры и пикеры', desc: 'Назначение зон, рейтинг, график работы' },
+        { name: 'Магазины и зоны', desc: 'Управление магазинами и полигонами доставки' },
+        { name: 'Управление сетями', desc: 'Включение/отключение сетей-адаптеров' },
+        { name: 'Audit log', desc: 'Полный лог: кто, когда и что сделал' },
+      ]},
+      { name: '🏢 B2B', cat: 'b2b', desc: 'Корпоративные заказы, регулярные поставки, ЭДО', children: [
+        { name: 'Корпоративные заказы', desc: 'Заказы для офиса с доставкой к определённому времени' },
+        { name: 'Регулярные поставки', desc: 'Автоматические поставки по расписанию' },
+        { name: 'Индивидуальные цены', desc: 'Персональные цены по договору для юрлиц' },
+        { name: 'Отсрочка платежа', desc: 'Отсрочка от 3 до 30 дней для корпоративных клиентов' },
+        { name: 'ЭДО', desc: 'Интеграция с Диадок / СБИС для обмена УПД' },
+        { name: 'Счета и документы', desc: 'Формирование счетов и закрывающих документов' },
+      ]},
+      { name: '💰 Dynamic Pricing', cat: 'pricing', desc: 'Динамическое ценообразование на основе множества факторов', children: [
+        { name: 'Факторы', desc: 'Загрузка, время, погода, расстояние, вес корзины' },
+        { name: 'Формула', desc: 'base_fee × product(multipliers) — мультипликативная модель' },
+        { name: 'Max надбавка: 2×', desc: 'Максимальный коэффициент наценки — 2×' },
+        { name: 'Отображение в корзине', desc: 'Показ итоговой стоимости до подтверждения заказа' },
+      ]},
+      { name: '📱 Приложение пикера', cat: 'picker', desc: 'Сборка заказов: FIFO, сканер, замены, offline', children: [
+        { name: 'Список заказов (FIFO)', desc: 'Очередь заказов для сборки по принципу FIFO' },
+        { name: 'Сканер штрихкодов', desc: 'Сканирование товаров через Scandit SDK' },
+        { name: 'Замены товаров', desc: 'Поиск альтернатив при отсутствии товара на полке' },
+        { name: 'Звонок клиенту', desc: 'Звонок через скрытый номер для согласования замен' },
+        { name: 'Offline-режим', desc: 'Работа через Firestore cache при отсутствии сети' },
+        { name: 'Smart Sync Queue', desc: 'Пакетная синхронизация при восстановлении соединения' },
+        { name: 'Подтверждение упаковки', desc: 'Фиксация завершения сборки и упаковки заказа' },
+      ]},
+      { name: '🚀 Приложение курьера', cat: 'courier', desc: 'Навигация, оплата, POD, offline-first', children: [
+        { name: 'Multi-stop навигация', desc: 'Маршрут с несколькими точками доставки' },
+        { name: 'Offline-режим', desc: 'Hive локальное хранение + Smart Sync' },
+        { name: 'Off-route detection', desc: 'Обнаружение отклонения от маршрута' },
+        { name: 'Приём оплаты', desc: 'Офлайн hold с синхронизацией при появлении сети' },
+        { name: 'Digital Signature', desc: 'Подпись клиента в приложении (Proof of Delivery)' },
+        { name: 'Photo POD', desc: 'Фото подтверждения доставки' },
+        { name: 'Сканер', desc: 'Сканирование штрихкода заказа перед выдачей' },
+        { name: 'Статусы доставки', desc: 'Выехал → на месте → вручено → завершено' },
+      ]},
+      { name: '🏗️ Инфраструктура', cat: 'infra', desc: 'CI/CD, оркестрация, мониторинг, feature flags', children: [
+        { name: 'CI/CD', desc: 'GitHub Actions с тестами в testcontainers' },
+        { name: 'Docker → Kubernetes', desc: 'Docker Compose для dev → K8s для production' },
+        { name: 'Мониторинг', desc: 'Prometheus + Grafana + Loki + Jaeger' },
+        { name: 'Sentry', desc: 'Отслеживание ошибок и краш-репорты' },
+        { name: 'Feature flags', desc: 'Flipper / LaunchDarkly для постепенного rollout' },
+        { name: 'Rollback', desc: 'Git revert + rolling update для быстрого отката' },
+      ]},
+      { name: '🧪 Тестирование', cat: 'testing', desc: 'Unit, integration, contract, E2E, load, security', children: [
+        { name: 'Unit', desc: 'Mockery + testify для модульного тестирования' },
+        { name: 'Integration', desc: 'Testcontainers для интеграционных тестов' },
+        { name: 'Contract', desc: 'Pact CDC для контрактного тестирования API' },
+        { name: 'E2E', desc: 'Cypress для фронтенда + K6 для API-нагрузки' },
+        { name: 'Load', desc: 'K6: stress, soak, spike тесты производительности' },
+        { name: 'Security', desc: 'SonarCloud + Trivy + Aikido для безопасности кода' },
+      ]},
+      { name: '📊 Аналитика', cat: 'analytics', desc: 'Дашборды, отчёты, бизнес-метрики', children: [
+        { name: 'Дашборды (Grafana)', desc: 'Визуализация ключевых метрик в реальном времени' },
+        { name: 'Отчёты', desc: 'Выручка, заказы, конверсия по периодам' },
+        { name: 'Метрики', desc: 'DAU/MAU, время сборки, ETA accuracy, топ товаров' },
+      ]},
+    ]
+  };
 
-function measureTextWidth(text) {
-  var t = svg.append('text').text(text).style('font-size', '12px').style('font-weight', '600');
-  var w = t.node().getComputedTextLength();
-  t.remove();
-  return w;
-}
+  // —————————————————————————————————————
+  //  INIT
+  // —————————————————————————————————————
+  var svg = d3.select('#tree');
+  var W = window.innerWidth;
+  var H = window.innerHeight;
+  var g = svg.append('g').attr('class', 'main-group');
 
-var zoom = d3.zoom()
-  .scaleExtent([0.05, 4])
-  .on('zoom', function(e) { g.attr('transform', e.transform); });
+  // Root glow
+  (function () {
+    var defs = svg.append('defs');
+    var filter = defs.append('filter').attr('id', 'root-glow');
+    filter.append('feGaussianBlur').attr('stdDeviation', '5').attr('result', 'blur');
+    var merge = filter.append('feMerge');
+    merge.append('feMergeNode').attr('in', 'blur');
+    merge.append('feMergeNode').attr('in', 'SourceGraphic');
+  })();
 
-svg.call(zoom);
+  // —————————————————————————————————————
+  //  HELPERS
+  // —————————————————————————————————————
+  var catLookup = {};
+  CATEGORIES.forEach(function (c) { catLookup[c.id] = c; });
 
-var root = d3.hierarchy(data);
-var viewW = window.innerWidth;
-var viewH = window.innerHeight;
+  function getNodeColor(d) {
+    if (d.depth === 0) return '#fbbf24';
+    var cat = catLookup[d.data.cat];
+    return cat ? cat.color : '#6366f1';
+  }
 
-function autoFit() {
-  var bounds = g.node().getBBox();
-  if (!bounds.width) return;
-  var pad = 40;
-  var s = Math.min((viewW - pad * 2) / bounds.width, 2);
-  s = Math.max(s, 0.05);
-  var tx = (viewW - bounds.width * s) / 2 - bounds.x * s;
-  var ty = pad - bounds.y * s;
-  svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(s));
-}
+  function nodeMatches(d, q) {
+    if (!q || q.length < 2 || d.depth === 0) return false;
+    var ql = q.toLowerCase();
+    var name = d.data.name.toLowerCase();
+    var desc = (d.data.desc || '').toLowerCase();
+    return name.indexOf(ql) !== -1 || desc.indexOf(ql) !== -1;
+  }
 
-function update(source) {
-  var duration = 400;
+  function getChildren(d) {
+    return d.children || d._children || [];
+  }
 
-  root.each(function(d) { d.y = d.depth * 100; });
+  // —————————————————————————————————————
+  //  ZOOM
+  // —————————————————————————————————————
+  var zoom = d3.zoom()
+    .scaleExtent([0.05, 5])
+    .on('zoom', function (e) { g.attr('transform', e.transform); });
 
-  var hSpacing = 260;
+  svg.call(zoom);
 
-  var treeLayout = d3.tree()
-    .nodeSize([hSpacing, 0])
-    .separation(function(a, b) { return a.parent === b.parent ? 1 : 1.3; });
-  treeLayout(root);
+  // —————————————————————————————————————
+  //  TREE
+  // —————————————————————————————————————
+  var root = d3.hierarchy(DATA);
+  var searchQuery = '';
 
-  var node = g.selectAll('g.node')
-    .data(root.descendants(), function(d) { return d.data.name; });
-
-  var nodeEnter = node.enter().append('g')
-    .attr('class', 'node')
-    .attr('transform', function(d) { return 'translate(' + source.x0 + ',' + source.y0 + ')'; });
-
-  nodeEnter.append('circle')
-    .attr('r', 0)
-    .on('click', function(e, d) {
-      toggle(d);
-      update(d);
-    });
-
-  nodeEnter.append('text')
-    .style('opacity', 0);
-
-  var nodeMerge = nodeEnter.merge(node);
-
-  nodeMerge.transition().duration(duration)
-    .attr('transform', function(d) { return 'translate(' + d.x + ',' + d.y + ')'; });
-
-  nodeMerge.select('circle')
-    .attr('r', function(d) {
-      return d.children || d._children ? 6 : 3;
-    })
-    .attr('class', function(d) {
-      if (!d.children && !d._children) return 'leaf';
-      if (d._children) return 'folded';
-      return '';
-    });
-
-  nodeMerge.select('text')
-    .text(function(d) { return d.data.name; })
-    .style('opacity', 1)
-    .attr('x', 14)
-    .attr('y', 5)
-    .style('font-size', function(d) { return d.depth === 0 ? '14px' : '12px'; })
-    .style('font-weight', function(d) { return d.depth === 0 ? '700' : d.depth === 1 ? '600' : '400'; });
-
-  var nodeExit = node.exit().transition().duration(duration)
-    .attr('transform', function(d) { return 'translate(' + source.x + ',' + source.y + ')'; })
-    .remove();
-
-  nodeExit.select('circle').attr('r', 0);
-  nodeExit.select('text').style('opacity', 0);
-
-  var link = g.selectAll('path.link')
-    .data(root.links(), function(d) { return d.target.data.name; });
-
-  var linkEnter = link.enter().insert('path', 'g')
-    .attr('class', 'link')
-    .attr('d', function(d) {
-      var o = { x: source.x0, y: source.y0 };
-      return diagonal(o, o);
-    });
-
-  linkEnter.merge(link).transition().duration(duration)
-    .attr('d', function(d) {
-      return diagonal(d.source, d.target);
-    });
-
-  link.exit().transition().duration(duration)
-    .attr('d', function(d) {
-      var o = { x: source.x, y: source.y };
-      return diagonal(o, o);
-    })
-    .remove();
-
-  root.eachBefore(function(d) {
-    d.x0 = d.x;
-    d.y0 = d.y;
+  // Start collapsed: only root + category names visible
+  root.each(function (d) {
+    if (d.depth === 1 && d.children) {
+      d._children = d.children;
+      d.children = null;
+    }
   });
 
-  setTimeout(autoFit, duration + 50);
-}
+  // —————————————————————————————————————
+  //  DOM REFS
+  // —————————————————————————————————————
+  var tooltipEl = document.getElementById('tooltip');
+  var breadcrumbEl = document.getElementById('breadcrumb');
+  var searchInput = document.getElementById('search-input');
+  var searchClear = document.getElementById('search-clear');
+  var searchCount = document.getElementById('search-count');
+  var statusEl = document.getElementById('status');
+  var legendEl = document.getElementById('legend');
+  var legendToggle = document.getElementById('legend-toggle');
+  var hintEl = document.getElementById('hint');
 
-function diagonal(s, t) {
-  var hx = (s.x + t.x) / 2;
-  return 'M' + s.x + ',' + s.y
-    + 'C' + hx + ',' + s.y
-    + ' ' + hx + ',' + t.y
-    + ' ' + t.x + ',' + t.y;
-}
+  // Hide hint after 6 seconds
+  setTimeout(function () { hintEl.style.opacity = '0'; }, 6000);
 
-function toggle(d) {
-  if (d.children) {
-    d._children = d.children;
-    d.children = null;
-  } else if (d._children) {
-    d.children = d._children;
-    d._children = null;
+  // —————————————————————————————————————
+  //  LEGEND
+  // —————————————————————————————————————
+  (function buildLegend() {
+    var total = 0;
+    DATA.children.forEach(function (d) {
+      if (d.children) total += d.children.length;
+    });
+    var html = '<div class="lg-title">' + total + ' функций · 15 модулей</div>';
+    CATEGORIES.forEach(function (c) {
+      var count = 0;
+      DATA.children.forEach(function (d) {
+        if (d.cat === c.id && d.children) count = d.children.length;
+      });
+      html += '<div class="lg-item" data-cat="' + c.id + '">'
+        + '<span class="lg-dot" style="background:' + c.color + '"></span>'
+        + '<span class="lg-emoji">' + c.emoji + '</span>'
+        + '<span class="lg-name">' + c.name + '</span>'
+        + '<span class="lg-count">' + count + '</span>'
+        + '</div>';
+    });
+    legendEl.innerHTML = html;
+
+    legendEl.querySelectorAll('.lg-item').forEach(function (item) {
+      item.addEventListener('click', function () {
+        var catId = item.getAttribute('data-cat');
+        focusCategory(catId);
+        closeLegend();
+      });
+    });
+  })();
+
+  function focusCategory(catId) {
+    root.each(function (d) {
+      if (d.data.cat === catId && d._children) {
+        d.children = d._children;
+        d._children = null;
+      }
+    });
+    // Also collapse other categories
+    root.each(function (d) {
+      if (d.data.cat && d.data.cat !== catId && d.children) {
+        d._children = d.children;
+        d.children = null;
+      }
+    });
+    update(root);
   }
-}
 
-window.addEventListener('resize', function () {
-  viewW = window.innerWidth;
-  autoFit();
-});
-
-root.x0 = 0;
-root.y0 = 0;
-update(root);
-
-function toggle(d) {
-  if (d.children) {
-    d._children = d.children;
-    d.children = null;
-  } else if (d._children) {
-    d.children = d._children;
-    d._children = null;
+  function closeLegend() {
+    legendEl.classList.remove('show');
+    legendToggle.classList.remove('active');
   }
-}
 
-// Initialize
-root.x0 = 0;
-root.y0 = 0;
-update(root);
+  // —————————————————————————————————————
+  //  AUTO FIT
+  // —————————————————————————————————————
+  var vw = W, vh = H;
+
+  function autoFit() {
+    var bounds = g.node().getBBox();
+    if (!bounds.width || !bounds.height || bounds.width === 0) return;
+    var pad = 60;
+    var sx = Math.min((vw - pad * 2) / bounds.width, 2);
+    var sy = Math.min((vh - pad * 2) / bounds.height, 2);
+    var s = Math.min(sx, sy);
+    s = Math.max(s, 0.05);
+    var tx = (vw - bounds.width * s) / 2 - bounds.x * s;
+    var ty = (vh - bounds.height * s) / 2 - bounds.y * s;
+    svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(s));
+  }
+
+  // —————————————————————————————————————
+  //  RESIZE
+  // —————————————————————————————————————
+  var resizeTimer;
+  window.addEventListener('resize', function () {
+    vw = window.innerWidth;
+    vh = window.innerHeight;
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      autoFit();
+    }, 200);
+  });
+
+  // —————————————————————————————————————
+  //  UPDATE
+  // —————————————————————————————————————
+  function update(source) {
+    var duration = 400;
+    var isSearch = searchQuery.length >= 2;
+
+    // Horizontal layout: left to right
+    var treeLayout = d3.tree()
+      .nodeSize([50, 0])
+      .separation(function (a, b) {
+        if (a.depth === 0) return 2;
+        return a.parent === b.parent ? 1 : 1.3;
+      });
+    treeLayout(root);
+
+    // Convert to horizontal: x = depth (left→right), y = tree-computed (top→bottom)
+    root.each(function (d) {
+      d.y = d.x;
+      d.x = d.depth * 250;
+    });
+
+    // Status
+    var vis = root.descendants().filter(function (d) { return d.depth > 0; }).length;
+    var statusText = vis + ' узлов';
+    if (isSearch) statusText += ' · поиск: «' + searchQuery + '»';
+    statusEl.textContent = statusText;
+
+    // ——— NODES ———
+    var node = g.selectAll('g.node')
+      .data(root.descendants(), function (d) { return d.data.name; });
+
+    var nodeEnter = node.enter().append('g')
+      .attr('class', 'node')
+      .attr('tabindex', function (d) { return d.depth > 0 ? 0 : -1; })
+      .attr('role', 'treeitem')
+      .attr('aria-expanded', function (d) {
+        return d.children ? 'true' : d._children ? 'false' : null;
+      })
+      .attr('aria-label', function (d) {
+        return d.data.name + (d.data.desc ? ': ' + d.data.desc : '');
+      })
+      .attr('transform', function (d) {
+        return 'translate(' + source.x0 + ',' + source.y0 + ')';
+      });
+
+    nodeEnter.append('circle')
+      .attr('r', 0);
+
+    nodeEnter.append('text')
+      .attr('dy', '0.35em')
+      .style('opacity', 0);
+
+    var nodeMerge = nodeEnter.merge(node);
+
+    nodeMerge.transition().duration(duration)
+      .attr('transform', function (d) { return 'translate(' + d.x + ',' + d.y + ')'; });
+
+    // Circle styling
+    nodeMerge.select('circle')
+      .attr('r', function (d) {
+        if (d.depth === 0) return 13;
+        return (d.children || d._children) ? 7 : 5;
+      })
+      .attr('class', function (d) {
+        var c = '';
+        if (!d.children && !d._children) c += 'leaf';
+        else if (d._children) c += 'folded';
+        if (isSearch && nodeMatches(d, searchQuery)) c += ' matched';
+        return c;
+      })
+      .style('fill', getNodeColor)
+      .style('filter', function (d) { return d.depth === 0 ? 'url(#root-glow)' : 'none'; })
+      .style('stroke-width', function (d) { return d.depth === 0 ? 3 : 2; });
+
+    // Text styling
+    nodeMerge.select('text')
+      .text(function (d) { return d.data.name; })
+      .attr('x', function (d) { return d.depth === 0 ? 22 : 14; })
+      .attr('y', 4)
+      .attr('class', function (d) {
+        var c = '';
+        if (isSearch && nodeMatches(d, searchQuery)) c += ' matched';
+        return c;
+      })
+      .style('opacity', 1)
+      .style('font-size', function (d) {
+        return d.depth === 0 ? '16px' : d.depth === 1 ? '13px' : '11px';
+      })
+      .style('font-weight', function (d) {
+        return d.depth === 0 ? '800' : d.depth === 1 ? '700' : '400';
+      })
+      .style('letter-spacing', function (d) {
+        return d.depth > 1 ? '0.3px' : '0';
+      });
+
+    // ——— EVENTS ———
+    nodeEnter.on('click', function (e, d) {
+      if (d.depth === 0) return;
+      if (d.children || d._children) {
+        toggleNode(d);
+        update(d);
+      }
+    });
+
+    nodeEnter.on('mouseenter', function (e, d) {
+      if (d.data.desc) showTooltip(e, d);
+    });
+    nodeEnter.on('mousemove', function (e) { moveTooltip(e); });
+    nodeEnter.on('mouseleave', hideTooltip);
+
+    // Keyboard
+    nodeEnter.on('keydown', function (e, d) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        if (d.depth > 0 && (d.children || d._children)) {
+          toggleNode(d);
+          update(d);
+        }
+      }
+      if (e.key === 'ArrowRight' && d._children) {
+        e.preventDefault(); toggleNode(d); update(d);
+      }
+      if (e.key === 'ArrowLeft' && d.children) {
+        e.preventDefault(); toggleNode(d); update(d);
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        var nn = g.selectAll('g.node').nodes();
+        var idx = nn.indexOf(this);
+        if (idx < nn.length - 1) nn[idx + 1].focus();
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        var nn = g.selectAll('g.node').nodes();
+        var idx = nn.indexOf(this);
+        if (idx > 0) nn[idx - 1].focus();
+      }
+    });
+
+    // ——— EXIT ———
+    var nodeExit = node.exit().transition().duration(duration)
+      .attr('transform', function (d) { return 'translate(' + source.x + ',' + source.y + ')'; })
+      .remove();
+    nodeExit.select('circle').attr('r', 0);
+    nodeExit.select('text').style('opacity', 0);
+
+    // ——— LINKS ———
+    var link = g.selectAll('path.link')
+      .data(root.links(), function (d) { return d.target.data.name; });
+
+    var linkEnter = link.enter().insert('path', 'g')
+      .attr('class', 'link')
+      .attr('d', function (d) {
+        var o = { x: source.x0, y: source.y0 };
+        return diagonal(o, o);
+      });
+
+    linkEnter.merge(link).transition().duration(duration)
+      .attr('d', function (d) { return diagonal(d.source, d.target); })
+      .style('stroke', function (d) {
+        if (d.target.depth <= 1) return getNodeColor(d.target);
+        var cat = catLookup[d.target.data.cat];
+        return cat ? cat.color : '#22223a';
+      })
+      .style('opacity', function (d) {
+        return d.target.depth <= 1 ? 0.25 : 0.4;
+      });
+
+    link.exit().transition().duration(duration)
+      .attr('d', function (d) {
+        var o = { x: source.x, y: source.y };
+        return diagonal(o, o);
+      })
+      .remove();
+
+    // ——— STORE ———
+    root.eachBefore(function (d) {
+      d.x0 = d.x;
+      d.y0 = d.y;
+    });
+
+    // Breadcrumb
+    updateBreadcrumb();
+
+    // Auto fit
+    setTimeout(autoFit, duration + 50);
+  }
+
+  // —————————————————————————————————————
+  //  DIAGONAL
+  // —————————————————————————————————————
+  function diagonal(s, t) {
+    var ox = Math.max((t.x - s.x) * 0.4, 20);
+    return 'M' + s.x + ',' + s.y
+      + 'C' + (s.x + ox) + ',' + s.y
+      + ' ' + (t.x - ox) + ',' + t.y
+      + ' ' + t.x + ',' + t.y;
+  }
+
+  // —————————————————————————————————————
+  //  TOGGLE
+  // —————————————————————————————————————
+  var lastToggled = null;
+
+  function toggleNode(d) {
+    if (d.children) {
+      d._children = d.children;
+      d.children = null;
+      lastToggled = d.parent || null;
+    } else if (d._children) {
+      d.children = d._children;
+      d._children = null;
+      lastToggled = d;
+    }
+  }
+
+  // —————————————————————————————————————
+  //  BREADCRUMB
+  // —————————————————————————————————————
+  function updateBreadcrumb() {
+    var node = lastToggled;
+    if (!node || node.depth === 0) {
+      breadcrumbEl.classList.remove('show');
+      return;
+    }
+    var parts = [];
+    var cur = node;
+    while (cur) {
+      var name = cur.data.name;
+      // Strip emoji for breadcrumb
+      var clean = name.replace(/^[^\s]+\s/, '');
+      parts.unshift(clean);
+      cur = cur.parent;
+    }
+    var html = '';
+    parts.forEach(function (p, i) {
+      if (i > 0) html += '<span class="bc-sep">›</span>';
+      html += '<span' + (i === parts.length - 1 ? ' class="bc-current"' : '') + '>' + p + '</span>';
+    });
+    breadcrumbEl.innerHTML = html;
+    breadcrumbEl.classList.add('show');
+  }
+
+  // —————————————————————————————————————
+  //  TOOLTIP
+  // —————————————————————————————————————
+  function showTooltip(e, d) {
+    var cat = d.depth > 0 ? catLookup[d.data.cat] : null;
+    var html = '';
+    if (cat) html += '<div class="tt-cat" style="color:' + cat.color + '">' + cat.emoji + ' ' + cat.name + '</div>';
+    html += '<div class="tt-name">' + d.data.name.replace(/^[^\s]+\s/, '') + '</div>';
+    if (d.data.desc) html += '<div class="tt-desc">' + d.data.desc + '</div>';
+    tooltipEl.innerHTML = html;
+    tooltipEl.classList.add('show');
+    moveTooltip(e);
+  }
+
+  function moveTooltip(e) {
+    var x = e.clientX + 14;
+    var y = e.clientY - 8;
+    var r = tooltipEl.getBoundingClientRect();
+    if (x + r.width > window.innerWidth - 8) x = e.clientX - r.width - 14;
+    if (y + r.height > window.innerHeight - 8) y = window.innerHeight - r.height - 8;
+    if (y < 8) y = 8;
+    tooltipEl.style.left = x + 'px';
+    tooltipEl.style.top = y + 'px';
+  }
+
+  function hideTooltip() {
+    tooltipEl.classList.remove('show');
+  }
+
+  // —————————————————————————————————————
+  //  SEARCH
+  // —————————————————————————————————————
+  function performSearch(q) {
+    searchQuery = q;
+
+    if (q.length >= 2) {
+      var ql = q.toLowerCase();
+
+      // Collect matches
+      var matchNames = {};
+      root.each(function (d) {
+        if (nodeMatches(d, q)) {
+          matchNames[d.data.name] = true;
+          var p = d.parent;
+          while (p) {
+            matchNames[p.data.name] = true;
+            p = p.parent;
+          }
+        }
+      });
+
+      // Expand/collapse accordingly
+      root.each(function (d) {
+        if (d.depth === 0) return;
+        var isMatch = matchNames[d.data.name];
+        var hasChildMatch = false;
+        if (d.depth === 1 && (d.children || d._children)) {
+          var kids = getChildren(d);
+          for (var i = 0; i < kids.length; i++) {
+            if (matchNames[kids[i].data.name]) { hasChildMatch = true; break; }
+          }
+        }
+        var shouldOpen = isMatch || hasChildMatch;
+        if (shouldOpen && d._children) {
+          d.children = d._children;
+          d._children = null;
+        } else if (!shouldOpen && d.children && (d.depth === 1 || (d.depth === 0))) {
+          d._children = d.children;
+          d.children = null;
+        }
+      });
+
+      var count = 0;
+      root.each(function (d) { if (nodeMatches(d, q)) count++; });
+      searchCount.textContent = 'Найдено: ' + count;
+      searchCount.style.display = 'block';
+      searchClear.style.display = 'flex';
+    } else {
+      // Reset: collapse all categories
+      root.each(function (d) {
+        if (d.depth === 1 && d.children) {
+          d._children = d.children;
+          d.children = null;
+        }
+      });
+      searchCount.style.display = 'none';
+      searchClear.style.display = 'none';
+    }
+
+    lastToggled = null;
+    update(root);
+  }
+
+  var searchDebounce;
+  searchInput.addEventListener('input', function () {
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(function () {
+      performSearch(searchInput.value.trim());
+    }, 200);
+  });
+
+  searchClear.addEventListener('click', function () {
+    searchInput.value = '';
+    searchInput.focus();
+    performSearch('');
+  });
+
+  // —————————————————————————————————————
+  //  CONTROLS
+  // —————————————————————————————————————
+  document.getElementById('btn-zoom-in').addEventListener('click', function () {
+    svg.transition().duration(250).call(zoom.scaleBy, 1.4);
+  });
+  document.getElementById('btn-zoom-out').addEventListener('click', function () {
+    svg.transition().duration(250).call(zoom.scaleBy, 0.7);
+  });
+  document.getElementById('btn-reset').addEventListener('click', autoFit);
+  document.getElementById('btn-collapse-all').addEventListener('click', function () {
+    root.each(function (d) {
+      if (d.depth === 1 && d.children) {
+        d._children = d.children;
+        d.children = null;
+      }
+    });
+    lastToggled = null;
+    searchInput.value = '';
+    performSearch('');
+    update(root);
+  });
+  document.getElementById('btn-expand-all').addEventListener('click', function () {
+    root.each(function (d) {
+      if (d._children) {
+        d.children = d._children;
+        d._children = null;
+      }
+    });
+    lastToggled = null;
+    searchInput.value = '';
+    performSearch('');
+    update(root);
+  });
+
+  // —————————————————————————————————————
+  //  LEGEND TOGGLE
+  // —————————————————————————————————————
+  legendToggle.addEventListener('click', function () {
+    legendEl.classList.toggle('show');
+    legendToggle.classList.toggle('active');
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!legendEl.contains(e.target) && e.target !== legendToggle) {
+      closeLegend();
+    }
+  });
+
+  // —————————————————————————————————————
+  //  KEYBOARD
+  // —————————————————————————————————————
+  document.addEventListener('keydown', function (e) {
+    if ((e.ctrlKey && e.key === 'f') || (e.key === '/' && !['INPUT', 'TEXTAREA'].includes(e.target.tagName))) {
+      e.preventDefault();
+      searchInput.focus();
+    }
+    if (e.key === 'Escape') {
+      if (document.activeElement === searchInput) {
+        searchInput.value = '';
+        searchInput.blur();
+        performSearch('');
+      }
+      closeLegend();
+    }
+  });
+
+  // —————————————————————————————————————
+  //  GO
+  // —————————————————————————————————————
+  root.x0 = root.x = 0;
+  root.y0 = root.y = 0;
+  update(root);
+
+})();
 </script>
 </body>
 </html>
