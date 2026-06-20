@@ -407,12 +407,26 @@ a:hover { color: var(--blue-hover); text-decoration: underline }
 
 /* ===== Markmap — Feature Map ===== */
 .markmap-wrap {
-  --mm-gutter: max(calc((100vw - var(--content-max)) / 2 - 100% + 24px), 24px);
-  margin: 32px var(--mm-gutter);
+  margin: 32px 0;
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   background: var(--bg2);
   overflow: hidden;
+  box-sizing: border-box;
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+}
+.markmap-wrap:fullscreen {
+  background: var(--bg);
+  border: none;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+}
+.markmap-wrap:fullscreen .markmap {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
 }
 
 .markmap-toolbar {
@@ -438,11 +452,12 @@ a:hover { color: var(--blue-hover); text-decoration: underline }
 .markmap {
   min-height: 520px;
   position: relative;
+  overflow: hidden;
 }
 .markmap svg {
   display: block;
   width: 100%;
-  min-width: 700px;
+  min-width: 800px;
 }
 .markmap .markmap-foreign {
   font-family: var(--font);
@@ -451,48 +466,6 @@ a:hover { color: var(--blue-hover); text-decoration: underline }
 }
 .markmap-foreign em { font-style: italic }
 .markmap-foreign strong { font-weight: 700 }
-
-/* Fullscreen overlay */
-.markmap-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 10000;
-  background: rgba(0,0,0,.85);
-  backdrop-filter: blur(8px);
-  align-items: center;
-  justify-content: center;
-}
-.markmap-overlay .markmap-overlay-content {
-  width: 94vw;
-  height: 90vh;
-  background: var(--bg);
-  border-radius: var(--r-lg);
-  overflow: hidden;
-}
-.markmap-overlay-content svg {
-  width: 100%;
-  height: 100%;
-}
-.markmap-overlay-close {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  z-index: 10001;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255,255,255,.15);
-  color: #fff;
-  font-size: 20px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background .2s var(--ease);
-}
-.markmap-overlay-close:hover { background: rgba(255,255,255,.3) }
 
 /* ===== Mermaid ===== */
 pre.mermaid {
