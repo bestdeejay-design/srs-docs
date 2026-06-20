@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Feature Map — Карта функциональных требований</title>
+<title>Feature Map</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0 }
   html, body { width: 100%; height: 100%; overflow: hidden }
@@ -11,169 +11,301 @@
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, Roboto, sans-serif;
     background: #f5f5f7;
   }
-  #mm-container {
-    width: 100%;
-    height: 100vh;
-    position: relative;
-  }
-  .markmap {
+  svg {
+    display: block;
     width: 100%;
     height: 100%;
+    cursor: grab;
   }
-  .markmap svg { width: 100%; height: 100% }
-  .markmap-foreign {
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, Roboto, sans-serif;
+  svg:active { cursor: grabbing }
+  .node circle {
+    fill: #0071e3;
+    stroke: #fff;
+    stroke-width: 2;
+    cursor: pointer;
+    transition: fill .2s;
+  }
+  .node circle:hover { fill: #2997ff }
+  .node circle.folded { fill: #6e6e73 }
+  .node text {
     font-size: 12px;
-    line-height: 1.35;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, Roboto, sans-serif;
+    fill: #1d1d1f;
+    dominant-baseline: middle;
   }
-  .markmap-foreign strong { font-weight: 700 }
-  .markmap-foreign em { font-style: italic }
+  .node text.bold { font-weight: 700 }
+  .link {
+    fill: none;
+    stroke: #aeaeb2;
+    stroke-width: 1.5;
+  }
 </style>
 </head>
 <body>
-<div id="mm-container">
-  <div class="markmap">
-- **Продукт**
-  - Регистрация и безопасность
-    - Вход по телефону
-    - SMS-подтверждение
-    - Роли: клиент/пикер/курьер/админ/суперадмин
-    - JWT access + refresh токены
-    - Rate limiting
-    - Audit log
-  - Каталог
-    - Выбор магазина по адресу
-    - Категории (3 уровня)
-    - Поиск (Elasticsearch)
-    - Динамические фильтры
-    - Карточка товара
-    - Нормализация данных сетей
-    - Маппинг категорий сети → платформа
-    - Адаптеры сетей (Лента, METRO, Вкусвилл и др.)
-    - Синхронизация цен/остатков (шедулер)
-  - Корзина
-    - Добавление товаров
-    - Промокоды и баллы
-    - Dynamic Pricing
-    - Пересчёт стоимости
-    - Оформление
-  - Заказы
-    - Создание
-    - Статусы (оплачен → сборка → доставка → завершён)
-    - Добавление товаров после оформления
-    - История
-    - Замена товара (пикер → звонок → альтернатива)
-    - Возврат и отмена (до/после сборки, комиссия)
-    - Event Sourcing (цепочка событий)
-  - Доставка
-    - Временные слоты (3 дня вперёд)
-    - Dispatch (multi-objective optimization)
-    - ETA (OSRM + ML гибрид)
-    - Трекинг для клиента
-    - Опция «Можно раньше»
-  - Платежи
-    - Т-Банк (онлайн, 3DSecure)
-    - СБП (QR от курьера)
-    - Карта курьеру (POS-терминал)
-    - Наличные
-    - Refund (полный/частичный)
-    - Чек (54-ФЗ, ОФД)
-  - Уведомления
-    - Push (FCM)
-    - SMS
-    - Email
-    - Telegram
-    - События: создан / сборка / курьер / доставлен
-  - Админка
-    - Управление заказами (CRUD, статусы)
-    - Управление товарами (CRUD, импорт CSV)
-    - Пользователи (блокировка, роли)
-    - Промокоды (создание, статистика)
-    - Курьеры и пикеры (зоны, рейтинг)
-    - Магазины и зоны доставки (полигоны)
-    - Управление сетями-адаптерами (вкл/выкл)
-    - Audit log (кто, когда, что сделал)
-  - B2B
-    - Корпоративные заказы в офис
-    - Регулярные поставки (ежедневно/еженедельно)
-    - Индивидуальные цены по договору
-    - Отсрочка платежа (3–30 дней)
-    - ЭДО (Диадок / СБИС, УПД)
-    - Счета и закрывающие документы
-  - Dynamic Pricing
-    - Факторы: загрузка, время, погода, расстояние, вес
-    - Формула: base_fee × product(multipliers)
-    - Max надбавка: 2×
-    - Отображение в корзине
-  - Приложение пикера
-    - Список заказов (FIFO)
-    - Сканер штрихкодов (Scandit)
-    - Замены товаров (поиск альтернатив)
-    - Звонок клиенту (скрытый номер)
-    - Offline-режим (Firestore cache)
-    - Smart Sync Queue (batch upload)
-    - Подтверждение упаковки
-  - Приложение курьера
-    - Навигация с multi-stop маршрутом
-    - Offline-режим (Hive + Smart Sync)
-    - Off-route detection
-    - Приём оплаты (офлайн hold → sync)
-    - Digital Signature (POD)
-    - Photo POD
-    - Сканер
-    - Статусы доставки
-  - Инфраструктура
-    - CI/CD (GitHub Actions, testcontainers)
-    - Docker Compose → Kubernetes
-    - Мониторинг (Prometheus + Grafana + Loki + Jaeger)
-    - Sentry (error tracking)
-    - Feature flags (Flipper / LaunchDarkly)
-    - Rollback (git revert + rolling update)
-  - Тестирование
-    - Unit (mockery + testify)
-    - Integration (testcontainers)
-    - Contract (Pact CDC)
-    - E2E (Cypress + K6)
-    - Load (K6: stress, soak, spike)
-    - Security (SonarCloud + Trivy + Aikido)
-  - Аналитика
-    - Дашборды (Grafana)
-    - Отчёты (выручка, заказы, конверсия)
-    - Метрики (DAU/MAU, время сборки, ETA, топ товаров)
-  </div>
-</div>
+<svg id="tree"></svg>
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.15.4/dist/browser/index.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/markmap-view@0.15.4/dist/browser/index.js"></script>
 <script>
-(function () {
-  var el = document.querySelector('.markmap');
-  if (!el) return;
-  var md = el.textContent;
-  try {
-    var t = new markmap.Transformer();
-    var root = t.transform(md);
-    markmap.Markmap.create(el, {
-      colorFreezeLevel: 2,
-      zoom: true,
-      pan: true,
-      duration: 300,
-      nodeMinHeight: 20,
-      spacingVertical: 6,
-      spacingHorizontal: 100,
-      paddingX: 10,
-      paddingY: 6,
-      maxWidth: 300,
-      fitRatio: 0.95,
-    }, root);
-    el._ready = true;
-  } catch (e) {
-    el.textContent = '\u041E\u0448\u0438\u0431\u043A\u0430: ' + e.message;
-    el.style.color = '#ff3b30';
-    el.style.padding = '40px';
-    el.style.fontSize = '18px';
+var svg = d3.select('#tree');
+var width = window.innerWidth;
+var height = window.innerHeight;
+
+var data = {
+  name: 'Продукт',
+  children: [
+    { name: 'Регистрация и безопасность', children: [
+      { name: 'Вход по телефону' },
+      { name: 'SMS-подтверждение' },
+      { name: 'Роли: клиент/пикер/курьер/админ/суперадмин' },
+      { name: 'JWT access + refresh токены' },
+      { name: 'Rate limiting' },
+      { name: 'Audit log' },
+    ]},
+    { name: 'Каталог', children: [
+      { name: 'Выбор магазина по адресу' },
+      { name: 'Категории (3 уровня)' },
+      { name: 'Поиск (Elasticsearch)' },
+      { name: 'Динамические фильтры' },
+      { name: 'Карточка товара' },
+      { name: 'Нормализация данных сетей' },
+      { name: 'Маппинг категорий сети → платформа' },
+      { name: 'Адаптеры сетей (Лента, METRO, Вкусвилл и др.)' },
+      { name: 'Синхронизация цен/остатков (шедулер)' },
+    ]},
+    { name: 'Корзина', children: [
+      { name: 'Добавление товаров' },
+      { name: 'Промокоды и баллы' },
+      { name: 'Dynamic Pricing' },
+      { name: 'Пересчёт стоимости' },
+      { name: 'Оформление' },
+    ]},
+    { name: 'Заказы', children: [
+      { name: 'Создание' },
+      { name: 'Статусы (оплачен → сборка → доставка → завершён)' },
+      { name: 'Добавление товаров после оформления' },
+      { name: 'История' },
+      { name: 'Замена товара (пикер → звонок → альтернатива)' },
+      { name: 'Возврат и отмена (до/после сборки, комиссия)' },
+      { name: 'Event Sourcing (цепочка событий)' },
+    ]},
+    { name: 'Доставка', children: [
+      { name: 'Временные слоты (3 дня вперёд)' },
+      { name: 'Dispatch (multi-objective optimization)' },
+      { name: 'ETA (OSRM + ML гибрид)' },
+      { name: 'Трекинг для клиента' },
+      { name: 'Опция «Можно раньше»' },
+    ]},
+    { name: 'Платежи', children: [
+      { name: 'Т-Банк (онлайн, 3DSecure)' },
+      { name: 'СБП (QR от курьера)' },
+      { name: 'Карта курьеру (POS-терминал)' },
+      { name: 'Наличные' },
+      { name: 'Refund (полный/частичный)' },
+      { name: 'Чек (54-ФЗ, ОФД)' },
+    ]},
+    { name: 'Уведомления', children: [
+      { name: 'Push (FCM)' },
+      { name: 'SMS' },
+      { name: 'Email' },
+      { name: 'Telegram' },
+      { name: 'События: создан / сборка / курьер / доставлен' },
+    ]},
+    { name: 'Админка', children: [
+      { name: 'Управление заказами (CRUD, статусы)' },
+      { name: 'Управление товарами (CRUD, импорт CSV)' },
+      { name: 'Пользователи (блокировка, роли)' },
+      { name: 'Промокоды (создание, статистика)' },
+      { name: 'Курьеры и пикеры (зоны, рейтинг)' },
+      { name: 'Магазины и зоны доставки (полигоны)' },
+      { name: 'Управление сетями-адаптерами (вкл/выкл)' },
+      { name: 'Audit log (кто, когда, что сделал)' },
+    ]},
+    { name: 'B2B', children: [
+      { name: 'Корпоративные заказы в офис' },
+      { name: 'Регулярные поставки (ежедневно/еженедельно)' },
+      { name: 'Индивидуальные цены по договору' },
+      { name: 'Отсрочка платежа (3–30 дней)' },
+      { name: 'ЭДО (Диадок / СБИС, УПД)' },
+      { name: 'Счета и закрывающие документы' },
+    ]},
+    { name: 'Dynamic Pricing', children: [
+      { name: 'Факторы: загрузка, время, погода, расстояние, вес' },
+      { name: 'Формула: base_fee × product(multipliers)' },
+      { name: 'Max надбавка: 2×' },
+      { name: 'Отображение в корзине' },
+    ]},
+    { name: 'Приложение пикера', children: [
+      { name: 'Список заказов (FIFO)' },
+      { name: 'Сканер штрихкодов (Scandit)' },
+      { name: 'Замены товаров (поиск альтернатив)' },
+      { name: 'Звонок клиенту (скрытый номер)' },
+      { name: 'Offline-режим (Firestore cache)' },
+      { name: 'Smart Sync Queue (batch upload)' },
+      { name: 'Подтверждение упаковки' },
+    ]},
+    { name: 'Приложение курьера', children: [
+      { name: 'Навигация с multi-stop маршрутом' },
+      { name: 'Offline-режим (Hive + Smart Sync)' },
+      { name: 'Off-route detection' },
+      { name: 'Приём оплаты (офлайн hold → sync)' },
+      { name: 'Digital Signature (POD)' },
+      { name: 'Photo POD' },
+      { name: 'Сканер' },
+      { name: 'Статусы доставки' },
+    ]},
+    { name: 'Инфраструктура', children: [
+      { name: 'CI/CD (GitHub Actions, testcontainers)' },
+      { name: 'Docker Compose → Kubernetes' },
+      { name: 'Мониторинг (Prometheus + Grafana + Loki + Jaeger)' },
+      { name: 'Sentry (error tracking)' },
+      { name: 'Feature flags (Flipper / LaunchDarkly)' },
+      { name: 'Rollback (git revert + rolling update)' },
+    ]},
+    { name: 'Тестирование', children: [
+      { name: 'Unit (mockery + testify)' },
+      { name: 'Integration (testcontainers)' },
+      { name: 'Contract (Pact CDC)' },
+      { name: 'E2E (Cypress + K6)' },
+      { name: 'Load (K6: stress, soak, spike)' },
+      { name: 'Security (SonarCloud + Trivy + Aikido)' },
+    ]},
+    { name: 'Аналитика', children: [
+      { name: 'Дашборды (Grafana)' },
+      { name: 'Отчёты (выручка, заказы, конверсия)' },
+      { name: 'Метрики (DAU/MAU, время сборки, ETA, топ товаров)' },
+    ]},
+  ]
+};
+
+var g = svg.append('g');
+
+var zoom = d3.zoom()
+  .scaleExtent([0.1, 4])
+  .on('zoom', function(e) { g.attr('transform', e.transform); });
+
+svg.call(zoom);
+
+var root = d3.hierarchy(data);
+
+var treeLayout = d3.tree()
+  .nodeSize([28, 280])
+  .separation(function(a, b) { return a.parent === b.parent ? 1 : 1.2; });
+
+treeLayout(root);
+
+// Center horizontally
+var x0 = Infinity, x1 = -Infinity;
+root.each(function(d) { if (d.x < x0) x0 = d.x; if (d.x > x1) x1 = d.x; });
+var treeHeight = x1 - x0 + 60;
+
+svg.call(zoom.transform, d3.zoomIdentity.translate(40, 40));
+
+function update(source) {
+  var duration = 400;
+
+  // Normalize for fixed depth
+  root.each(function(d) { d.y = d.depth * 200; });
+
+  // Compute new tree layout
+  treeLayout(root);
+
+  // Nodes
+  var node = g.selectAll('g.node')
+    .data(root.descendants(), function(d) { return d.data.name; });
+
+  var nodeEnter = node.enter().append('g')
+    .attr('class', 'node')
+    .attr('transform', function(d) { return 'translate(' + source.y0 + ',' + source.x0 + ')'; });
+
+  nodeEnter.append('circle')
+    .attr('r', 0)
+    .on('click', function(e, d) {
+      toggle(d);
+      update(d);
+    });
+
+  nodeEnter.append('text')
+    .attr('dy', '.35em')
+    .style('opacity', 0);
+
+  var nodeMerge = nodeEnter.merge(node);
+
+  nodeMerge.transition().duration(duration)
+    .attr('transform', function(d) { return 'translate(' + d.y + ',' + d.x + ')'; });
+
+  nodeMerge.select('circle')
+    .attr('r', function(d) {
+      if (d._children) return 5;
+      return d.children ? 5 : 3;
+    })
+    .attr('class', function(d) {
+      return d._children || (d.children && d.children.length) ? 'folded' : '';
+    });
+
+  nodeMerge.select('text')
+    .text(function(d) { return d.data.name; })
+    .style('opacity', 1)
+    .attr('x', function(d) { return d.children || d._children ? 12 : 12; })
+    .style('font-weight', function(d) { return d.depth === 0 ? '700' : d.depth === 1 ? '600' : '400'; });
+
+  var nodeExit = node.exit().transition().duration(duration)
+    .attr('transform', function(d) { return 'translate(' + source.y + ',' + source.x + ')'; })
+    .remove();
+
+  nodeExit.select('circle').attr('r', 0);
+  nodeExit.select('text').style('opacity', 0);
+
+  // Links
+  var link = g.selectAll('path.link')
+    .data(root.links(), function(d) { return d.target.data.name; });
+
+  var linkEnter = link.enter().insert('path', 'g')
+    .attr('class', 'link')
+    .attr('d', function(d) {
+      var o = { x: source.x0, y: source.y0 };
+      return diagonal(o, o);
+    });
+
+  linkEnter.merge(link).transition().duration(duration)
+    .attr('d', function(d) {
+      return diagonal(d.source, d.target);
+    });
+
+  link.exit().transition().duration(duration)
+    .attr('d', function(d) {
+      var o = { x: source.x, y: source.y };
+      return diagonal(o, o);
+    })
+    .remove();
+
+  // Store old positions
+  root.eachBefore(function(d) {
+    d.x0 = d.x;
+    d.y0 = d.y;
+  });
+}
+
+function diagonal(s, t) {
+  var hy = (s.y + t.y) / 2;
+  return 'M' + s.y + ',' + s.x
+    + 'C' + hy + ',' + s.x
+    + ' ' + hy + ',' + t.x
+    + ' ' + t.y + ',' + t.x;
+}
+
+function toggle(d) {
+  if (d.children) {
+    d._children = d.children;
+    d.children = null;
+  } else if (d._children) {
+    d.children = d._children;
+    d._children = null;
   }
-})();
+}
+
+// Initialize
+root.x0 = 0;
+root.y0 = 0;
+update(root);
 </script>
 </body>
 </html>
