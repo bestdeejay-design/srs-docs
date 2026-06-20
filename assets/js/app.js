@@ -311,10 +311,10 @@
           d3.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
           d3.onload = function () {
             var l = document.createElement('script');
-            l.src = 'https://cdn.jsdelivr.net/npm/markmap-lib@0.15.4/dist/index.min.js';
+            l.src = 'https://cdn.jsdelivr.net/npm/markmap-lib@0.15.4/dist/browser/index.js';
             l.onload = function () {
               var v = document.createElement('script');
-              v.src = 'https://cdn.jsdelivr.net/npm/markmap-view@0.15.4/dist/index.min.js';
+              v.src = 'https://cdn.jsdelivr.net/npm/markmap-view@0.15.4/dist/browser/index.js';
               v.onload = function () {
                 libLoaded = true;
                 cb();
