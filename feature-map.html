@@ -26,12 +26,11 @@
     transition: fill .2s;
   }
   .node circle:hover { fill: #2997ff }
-  .node circle.folded { fill: #6e6e73 }
+  .node circle.folded { fill: #aeaeb2; stroke: none; cursor: default }
   .node text {
     font-size: 12px;
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, Roboto, sans-serif;
     fill: #1d1d1f;
-    dominant-baseline: middle;
   }
   .node text.bold { font-weight: 700 }
   .link {
@@ -186,26 +185,16 @@ svg.call(zoom);
 
 var root = d3.hierarchy(data);
 
-var treeLayout = d3.tree()
-  .nodeSize([28, 280])
-  .separation(function(a, b) { return a.parent === b.parent ? 1 : 1.2; });
-
-treeLayout(root);
-
-// Center horizontally
-var x0 = Infinity, x1 = -Infinity;
-root.each(function(d) { if (d.x < x0) x0 = d.x; if (d.x > x1) x1 = d.x; });
-var treeHeight = x1 - x0 + 60;
-
-svg.call(zoom.transform, d3.zoomIdentity.translate(40, 40));
-
 function update(source) {
   var duration = 400;
 
-  // Normalize for fixed depth
-  root.each(function(d) { d.y = d.depth * 200; });
+  // Fixed depth spacing
+  root.each(function(d) { d.y = d.depth * 100; });
 
-  // Compute new tree layout
+  // Layout computes horizontal positions (x)
+  var treeLayout = d3.tree()
+    .nodeSize([240, 0])
+    .separation(function(a, b) { return a.parent === b.parent ? 1 : 1.4; });
   treeLayout(root);
 
   // Nodes
@@ -214,7 +203,7 @@ function update(source) {
 
   var nodeEnter = node.enter().append('g')
     .attr('class', 'node')
-    .attr('transform', function(d) { return 'translate(' + source.y0 + ',' + source.x0 + ')'; });
+    .attr('transform', function(d) { return 'translate(' + source.x0 + ',' + source.y0 + ')'; });
 
   nodeEnter.append('circle')
     .attr('r', 0)
@@ -230,25 +219,25 @@ function update(source) {
   var nodeMerge = nodeEnter.merge(node);
 
   nodeMerge.transition().duration(duration)
-    .attr('transform', function(d) { return 'translate(' + d.y + ',' + d.x + ')'; });
+    .attr('transform', function(d) { return 'translate(' + d.x + ',' + d.y + ')'; });
 
   nodeMerge.select('circle')
     .attr('r', function(d) {
-      if (d._children) return 5;
-      return d.children ? 5 : 3;
+      return d.children || d._children ? 5 : 3;
     })
     .attr('class', function(d) {
-      return d._children || (d.children && d.children.length) ? 'folded' : '';
+      return d._children || (d.children && d.children.length) ? '' : 'folded';
     });
 
   nodeMerge.select('text')
     .text(function(d) { return d.data.name; })
     .style('opacity', 1)
-    .attr('x', function(d) { return d.children || d._children ? 12 : 12; })
+    .attr('x', 10)
+    .attr('y', 4)
     .style('font-weight', function(d) { return d.depth === 0 ? '700' : d.depth === 1 ? '600' : '400'; });
 
   var nodeExit = node.exit().transition().duration(duration)
-    .attr('transform', function(d) { return 'translate(' + source.y + ',' + source.x + ')'; })
+    .attr('transform', function(d) { return 'translate(' + source.x + ',' + source.y + ')'; })
     .remove();
 
   nodeExit.select('circle').attr('r', 0);
@@ -285,12 +274,30 @@ function update(source) {
 }
 
 function diagonal(s, t) {
-  var hy = (s.y + t.y) / 2;
-  return 'M' + s.y + ',' + s.x
-    + 'C' + hy + ',' + s.x
-    + ' ' + hy + ',' + t.x
-    + ' ' + t.y + ',' + t.x;
+  var hx = (s.x + t.x) / 2;
+  return 'M' + s.x + ',' + s.y
+    + 'C' + hx + ',' + s.y
+    + ' ' + hx + ',' + t.y
+    + ' ' + t.x + ',' + t.y;
 }
+
+function toggle(d) {
+  if (d.children) {
+    d._children = d.children;
+    d.children = null;
+  } else if (d._children) {
+    d.children = d._children;
+    d._children = null;
+  }
+}
+
+// Initial zoom: center top, leave room for labels
+svg.call(zoom.transform, d3.zoomIdentity.translate(60, 60).scale(1));
+
+// Initialize
+root.x0 = 0;
+root.y0 = 0;
+update(root);
 
 function toggle(d) {
   if (d.children) {
