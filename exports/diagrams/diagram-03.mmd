@@ -1,9 +1,0 @@
-stateDiagram-v2
-    [*] --> pending : order created
-    pending --> processing : payment.initiated
-    processing --> succeeded : bank confirms
-    processing --> failed : bank declines
-    succeeded --> refunded : refund initiated
-    failed --> processing : user retries
-    refunded --> [*]
-    succeeded --> [*]
