@@ -299,10 +299,11 @@
     if (!el) return;
     var nodes = [];
     var sib = el.nextSibling;
-    while (sib && sib.nodeType === 1 && !/^H[1-6]$/.test(sib.tagName)) {
-      var next = sib.nextSibling;
+    while (sib) {
+      if (sib.nodeType !== 1) { sib = sib.nextSibling; continue; }
+      if (/^H[1-6]$/.test(sib.tagName)) break;
       nodes.push(sib);
-      sib = next;
+      sib = sib.nextSibling;
     }
     nodes.forEach(function (n) { n.style.display = 'none'; });
     el.style.display = 'none';
