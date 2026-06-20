@@ -241,11 +241,13 @@
               item.block._placeholder.parentElement.replaceChild(wrapper, item.block._placeholder);
             }
             try {
-              var root = mm.Transformer.prototype.transform(md);
+              var t = new mm.Transformer();
+              var root = t.transform(md);
               mm.Markmap.create(wrapper, {
                 colorFreezeLevel: 2,
                 zoom: true,
-                pan: true
+                pan: true,
+                style: dark ? 'dark' : 'light'
               }, root);
             } catch (e) {
               wrapper.textContent = '\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u043E\u0441\u0442\u0440\u043E\u0435\u043D\u0438\u044F \u043A\u0430\u0440\u0442\u044B: ' + e.message;
