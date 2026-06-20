@@ -293,10 +293,35 @@
     document.head.appendChild(script);
   }
 
+  /* ===== Hide Changelog ===== */
+  function hideChangelog() {
+    var el = document.getElementById('changelog');
+    if (!el) return;
+    var nodes = [];
+    var sib = el.nextSibling;
+    while (sib && sib.nodeType === 1 && !/^H[1-6]$/.test(sib.tagName)) {
+      var next = sib.nextSibling;
+      nodes.push(sib);
+      sib = next;
+    }
+    nodes.forEach(function (n) { n.style.display = 'none'; });
+    el.style.display = 'none';
+    /* also hide TOC link */
+    var tocLink = document.querySelector('.toc-link[href="#changelog"]');
+    if (tocLink) {
+      var tocItem = tocLink.closest('.toc-item');
+      if (tocItem) tocItem.style.display = 'none';
+    }
+  }
+
   /* ===== Init ===== */
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', loadDiagrams);
-  } else {
+  function init() {
+    hideChangelog();
     loadDiagrams();
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
   }
 })();
