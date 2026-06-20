@@ -7,20 +7,23 @@
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box }
-body { background: #0a0a0f; color: #e8e8ed; font-family: -apple-system, BlinkMacSystemFont, Inter, sans-serif; height: 100vh; display: flex; flex-direction: column }
-h1 { text-align: center; padding: 12px; font-size: 14px; font-weight: 600; color: #6b6b83; letter-spacing: 0.5px }
-svg { flex: 1; display: block }
+body { background: #0a0a0f; color: #e8e8ed; font-family: -apple-system, BlinkMacSystemFont, Inter, sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden }
+h1 { text-align: center; padding: 10px; font-size: 14px; font-weight: 600; color: #6b6b83; letter-spacing: 0.5px; flex-shrink: 0 }
+svg { flex: 1; display: block; width: 100%; height: 100% }
 .tooltip { position: fixed; display: none; background: #12121a; border: 1px solid #262636; border-radius: 8px; padding: 8px 12px; font-size: 12px; max-width: 260px; pointer-events: none; z-index: 1000; backdrop-filter: blur(12px) }
 .tooltip.show { display: block }
 .tooltip .tt-name { font-weight: 700; font-size: 13px; margin-bottom: 2px }
 .tooltip .tt-desc { color: #6b6b83; font-size: 11px }
-rect { cursor: pointer; transition: opacity .15s, stroke .15s }
-rect:hover { opacity: 0.85; stroke: #fff; stroke-width: 2 }
+.hint { position: fixed; top: 52px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #6b6b83; background: #12121ab0; padding: 4px 14px; border-radius: 12px; border: 1px solid #262636; z-index: 100; backdrop-filter: blur(8px); pointer-events: none; opacity: 0; transition: opacity .5s }
+.hint.show { opacity: 1 }
+rect { cursor: pointer; transition: opacity .12s }
+rect:hover { opacity: 0.85; stroke: #fff; stroke-width: 1.5 }
 </style>
 </head>
 <body>
 <h1>🧩 Treemap — Карта функциональных требований</h1>
 <svg id="chart"></svg>
+<div class="hint" id="hint">Наведите на прямоугольник для просмотра · кликните чтобы увеличить категорию</div>
 <div id="tooltip" class="tooltip"></div>
 <script>
 var CATEGORIES = [
@@ -40,153 +43,217 @@ var CATEGORIES = [
   { id: 'testing',   name: 'Тестирование',               color: '#a855f7' },
   { id: 'analytics', name: 'Аналитика',                  color: '#10b981' }
 ];
-var catLookup = {};
-CATEGORIES.forEach(function(c) { catLookup[c.id] = c; });
+var catMap = {};
+CATEGORIES.forEach(function(c) { catMap[c.id] = c; });
 
-var DATA = {
-  name: 'Продукт',
-  children: [
-    { name: 'Регистрация и безопасность', cat: 'security', children: [
-      { name: 'Вход по телефону' }, { name: 'SMS-подтверждение' }, { name: 'Роли' },
-      { name: 'JWT токены' }, { name: 'Rate limiting' }, { name: 'Audit log' }
-    ]},
-    { name: 'Каталог', cat: 'catalog', children: [
-      { name: 'Выбор магазина' }, { name: 'Категории' }, { name: 'Поиск (ES)' },
-      { name: 'Динамические фильтры' }, { name: 'Карточка товара' }, { name: 'Нормализация' },
-      { name: 'Маппинг категорий' }, { name: 'Адаптеры сетей' }, { name: 'Синхронизация' }
-    ]},
-    { name: 'Корзина', cat: 'cart', children: [
-      { name: 'Добавление товаров' }, { name: 'Промокоды' }, { name: 'Dynamic Pricing' },
-      { name: 'Пересчёт стоимости' }, { name: 'Оформление' }
-    ]},
-    { name: 'Заказы', cat: 'orders', children: [
-      { name: 'Создание' }, { name: 'Статусы' }, { name: 'Добавление после' },
-      { name: 'История' }, { name: 'Замена товара' }, { name: 'Возврат и отмена' }, { name: 'Event Sourcing' }
-    ]},
-    { name: 'Доставка', cat: 'delivery', children: [
-      { name: 'Временные слоты' }, { name: 'Dispatch' }, { name: 'ETA' }, { name: 'Трекинг' }, { name: 'Можно раньше' }
-    ]},
-    { name: 'Платежи', cat: 'payments', children: [
-      { name: 'Т-Банк' }, { name: 'СБП' }, { name: 'Карта курьеру' },
-      { name: 'Наличные' }, { name: 'Refund' }, { name: 'Чек (54-ФЗ)' }
-    ]},
-    { name: 'Уведомления', cat: 'notify', children: [
-      { name: 'Push (FCM)' }, { name: 'SMS' }, { name: 'Email' }, { name: 'Telegram' }, { name: 'События' }
-    ]},
-    { name: 'Админка', cat: 'admin', children: [
-      { name: 'Упр. заказами' }, { name: 'Упр. товарами' }, { name: 'Пользователи' },
-      { name: 'Промокоды' }, { name: 'Курьеры и пикеры' }, { name: 'Магазины' },
-      { name: 'Упр. сетями' }, { name: 'Audit log' }
-    ]},
-    { name: 'B2B', cat: 'b2b', children: [
-      { name: 'Корп. заказы' }, { name: 'Регулярные поставки' }, { name: 'Индивид. цены' },
-      { name: 'Отсрочка платежа' }, { name: 'ЭДО' }, { name: 'Счета и документы' }
-    ]},
-    { name: 'Dynamic Pricing', cat: 'pricing', children: [
-      { name: 'Факторы' }, { name: 'Формула' }, { name: 'Max 2×' }, { name: 'Отображение' }
-    ]},
-    { name: 'Приложение пикера', cat: 'picker', children: [
-      { name: 'FIFO' }, { name: 'Сканер' }, { name: 'Замены' },
-      { name: 'Звонок клиенту' }, { name: 'Offline' }, { name: 'Smart Sync' }, { name: 'Упаковка' }
-    ]},
-    { name: 'Приложение курьера', cat: 'courier', children: [
-      { name: 'Multi-stop' }, { name: 'Offline' }, { name: 'Off-route' },
-      { name: 'Оплата' }, { name: 'Digital Signature' }, { name: 'Photo POD' },
-      { name: 'Сканер' }, { name: 'Статусы' }
-    ]},
-    { name: 'Инфраструктура', cat: 'infra', children: [
-      { name: 'CI/CD' }, { name: 'Docker/K8s' }, { name: 'Мониторинг' },
-      { name: 'Sentry' }, { name: 'Feature flags' }, { name: 'Rollback' }
-    ]},
-    { name: 'Тестирование', cat: 'testing', children: [
-      { name: 'Unit' }, { name: 'Integration' }, { name: 'Contract' }, { name: 'E2E' }, { name: 'Load' }, { name: 'Security' }
-    ]},
-    { name: 'Аналитика', cat: 'analytics', children: [
-      { name: 'Дашборды' }, { name: 'Отчёты' }, { name: 'Метрики' }
-    ]}
-  ]
-};
+var RAW = [
+  { id: 'security',  name: 'Регистрация и безопасность', features: ['Вход по телефону', 'SMS-подтверждение', 'Роли (RBAC)', 'JWT токены', 'Rate limiting', 'Audit log'] },
+  { id: 'catalog',   name: 'Каталог',                    features: ['Выбор магазина', 'Категории', 'Поиск (ES)', 'Фильтры', 'Карточка товара', 'Нормализация', 'Маппинг', 'Адаптеры', 'Синхронизация'] },
+  { id: 'cart',      name: 'Корзина',                    features: ['Добавление', 'Промокоды', 'Dynamic Pricing', 'Пересчёт', 'Оформление'] },
+  { id: 'orders',    name: 'Заказы',                     features: ['Создание', 'Статусы', 'Добавление после', 'История', 'Замена', 'Возврат', 'Event Sourcing'] },
+  { id: 'delivery',  name: 'Доставка',                   features: ['Слоты', 'Dispatch', 'ETA', 'Трекинг', 'Можно раньше'] },
+  { id: 'payments',  name: 'Платежи',                    features: ['Т-Банк', 'СБП (QR)', 'Карта курьеру', 'Наличные', 'Refund', 'Чек (54-ФЗ)'] },
+  { id: 'notify',    name: 'Уведомления',                features: ['Push (FCM)', 'SMS', 'Email', 'Telegram', 'События'] },
+  { id: 'admin',     name: 'Админка',                    features: ['Заказы', 'Товары', 'Пользователи', 'Промокоды', 'Курьеры', 'Магазины', 'Сети', 'Audit log'] },
+  { id: 'b2b',       name: 'B2B',                        features: ['Корп. заказы', 'Регулярные', 'Цены', 'Отсрочка', 'ЭДО', 'Счета'] },
+  { id: 'pricing',   name: 'Dynamic Pricing',            features: ['Факторы', 'Формула', 'Max 2×', 'Отображение'] },
+  { id: 'picker',    name: 'Приложение пикера',          features: ['FIFO', 'Сканер', 'Замены', 'Звонок', 'Offline', 'Smart Sync', 'Упаковка'] },
+  { id: 'courier',   name: 'Приложение курьера',         features: ['Multi-stop', 'Offline', 'Off-route', 'Оплата', 'Digital Sign.', 'Photo POD', 'Сканер', 'Статусы'] },
+  { id: 'infra',     name: 'Инфраструктура',             features: ['CI/CD', 'Docker/K8s', 'Мониторинг', 'Sentry', 'Feature flags', 'Rollback'] },
+  { id: 'testing',   name: 'Тестирование',               features: ['Unit', 'Integration', 'Contract', 'E2E', 'Load', 'Security'] },
+  { id: 'analytics', name: 'Аналитика',                  features: ['Дашборды', 'Отчёты', 'Метрики'] }
+];
 
-var width = window.innerWidth;
-var height = window.innerHeight - 44;
+var w = window.innerWidth;
+var h = window.innerHeight - 44;
 
-var svg = d3.select('#chart')
-  .attr('viewBox', [0, 0, width, height]);
-
-var root = d3.hierarchy(DATA)
-  .sum(function(d) { return d.children ? 0 : 1; })
-  .sort(function(a, b) { return b.value - a.value; });
-
-d3.treemap()
-  .size([width, height])
-  .paddingOuter(6)
-  .paddingTop(24)
-  .paddingInner(3)
-  .round(true)(root);
-
-var color = d3.scaleOrdinal()
-  .domain(DATA.children.map(function(d) { return d.name; }))
-  .range(CATEGORIES.map(function(c) { return c.color; }));
+var svg = d3.select('#chart');
+var g = svg.append('g');
 
 var tooltip = document.getElementById('tooltip');
+var hint = document.getElementById('hint');
+setTimeout(function() { hint.classList.add('show'); }, 500);
+setTimeout(function() { hint.classList.remove('show'); }, 4000);
 
-var cell = svg.selectAll('g')
-  .data(root.leaves())
-  .join('g')
-  .attr('transform', function(d) { return 'translate(' + d.x0 + ',' + d.y0 + ')'; });
+function render(zoomCat) {
+  g.selectAll('*').remove();
+  svg.attr('viewBox', [0, 0, w, h]);
 
-cell.append('rect')
-  .attr('width', function(d) { return d.x1 - d.x0; })
-  .attr('height', function(d) { return d.y1 - d.y0; })
-  .style('fill', function(d) {
-    var p = d;
-    while (p.depth > 1) p = p.parent;
-    return color(p.data.name);
-  })
-  .style('opacity', function(d) { return d.y1 - d.y0 > 20 ? 0.8 : 0.6; })
-  .on('mouseenter', function(e, d) {
-    tooltip.innerHTML = '<div class="tt-name">' + d.data.name + '</div>';
-    tooltip.classList.add('show');
-  })
-  .on('mousemove', function(e) {
-    var x = e.clientX + 12;
-    var y = e.clientY - 8;
-    var r = tooltip.getBoundingClientRect();
-    if (x + r.width > window.innerWidth - 8) x = e.clientX - r.width - 12;
-    tooltip.style.left = x + 'px';
-    tooltip.style.top = y + 'px';
-  })
-  .on('mouseleave', function() { tooltip.classList.remove('show'); });
+  var data;
+  if (zoomCat) {
+    var mod = RAW.find(function(m) { return m.id === zoomCat; });
+    data = { name: mod.name, children: mod.features.map(function(f) { return { name: f }; }) };
+  } else {
+    data = {
+      name: 'Продукт',
+      children: RAW.map(function(m) {
+        return { name: m.name, cat: m.id, children: m.features.map(function(f) { return { name: f, cat: m.id }; }) };
+      })
+    };
+  }
 
-cell.append('text')
-  .attr('x', 4)
-  .attr('y', 14)
-  .style('fill', '#fff')
-  .style('font-size', function(d) {
-    var w = d.x1 - d.x0;
-    return w < 60 ? '8px' : w < 100 ? '10px' : '11px';
-  })
-  .style('font-weight', '600')
-  .style('pointer-events', 'none')
-  .style('text-shadow', '0 1px 3px rgba(0,0,0,0.8)')
-  .text(function(d) { return d.data.name; });
+  var root = d3.hierarchy(data)
+    .sum(function(d) { return d.children ? 0 : 1; })
+    .sort(function(a, b) { return b.value - a.value; });
 
-// Category labels
-svg.selectAll('.cat-label')
-  .data(root.children)
-  .join('text')
-  .attr('class', 'cat-label')
-  .attr('x', function(d) { return d.x0 + 6; })
-  .attr('y', function(d) { return d.y0 + 16; })
-  .style('fill', '#fff')
-  .style('font-size', '12px')
-  .style('font-weight', '700')
-  .style('pointer-events', 'none')
-  .style('text-shadow', '0 1px 4px rgba(0,0,0,0.9)')
-  .text(function(d) {
-    var count = d.children ? d.children.length : 0;
-    return d.data.name + ' (' + count + ')';
-  });
+  d3.treemap()
+    .size([w, h])
+    .paddingOuter(4)
+    .paddingTop(zoomCat ? 0 : 22)
+    .paddingInner(2)
+    .round(true)(root);
+
+  if (zoomCat) {
+    // Zoomed view: show features as main rects
+    var leaves = root.leaves();
+    var color = catMap[zoomCat] ? catMap[zoomCat].color : '#6366f1';
+
+    g.selectAll('rect')
+      .data(leaves)
+      .join('rect')
+      .attr('x', function(d) { return d.x0; })
+      .attr('y', function(d) { return d.y0; })
+      .attr('width', function(d) { return d.x1 - d.x0; })
+      .attr('height', function(d) { return d.y1 - d.y0; })
+      .style('fill', color)
+      .style('stroke', '#0a0a0f')
+      .style('stroke-width', 1)
+      .style('opacity', 0.75)
+      .on('mouseenter', function(e, d) {
+        tooltip.innerHTML = '<div class="tt-name">' + d.data.name + '</div>';
+        tooltip.classList.add('show');
+        d3.select(this).style('opacity', 1).style('stroke', '#fff');
+      })
+      .on('mousemove', function(e) {
+        tooltip.style.left = (e.clientX + 12) + 'px';
+        tooltip.style.top = (e.clientY - 8) + 'px';
+      })
+      .on('mouseleave', function() {
+        tooltip.classList.remove('show');
+        d3.select(this).style('opacity', 0.75).style('stroke', '#0a0a0f');
+      });
+
+    g.selectAll('text')
+      .data(leaves)
+      .join('text')
+      .attr('x', function(d) { return d.x0 + 4; })
+      .attr('y', function(d) { return d.y0 + 14; })
+      .style('fill', '#fff')
+      .style('font-size', function(d) {
+        var w2 = d.x1 - d.x0;
+        return w2 < 70 ? '9px' : '11px';
+      })
+      .style('font-weight', '600')
+      .style('pointer-events', 'none')
+      .style('text-shadow', '0 1px 3px rgba(0,0,0,0.8)')
+      .text(function(d) { return d.data.name; });
+
+    // Back button
+    g.append('text')
+      .attr('x', 10)
+      .attr('y', 20)
+      .style('fill', '#6366f1')
+      .style('font-size', '13px')
+      .style('font-weight', '700')
+      .style('cursor', 'pointer')
+      .style('text-shadow', '0 1px 4px rgba(0,0,0,0.9)')
+      .text('← Назад ко всем модулям')
+      .on('click', function() { render(null); });
+
+  } else {
+    // Normal view: modules as groups
+    var modules = root.children || [];
+
+    modules.forEach(function(m) {
+      var cat = catMap[m.data.cat];
+      var color = cat ? cat.color : '#6366f1';
+
+      // Module background
+      g.append('rect')
+        .attr('x', m.x0)
+        .attr('y', m.y0)
+        .attr('width', m.x1 - m.x0)
+        .attr('height', m.y1 - m.y0)
+        .style('fill', 'transparent')
+        .style('stroke', color)
+        .style('stroke-width', 1.5)
+        .style('stroke-opacity', 0.5)
+        .style('rx', 4);
+
+      // Module label
+      g.append('text')
+        .attr('x', m.x0 + 6)
+        .attr('y', m.y0 + 16)
+        .style('fill', color)
+        .style('font-size', '11px')
+        .style('font-weight', '700')
+        .style('pointer-events', 'none')
+        .style('text-shadow', '0 1px 4px rgba(0,0,0,0.9)')
+        .text(m.data.name + ' (' + (m.value || 0) + ')');
+
+      // Features inside module
+      if (m.children) {
+        m.children.forEach(function(f) {
+          g.append('rect')
+            .attr('x', f.x0)
+            .attr('y', f.y0)
+            .attr('width', f.x1 - f.x0)
+            .attr('height', f.y1 - f.y0)
+            .style('fill', color)
+            .style('stroke', '#0a0a0f')
+            .style('stroke-width', 0.5)
+            .style('opacity', 0.6)
+            .style('rx', 2)
+            .on('mouseenter', function(e) {
+              tooltip.innerHTML = '<div class="tt-name">' + f.data.name + '</div>';
+              tooltip.classList.add('show');
+              d3.select(this).style('opacity', 0.9).style('stroke', '#fff');
+            })
+            .on('mousemove', function(e) {
+              tooltip.style.left = (e.clientX + 12) + 'px';
+              tooltip.style.top = (e.clientY - 8) + 'px';
+            })
+            .on('mouseleave', function() {
+              tooltip.classList.remove('show');
+              d3.select(this).style('opacity', 0.6).style('stroke', '#0a0a0f');
+            });
+
+          // Feature label
+          var fw = f.x1 - f.x0;
+          if (fw > 50) {
+            g.append('text')
+              .attr('x', f.x0 + 3)
+              .attr('y', f.y0 + 12)
+              .style('fill', '#fff')
+              .style('font-size', '8px')
+              .style('pointer-events', 'none')
+              .style('text-shadow', '0 1px 2px rgba(0,0,0,0.8)')
+              .text(f.data.name.length > 12 ? f.data.name.slice(0, 11) + '…' : f.data.name);
+          }
+        });
+
+        // Click on module to zoom
+        g.append('rect')
+          .attr('x', m.x0)
+          .attr('y', m.y0)
+          .attr('width', m.x1 - m.x0)
+          .attr('height', m.y1 - m.y0)
+          .style('fill', 'transparent')
+          .style('stroke', 'none')
+          .style('cursor', 'pointer')
+          .on('click', function() { render(m.data.cat); });
+      }
+    });
+  }
+}
+
+render(null);
+
+window.addEventListener('resize', function() {
+  w = window.innerWidth;
+  h = window.innerHeight - 44;
+  render(null);
+});
 </script>
 </body>
 </html>
