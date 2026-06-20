@@ -37,15 +37,32 @@
   if (overlay) overlay.addEventListener('click', toggleSidebar);
 
   /* ===== TOC ===== */
+  function toggleToc(el) {
+    var item = el.closest('.toc-item');
+    if (!item) return;
+    var children = item.querySelector('.toc-children');
+    var btn = item.querySelector('.toc-toggle');
+    if (!children) return;
+    var open = children.classList.toggle('open');
+    if (btn) btn.classList.toggle('open', open);
+  }
+
   document.querySelectorAll('.toc-toggle').forEach(function (btn) {
     btn.addEventListener('click', function (e) {
       e.stopPropagation();
-      var children = this.parentElement.querySelector('.toc-children');
-      if (children) {
-        var open = children.classList.toggle('open');
-        this.classList.toggle('open', open);
-      }
+      toggleToc(this);
     });
+  });
+
+  document.querySelectorAll('.toc-link').forEach(function (link) {
+    var item = link.closest('.toc-item');
+    if (item && item.querySelector('.toc-children')) {
+      link.classList.add('has-children');
+      link.addEventListener('click', function (e) {
+        if (e.target.closest('.toc-toggle')) return;
+        toggleToc(this);
+      });
+    }
   });
 
   /* ===== Search ===== */
