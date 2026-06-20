@@ -228,16 +228,108 @@
     if (mindmapBlocks.length) {
       mindmapBlocks.forEach(function (item) {
         var md = mindmapToMarkdown(item.code);
-        var wrapper = document.createElement('div');
-        wrapper.className = 'markmap';
-        wrapper.textContent = md + '\n';
+
+        var container = document.createElement('div');
+        container.className = 'markmap-wrap';
+
+        var toolbar = document.createElement('div');
+        toolbar.className = 'markmap-toolbar';
+        var btn = document.createElement('button');
+        btn.className = 'markmap-fullscreen-btn';
+        btn.textContent = '\u26F6 \u041E\u0442\u043A\u0440\u044B\u0442\u044C \u043A\u0430\u0440\u0442\u0443 \u043F\u043E\u043B\u043D\u043E\u0441\u0442\u044C\u044E';
+        toolbar.appendChild(btn);
+
+        var svgEl = document.createElement('div');
+        svgEl.className = 'markmap';
+
+        container.appendChild(toolbar);
+        container.appendChild(svgEl);
+
         if (item.block._placeholder) {
-          item.block._placeholder.parentElement.replaceChild(wrapper, item.block._placeholder);
+          item.block._placeholder.parentElement.replaceChild(container, item.block._placeholder);
         }
+
+        /* Fullscreen overlay */
+        var overlay = document.createElement('div');
+        overlay.className = 'markmap-overlay';
+        var closeBtn = document.createElement('button');
+        closeBtn.className = 'markmap-overlay-close';
+        closeBtn.textContent = '\u2716';
+        var overlaySvg = document.createElement('div');
+        overlaySvg.className = 'markmap markmap-overlay-content';
+        overlay.appendChild(closeBtn);
+        overlay.appendChild(overlaySvg);
+        document.body.appendChild(overlay);
+
+        btn.addEventListener('click', function () {
+          overlay.style.display = 'flex';
+          document.body.style.overflow = 'hidden';
+          initMarkmap(overlaySvg, md, true);
+        });
+        closeBtn.addEventListener('click', function () {
+          overlay.style.display = 'none';
+          document.body.style.overflow = '';
+        });
+        overlay.addEventListener('click', function (e) {
+          if (e.target === overlay) {
+            overlay.style.display = 'none';
+            document.body.style.overflow = '';
+          }
+        });
+
+        /* Load markmap libs and render inline */
+        function initMarkmap(el, mdown, fullscreen) {
+          if (el._markmapReady) return;
+          el._markmapReady = true;
+          try {
+            var t = new markmap.Transformer();
+            var root = t.transform(mdown);
+            var opts = {
+              colorFreezeLevel: 2,
+              zoom: true,
+              pan: true,
+              duration: 300,
+              nodeMinHeight: fullscreen ? 24 : 16,
+              spacingVertical: fullscreen ? 8 : 5,
+              spacingHorizontal: fullscreen ? 140 : 80,
+              paddingX: fullscreen ? 12 : 8,
+              paddingY: fullscreen ? 8 : 4,
+              maxWidth: fullscreen ? 400 : 260,
+            };
+            markmap.Markmap.create(el, opts, root);
+          } catch (e) {
+            el.textContent = '\u041E\u0448\u0438\u0431\u043A\u0430: ' + e.message;
+            el.style.color = '#ff3b30';
+            el.style.padding = '20px';
+          }
+        }
+
+        var libLoaded = false;
+        function loadMarkmapLib(cb) {
+          if (libLoaded) { cb(); return; }
+          var d3 = document.createElement('script');
+          d3.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+          d3.onload = function () {
+            var l = document.createElement('script');
+            l.src = 'https://cdn.jsdelivr.net/npm/markmap-lib@0.15.4/dist/index.min.js';
+            l.onload = function () {
+              var v = document.createElement('script');
+              v.src = 'https://cdn.jsdelivr.net/npm/markmap-view@0.15.4/dist/index.min.js';
+              v.onload = function () {
+                libLoaded = true;
+                cb();
+              };
+              document.head.appendChild(v);
+            };
+            document.head.appendChild(l);
+          };
+          document.head.appendChild(d3);
+        }
+
+        loadMarkmapLib(function () {
+          initMarkmap(svgEl, md, false);
+        });
       });
-      var aScript = document.createElement('script');
-      aScript.src = 'https://cdn.jsdelivr.net/npm/markmap-autoloader@0.15';
-      document.head.appendChild(aScript);
     }
 
     /* Mermaid (all other diagrams) */
