@@ -161,8 +161,14 @@
   });
 
   /* ===== Mermaid ===== */
+  function htmlDecode(s) {
+    var t = document.createElement('textarea');
+    t.innerHTML = s;
+    return t.value;
+  }
+
   function renderMermaid() {
-    var blocks = document.querySelectorAll('.language-mermaid');
+    var blocks = document.querySelectorAll('pre.mermaid');
     if (!blocks.length) return;
 
     // Show loading placeholder
@@ -199,7 +205,7 @@
       });
 
       blocks.forEach(function (block) {
-        var code = block.textContent.trim();
+        var code = htmlDecode(block.innerHTML.trim());
         var wrapper = document.createElement('div');
         wrapper.className = 'mermaid-wrapper';
 
